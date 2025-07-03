@@ -24,6 +24,12 @@ dependencies = [
     "aiida-core~=2.5",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "myst-parser",
+    "sphinx-book-theme"
+]
+
 [project.urls]
 Source = "https://github.com/aiidaplugins/aiida-epw"
 
