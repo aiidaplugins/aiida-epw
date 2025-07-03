@@ -22,6 +22,7 @@ keywords = ["aiida", "plugin"]
 requires-python = ">=3.9"
 dependencies = [
     "aiida-core~=2.5",
+    "aiida-quantumespresso~=4.10"
 ]
 
 [project.optional-dependencies]
@@ -32,6 +33,12 @@ dev = [
 
 [project.urls]
 Source = "https://github.com/aiidaplugins/aiida-epw"
+
+[project.entry-points.'aiida.calculations']
+'quantumespresso.epw' = 'aiida_quantumespresso.calculations.epw:EpwCalculation'
+
+[project.entry-points.'aiida.parsers']
+'quantumespresso.epw' = 'aiida_quantumespresso.parsers.epw:EpwParser'
 
 [tool.flit.module]
 name = "aiida_epw"
