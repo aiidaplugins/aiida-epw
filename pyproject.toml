@@ -23,7 +23,8 @@ classifiers = [
 dependencies = [
     "aiida-core~=2.5",
     "aiida-quantumespresso~=4.10",
-    "aiida_wannier90_workflows"
+    "aiida_wannier90_workflows",
+    "numpy",
 ]
 
 [project.urls]
