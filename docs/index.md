@@ -1,3 +1,5 @@
-# AiiDA-supercon
+# Introduction
 
-AiiDA plugin package with workflows for superconductivity research based on the Quantum ESPRESSO software suite and the Electron-Phonon Wannier (EPW) code.
+This is the documentation of the `aiida-epw` Python package.
+
+AiiDA plugin package for interfacing with the Electron Phonon Wannier (EPW) code.

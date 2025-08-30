@@ -1,0 +1,8 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.6.0
+_src_path: https://github.com/mbercx/python-copier
+description: AiiDA plugin package for interfacing with the Electron Phonon Wannier
+    (EPW) code.
+doc_deploy: github
+docs: myst
+package_name: aiida-epw

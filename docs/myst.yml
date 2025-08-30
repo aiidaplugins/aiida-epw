@@ -1,0 +1,11 @@
+# See docs at: https://mystmd.org/guide/frontmatter
+version: 1
+project:
+  title: aiida-epw
+  description: AiiDA plugin package for interfacing with the Electron Phonon Wannier (EPW) code.
+  # keywords: []
+  # authors: []
+  # github: https://github.com/
+  # To autogenerate a Table of Contents, run "myst init --write-toc"
+site:
+  template: book-theme
