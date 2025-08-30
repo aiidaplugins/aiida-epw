@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Work chain for computing the critical temperature based off an `EpwWorkChain`."""
 from aiida import orm
 from aiida.common import AttributeDict

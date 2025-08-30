@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Work chain for doing the coarse-grid calculations."""
 from pathlib import Path
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Plugin to create a Quantum Espresso epw.x input file."""
 from pathlib import Path
 
