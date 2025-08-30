@@ -1,0 +1,102 @@
+default_inputs:
+  clean_workdir: False
+  interpolation_distance:
+    - 0.5
+    - 0.3
+    - 0.2
+    - 0.1
+    - 0.08
+    - 0.06
+    - 0.05
+    - 0.04
+    - 0.03
+  convergence_threshold: 0.5
+  always_run_final: True
+  epw_interp:
+    metadata:
+      options:
+        resources:
+          num_machines: 1
+        max_wallclock_seconds: 43200  # Twelve hours
+        withmpi: True
+    parameters:
+      INPUTEPW:
+        broyden_beta: 0.4
+        conv_thr_iaxis: 0.01
+        degaussq: 0.5
+        degaussw: 0.1
+        eliashberg: True
+        elph: True
+        ep_coupling: True
+        epbread: False
+        epbwrite: False
+        ephwrite: True
+        eps_acustic: 1
+        epwread: True
+        epwwrite: False
+        etf_mem: 1
+        fsthick: 0.8
+        liso: True
+        laniso: False
+        limag: True
+        lpade: True
+        mp_mesh_k: True
+        muc: 0.13
+        nqstep: 500
+        nsiter: 1
+        nstemp: 1
+        restart: True
+        selecqread: False
+        temps: 10.0
+        vme: 'dipole'
+        wannierize: False
+        wscut: 0.5
+  epw_final:
+    metadata:
+      options:
+        resources:
+          num_machines: 1
+        max_wallclock_seconds: 43200  # Twelve hours
+        withmpi: True
+    parameters:
+      INPUTEPW:
+        conv_thr_iaxis: 0.01
+        degaussq: 0.5
+        degaussw: 0.1
+        elecselfen: False
+        eliashberg: True
+        ep_coupling: False
+        epbread: False
+        epbwrite: False
+        ephwrite: False
+        epwread: True
+        epwwrite: False
+        eps_acustic: 1  # cm^{-1}
+        etf_mem: 1
+        fsthick: 0.8
+        laniso: False
+        limag: True
+        liso: True
+        # mp_mesh_k: True
+        muc: 0.13
+        nqstep: 500
+        nsiter: 500
+        nstemp: 40
+        restart: True
+        selecqread:  False
+        tc_linear: True
+        tc_linear_solver: 'power'   
+        temps: 1 40
+        vme: 'dipole'
+        wannierize: False
+        wscut: 0.5
+default_protocol: moderate
+protocols:
+  moderate:
+    description: 'Protocol to perform a electron-phonon calculation at normal precision at moderate computational cost.'
+  precise:
+    description: 'Protocol to perform a electron-phonon calculation at high precision at higher computational cost.'
+    interpolation_distance: 0.05
+  fast:
+    description: 'Protocol to perform a electron-phonon calculation at low precision at minimal computational cost for testing purposes.'
+    interpolation_distance: 0.5

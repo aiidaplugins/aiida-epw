@@ -1,0 +1,70 @@
+default_inputs:
+  clean_workdir: True
+  qpoints_distance: 0.5
+  kpoints_distance_scf: 0.15
+  kpoints_factor_nscf: 2
+  # To set for the NSCF step of the Wannier90 work chain
+  # One can either use `nscf` mode or `bands` mode. For the `nscf` mode,
+  # the `nosym` and `noinv` must be set to True to avoid pw.x automatically
+  # adds more (symmetry-equivalent) kpoints to the user-specified kpoints.
+  # For the `bands` mode, pw.x will use exactly what the user provided.
+  # In addition, it seems epw.x has some problem when restarting from a
+  # pw.x calculation with `nosym` and `noinv` set to True, therefore, we
+  # switch to the `bands` mode.
+  w90_bands:
+    nscf:
+      pw:
+        parameters:
+          SYSTEM:
+            nosym: False
+            noinv: False
+          CONTROL:
+            calculation: bands
+  ph_base:
+    ph:
+      settings:
+        PREPARE_FOR_EPW: True
+  epw:
+    metadata:
+      options:
+        resources:
+          num_machines: 1
+        max_wallclock_seconds: 43200  # Twelve hours
+        withmpi: True
+        stash:
+          source_list:
+            - crystal.fmt
+            - dmedata.fmt
+            - epwdata.fmt
+            - selecq.fmt
+            - vmedata.fmt
+            - aiida.kgmap
+            - aiida.kmap
+            - aiida.ukk
+            - out/aiida.epmatwp
+            - save
+    parameters:
+      INPUTEPW:
+        a2f: False
+        degaussq: 0.05
+        degaussw: 0.2
+        elph: True
+        epbread: False
+        epbwrite: True
+        epwread: False
+        epwwrite: True
+        fsthick: 100
+        phonselfen: False
+        temps: 300
+        vme: 'dipole'
+        wannierize: False
+default_protocol: moderate
+protocols:
+  moderate:
+    description: 'Protocol to perform a electron-phonon calculation at normal precision at moderate computational cost.'
+  precise:
+    description: 'Protocol to perform a electron-phonon calculation at high precision at higher computational cost.'
+    qpoints_distance: 0.3
+  fast:
+    description: 'Protocol to perform a electron-phonon calculation at low precision at minimal computational cost for testing purposes.'
+    qpoints_distance: 1.1
