@@ -8,7 +8,6 @@ from aiida.engine import WorkChain, ToContext
 from aiida_quantumespresso.workflows.ph.base import PhBaseWorkChain
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
-from aiida_quantumespresso.calculations.epw import EpwCalculation
 from aiida_quantumespresso.calculations.functions.create_kpoints_from_distance import create_kpoints_from_distance
 
 from aiida_wannier90_workflows.workflows import Wannier90BandsWorkChain, Wannier90OptimizeWorkChain
@@ -16,7 +15,7 @@ from aiida_wannier90_workflows.workflows.bands import validate_inputs as validat
 from aiida_wannier90_workflows.utils.workflows.builder.setter import set_kpoints
 from aiida_wannier90_workflows.common.types import WannierProjectionType
 
-
+from aiida_epw.workflows.base import EpwBaseWorkChain
 class EpwWorkChain(ProtocolMixin, WorkChain):
     """Main work chain to start calculating properties using EPW.
 
@@ -54,11 +53,21 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
             }
         )
         spec.expose_inputs(
-            EpwCalculation, namespace='epw', exclude=(
-                'parent_folder_ph', 'parent_folder_nscf', 'kpoints', 'qpoints', 'kfpoints', 'qfpoints'
+            EpwBaseWorkChain, namespace='epw_base', exclude=(
+                'structure',
+                'kpoints', 
+                'qpoints', 
+                'kfpoints', 
+                'qfpoints', 
+                'qfpoints_distance', 
+                'kfpoints_factor', 
+                'parent_folder_ph',
+                'parent_folder_nscf', 
+                'parent_folder_epw',
+                'parent_folder_chk'
             ),
             namespace_options={
-                'help': 'Inputs for the `EpwCalculation`.'
+                'help': 'Inputs for the `EpwBaseWorkChain`.'
             }
         )
         spec.output('retrieved', valid_type=orm.FolderData)
@@ -140,14 +149,9 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
         ph_base.pop('clean_workdir', None)
         ph_base.pop('qpoints_distance')
 
-        epw_builder = EpwCalculation.get_builder()
+        epw_base_inputs = inputs.get('epw_base', None)
 
-        epw_builder.code = codes['epw']
-        epw_inputs = inputs.get('epw', None)
-
-        epw_builder.parameters = orm.Dict(epw_inputs['parameters'])
-
-        if 'target_base' not in epw_builder.metadata['options']['stash']:
+        if 'target_base' not in epw_base_inputs['epw']['metadata']['options']['stash']:
             epw_computer = codes['epw'].computer
             if epw_computer.transport_type == 'core.local':
                 target_basepath = Path(epw_computer.get_workdir(), 'stash').as_posix()
@@ -155,11 +159,22 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
                 target_basepath = Path(
                     epw_computer.get_workdir().format(username=epw_computer.get_configuration()['username']), 'stash'
                 ).as_posix()
-            epw_inputs['metadata']['options']['stash']['target_base'] = target_basepath
+            
+            epw_base_inputs['epw']['metadata']['options']['stash']['target_base'] = target_basepath
 
-        epw_builder.metadata = epw_inputs['metadata']
-        epw_builder.settings = orm.Dict(epw_inputs['settings'])
+        epw_base = EpwBaseWorkChain.get_builder_from_protocol(
+            code=codes['epw'],
+            structure=structure,
+            protocol=protocol,
+            overrides=epw_base_inputs,
+            **kwargs
+        )
 
+        if 'settings' in epw_base_inputs['epw']:
+            epw_base.epw['settings'] = orm.Dict(epw_base_inputs['epw']['settings'])
+        if 'parallelization' in epw_base_inputs['epw']:
+            epw_base.epw['parallelization'] = orm.Dict(epw_base_inputs['epw']['parallelization'])
+        
         builder = cls.get_builder()
         builder.qpoints_distance = orm.Float(inputs['qpoints_distance'])
         builder.kpoints_distance_scf = orm.Float(inputs['kpoints_distance_scf'])
@@ -167,7 +182,7 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
         builder.structure = structure
         builder.w90_bands = w90_bands
         builder.ph_base = ph_base
-        builder.epw = epw_builder
+        builder.epw_base = epw_base
         builder.clean_workdir = orm.Bool(inputs['clean_workdir'])
 
         return builder
@@ -205,12 +220,13 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
     def run_wannier90(self):
         """Run the wannier90 workflow."""
         if 'projwfc' in self.inputs.w90_bands:
-            self.report('Running a Wannier90BandsWorkChain.')
             w90_class = Wannier90BandsWorkChain
         else:
-            self.report('Running a Wannier90OptimizeWorkChain.')
             w90_class = Wannier90OptimizeWorkChain
 
+        self.ctx.w90_class_name = w90_class.get_name()
+        self.report(f'Running a {self.ctx.w90_class_name}.')
+        
         inputs = AttributeDict(
             self.exposed_inputs(Wannier90OptimizeWorkChain, namespace='w90_bands')
         )
@@ -221,7 +237,7 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
         inputs['scf']['kpoints'] = self.ctx.kpoints_scf
 
         workchain_node = self.submit(w90_class, **inputs)
-        self.report(f'launching wannier90 work chain {workchain_node.pk}')
+        self.report(f'launching {w90_class.get_name()}<{workchain_node.pk}>')
 
         return ToContext(workchain_w90_bands=workchain_node)
 
@@ -230,7 +246,7 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
         workchain = self.ctx.workchain_w90_bands
 
         if not workchain.is_finished_ok:
-            self.report(f'`Wannier90BandsWorkChain` failed with exit status {workchain.exit_status}')
+            self.report(f'{self.ctx.w90_class_name}<{workchain.pk}> failed with exit status {workchain.exit_status}')
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_WANNIER90
 
     def run_ph(self):
@@ -244,7 +260,7 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
 
         inputs.metadata.call_link_label = 'ph_base'
         workchain_node = self.submit(PhBaseWorkChain, **inputs)
-        self.report(f'launching `ph` {workchain_node.pk}')
+        self.report(f'launching PhBaseWorkChain<{workchain_node.pk}>')
 
         return ToContext(workchain_ph=workchain_node)
 
@@ -253,67 +269,83 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
         workchain = self.ctx.workchain_ph
 
         if not workchain.is_finished_ok:
-            self.report(f'Electron-phonon PhBaseWorkChain failed with exit status {workchain.exit_status}')
+            self.report(f'PhBaseWorkChain<{workchain.pk}> failed with exit status {workchain.exit_status}')
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_PHONON
 
     def run_epw(self):
-        """Run the `epw.x` calculation."""        
-        inputs = AttributeDict(self.exposed_inputs(EpwCalculation, namespace='epw'))
+        """Run the `EpwBaseWorkChain`."""        
+        inputs = AttributeDict(self.exposed_inputs(EpwBaseWorkChain, namespace='epw_base'))
 
+        # The EpwBaseWorkChain will take the parent folder of the previous
+        # PhCalculation, PwCalculation, and Wannier90Calculation.
+        # And it will take over the file copying and ukk file generation.
         inputs.parent_folder_ph = self.ctx.workchain_ph.outputs.remote_folder
-
-        nscf_base_wc =  self.ctx.workchain_w90_bands.base.links.get_outgoing(link_label_filter='nscf').first().node
-        inputs.parent_folder_nscf = nscf_base_wc.outputs.remote_folder
+        # nscf_base_wc =  self.ctx.workchain_w90_bands.base.links.get_outgoing(link_label_filter='nscf').first().node
+        # inputs.parent_folder_nscf = nscf_base_wc.outputs.remote_folder
+        w90_workchain = self.ctx.workchain_w90_bands
+        inputs.parent_folder_nscf = w90_workchain.outputs.nscf.remote_folder
+        if self.ctx.w90_class_name == 'Wannier90OptimizeWorkChain' and w90_workchain.inputs.optimize_disproj:
+            inputs.parent_folder_chk = w90_workchain.outputs.wannier90_optimal__remote_folder
+        else:
+            inputs.parent_folder_chk = w90_workchain.outputs.wannier90.remote_folder
 
         fine_points = orm.KpointsData()
         fine_points.set_kpoints_mesh([1, 1, 1])
 
+        # Here we explicitely speficy the coarse k/q grid so EpwBaseWorkChain will not deduce it from
+        # the parent folders.
+        # This EpwBaseWorkChain is only used for the transition from coarse BLoch representation to Wannier representation.
+        # Thus the find grid is always [1, 1, 1].
         inputs.kpoints = self.ctx.kpoints_nscf
         inputs.kfpoints = fine_points
         inputs.qpoints = self.ctx.qpoints
         inputs.qfpoints = fine_points      
 
-        parameters = inputs.parameters.get_dict()
+        # The update of epw parameters according to the wannier parameters
+        # and the file copying and conversion 
+        # is now handled by the EpwBaseWorkChain.
 
-        wannier_params = self.ctx.workchain_w90_bands.inputs.wannier90.wannier90.parameters.get_dict()
-        exclude_bands = wannier_params.get('exclude_bands') #TODO check this!
-        if exclude_bands:
-            parameters['INPUTEPW']['bands_skipped'] = f'exclude_bands = {exclude_bands[0]}:{exclude_bands[-1]}'
+        # parameters = inputs.epw.parameters.get_dict()
 
-        parameters['INPUTEPW']['nbndsub'] = wannier_params['num_wann']
-        inputs.parameters = orm.Dict(parameters)
+        # wannier_params = self.ctx.workchain_w90_bands.inputs.wannier90.wannier90.parameters.get_dict()
+        # exclude_bands = wannier_params.get('exclude_bands') #TODO check this!
+        # if exclude_bands:
+        #     parameters['INPUTEPW']['bands_skipped'] = f'exclude_bands = {exclude_bands[0]}:{exclude_bands[-1]}'
 
-        if 'projwfc' in self.inputs.w90_bands:
-            w90_remote_data = self.ctx.workchain_w90_bands.outputs.wannier90__remote_folder
-        else:
-            w90_remote_data = self.ctx.workchain_w90_bands.outputs.wannier90_optimal__remote_folder
+        # parameters['INPUTEPW']['nbndsub'] = wannier_params['num_wann']
+        # inputs.epw.parameters = orm.Dict(parameters)
 
-        wannier_chk_path = Path(w90_remote_data.get_remote_path(), 'aiida.chk')
-        nscf_xml_path = Path(self.ctx.workchain_w90_bands.outputs.nscf.remote_folder.get_remote_path(), 'out/aiida.xml')
+        # if 'projwfc' in self.inputs.w90_bands:
+        #     w90_remote_data = self.ctx.workchain_w90_bands.outputs.wannier90__remote_folder
+        # else:
+        #     w90_remote_data = self.ctx.workchain_w90_bands.outputs.wannier90_optimal__remote_folder
 
-        prepend_text = inputs.metadata.options.get('prepend_text', '')
-        prepend_text += f'\n{self.inputs.w90_chk_to_ukk_script.get_remote_path()} {wannier_chk_path} {nscf_xml_path} aiida.ukk'
-        inputs.metadata.options.prepend_text = prepend_text
+        # wannier_chk_path = Path(w90_remote_data.get_remote_path(), 'aiida.chk')
+        # nscf_xml_path = Path(self.ctx.workchain_w90_bands.outputs.nscf.remote_folder.get_remote_path(), 'out/aiida.xml')
 
-        inputs.metadata.call_link_label = 'epw'
+        # prepend_text = inputs.metadata.options.get('prepend_text', '')
+        # prepend_text += f'\n{self.inputs.w90_chk_to_ukk_script.get_remote_path()} {wannier_chk_path} {nscf_xml_path} aiida.ukk'
+        # inputs.metadata.options.prepend_text = prepend_text
 
-        calcjob_node = self.submit(EpwCalculation, **inputs)
-        self.report(f'launching `epw` {calcjob_node.pk}')
+        inputs.metadata.call_link_label = 'epw_base'
 
-        return ToContext(calcjob_epw=calcjob_node)
+        workchain_node = self.submit(EpwBaseWorkChain, **inputs)
+        self.report(f'launching EpwBaseWorkChain<{workchain_node.pk}>')
+
+        return ToContext(workchain_epw=workchain_node)
 
     def inspect_epw(self):
-        """Verify that the `epw.x` calculation finished successfully."""
-        calcjob = self.ctx.calcjob_epw
+        """Verify that the `EpwBaseWorkChain` finished successfully."""
+        workchain = self.ctx.workchain_epw
 
-        if not calcjob.is_finished_ok:
-            self.report(f'`EpwCalculation` failed with exit status {calcjob.exit_status}')
+        if not workchain.is_finished_ok:
+            self.report(f'EpwBaseWorkChain<{workchain.pk}> failed with exit status {workchain.exit_status}')
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_EPW
 
     def results(self):
         """Add the most important results to the outputs of the work chain."""
-        self.out('retrieved', self.ctx.calcjob_epw.outputs.retrieved)
-        self.out('epw_folder', self.ctx.calcjob_epw.outputs.remote_stash)
+        self.out('retrieved', self.ctx.workchain_epw.outputs.retrieved)
+        self.out('epw_folder', self.ctx.workchain_epw.outputs.remote_stash)
 
     def on_terminated(self):
         """Clean the working directories of all child calculations if `clean_workdir=True` in the inputs."""

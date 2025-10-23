@@ -31,11 +31,15 @@ dependencies = [
 Source = "https://github.com/aiidaplugins/aiida-epw"
 
 [project.entry-points.'aiida.calculations']
-'quantumespresso.epw' = 'aiida_quantumespresso.calculations.epw:EpwCalculation'
+'epw.epw' = 'aiida_epw.calculations.epw:EpwCalculation'
 
 [project.entry-points.'aiida.parsers']
-'quantumespresso.epw' = 'aiida_quantumespresso.parsers.epw:EpwParser'
+'epw.epw' = 'aiida_epw.parsers.epw:EpwParser'
 
+[project.entry-points.'aiida.workflows']
+'epw.base' = 'aiida_epw.workflows.base:EpwBaseWorkChain'
+'epw.epw' = 'aiida_epw.workflows.epw:EpwWorkChain'
+'epw.supercon' = 'aiida_epw.workflows.supercon:SuperConWorkChain'
 
 [tool.hatch.version]
 path = "src/aiida_epw/__about__.py"
