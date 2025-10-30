@@ -31,7 +31,7 @@ default_inputs:
         epbread: False
         epbwrite: False
         ephwrite: True
-        eps_acustic: 1
+        eps_acoustic: 1
         epwread: True
         epwwrite: False
         etf_mem: 1
@@ -45,13 +45,52 @@ default_inputs:
         nqstep: 500
         nsiter: 1
         nstemp: 1
-        restart: True
+        restart: False
         selecqread: False
         temps: 10.0
         vme: 'dipole'
         wannierize: False
         wscut: 0.5
-  epw_final:
+  epw_final_iso:
+    metadata:
+      options:
+        resources:
+          num_machines: 1
+        max_wallclock_seconds: 43200  # Twelve hours
+        withmpi: True
+    parameters:
+      INPUTEPW:
+        conv_thr_iaxis: 0.01
+        degaussq: 0.5
+        degaussw: 0.1
+        elecselfen: False
+        eliashberg: True
+        ep_coupling: False
+        epbread: False
+        epbwrite: False
+        ephwrite: False  
+        epwread: True
+        epwwrite: False
+        eps_acoustic: 0.1  # cm^{-1}
+        etf_mem: 1
+        fsthick: 0.8
+        laniso: False
+        limag: True
+        liso: True
+        mp_mesh_k: True
+        muc: 0.13
+        nqstep: 500
+        nsiter: 500
+        nstemp: 40
+        restart: True
+        selecqread:  False
+        tc_linear: True
+        tc_linear_solver: 'power'   
+        temps: 1 40
+        vme: 'dipole'
+        wannierize: False
+        wscut: 0.5
+  epw_final_aniso:
     metadata:
       options:
         resources:
@@ -71,22 +110,20 @@ default_inputs:
         ephwrite: False
         epwread: True
         epwwrite: False
-        eps_acustic: 1  # cm^{-1}
+        eps_acoustic: 0.1  # cm^{-1}
         etf_mem: 1
         fsthick: 0.8
-        laniso: False
+        laniso: True
         limag: True
-        liso: True
+        liso: False
         # mp_mesh_k: True
         muc: 0.13
         nqstep: 500
         nsiter: 500
-        nstemp: 40
+        nstemp: 20
         restart: True
         selecqread:  False
-        tc_linear: True
-        tc_linear_solver: 'power'   
-        temps: 1 40
+        temps: 5 43
         vme: 'dipole'
         wannierize: False
         wscut: 0.5

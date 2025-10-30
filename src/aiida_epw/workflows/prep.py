@@ -4,7 +4,7 @@ from pathlib import Path
 from aiida import orm
 from aiida.common import AttributeDict
 
-from aiida.engine import WorkChain, ToContext
+from aiida.engine import WorkChain, ToContext, if_
 from aiida_quantumespresso.workflows.ph.base import PhBaseWorkChain
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
@@ -16,7 +16,8 @@ from aiida_wannier90_workflows.utils.workflows.builder.setter import set_kpoints
 from aiida_wannier90_workflows.common.types import WannierProjectionType
 
 from aiida_epw.workflows.base import EpwBaseWorkChain
-class EpwWorkChain(ProtocolMixin, WorkChain):
+
+class EpwPrepWorkChain(ProtocolMixin, WorkChain):
     """Main work chain to start calculating properties using EPW.
 
     Has support for both the selected columns of the density matrix (SCDM) and
@@ -49,12 +50,13 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
                 'clean_workdir', 'ph.parent_folder', 'qpoints', 'qpoints_distance'
             ),
             namespace_options={
-                'help': 'Inputs for the `PwBaseWorkChain` that does the `ph.x` calculation.'
+                'help': 'Inputs for the `PhBaseWorkChain` that does the `ph.x` calculation.'
             }
         )
         spec.expose_inputs(
             EpwBaseWorkChain, namespace='epw_base', exclude=(
                 'structure',
+                'clean_workdir',
                 'kpoints', 
                 'qpoints', 
                 'kfpoints', 
@@ -70,6 +72,7 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
                 'help': 'Inputs for the `EpwBaseWorkChain`.'
             }
         )
+
         spec.output('retrieved', valid_type=orm.FolderData)
         spec.output('epw_folder', valid_type=orm.RemoteStashFolderData)
 
@@ -95,7 +98,7 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
         """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
         from importlib_resources import files
         from . import protocols
-        return files(protocols) / 'epw.yaml'
+        return files(protocols) / 'prep.yaml'
 
     @classmethod
     def get_builder_from_protocol(cls, codes, structure, protocol=None, overrides=None,
@@ -112,6 +115,9 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
         :return: a process builder instance with all inputs defined ready for launch.
         """
         inputs = cls.get_protocol_inputs(protocol, overrides)
+
+        builder = cls.get_builder()
+        builder.structure = structure
 
         w90_bands_inputs = inputs.get('w90_bands', {})
         pseudo_family = w90_bands_inputs.pop('pseudo_family', None)
@@ -144,45 +150,49 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
         w90_bands.pop('structure', None)
         w90_bands.pop('open_grid', None)
 
+        builder.w90_bands = w90_bands
+
         args = (codes['ph'], None, protocol)
         ph_base = PhBaseWorkChain.get_builder_from_protocol(*args, overrides=inputs.get('ph_base', None), **kwargs)
         ph_base.pop('clean_workdir', None)
         ph_base.pop('qpoints_distance')
 
-        epw_base_inputs = inputs.get('epw_base', None)
+        builder.ph_base = ph_base
 
-        if 'target_base' not in epw_base_inputs['epw']['metadata']['options']['stash']:
-            epw_computer = codes['epw'].computer
-            if epw_computer.transport_type == 'core.local':
-                target_basepath = Path(epw_computer.get_workdir(), 'stash').as_posix()
-            elif epw_computer.transport_type == 'core.ssh':
-                target_basepath = Path(
-                    epw_computer.get_workdir().format(username=epw_computer.get_configuration()['username']), 'stash'
-                ).as_posix()
-            
-            epw_base_inputs['epw']['metadata']['options']['stash']['target_base'] = target_basepath
+        # TODO: 
+        # Here I have a loop for the epw builders for furture extension of another epw bands interpolation
+        # .
+        for namespace in ['epw_base',]:
+            epw_inputs = inputs.get(namespace, None)
+            if namespace == 'epw_base':
+                if 'target_base' not in epw_inputs['metadata']['options']['stash']:
+                    epw_computer = codes['epw'].computer
+                    if epw_computer.transport_type == 'core.local':
+                        target_basepath = Path(epw_computer.get_workdir(), 'stash').as_posix()
+                    elif epw_computer.transport_type == 'core.ssh':
+                        target_basepath = Path(
+                            epw_computer.get_workdir().format(username=epw_computer.get_configuration()['username']), 'stash'
+                        ).as_posix()
+                    
+                    epw_inputs['metadata']['options']['stash']['target_base'] = target_basepath
 
-        epw_base = EpwBaseWorkChain.get_builder_from_protocol(
-            code=codes['epw'],
-            structure=structure,
-            protocol=protocol,
-            overrides=epw_base_inputs,
-            **kwargs
-        )
+            epw_builder = EpwBaseWorkChain.get_builder_from_protocol(
+                code=codes['epw'],
+                structure=structure,
+                protocol=protocol,
+                overrides=epw_inputs,
+                **kwargs
+            )
 
-        if 'settings' in epw_base_inputs['epw']:
-            epw_base.epw['settings'] = orm.Dict(epw_base_inputs['epw']['settings'])
-        if 'parallelization' in epw_base_inputs['epw']:
-            epw_base.epw['parallelization'] = orm.Dict(epw_base_inputs['epw']['parallelization'])
-        
-        builder = cls.get_builder()
+            if 'settings' in epw_inputs:
+                epw_builder.settings = orm.Dict(epw_inputs['settings'])
+            if 'parallelization' in epw_inputs:
+                epw_builder.parallelization = orm.Dict(epw_inputs['parallelization'])
+            builder[namespace] = epw_builder
+
         builder.qpoints_distance = orm.Float(inputs['qpoints_distance'])
         builder.kpoints_distance_scf = orm.Float(inputs['kpoints_distance_scf'])
         builder.kpoints_factor_nscf = orm.Int(inputs['kpoints_factor_nscf'])
-        builder.structure = structure
-        builder.w90_bands = w90_bands
-        builder.ph_base = ph_base
-        builder.epw_base = epw_base
         builder.clean_workdir = orm.Bool(inputs['clean_workdir'])
 
         return builder
@@ -274,14 +284,12 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
 
     def run_epw(self):
         """Run the `EpwBaseWorkChain`."""        
-        inputs = AttributeDict(self.exposed_inputs(EpwBaseWorkChain, namespace='epw_base'))
+        inputs = AttributeDict(self.exposed_inputs(EpwBaseWorkChain), namespace='epw_base')
 
         # The EpwBaseWorkChain will take the parent folder of the previous
         # PhCalculation, PwCalculation, and Wannier90Calculation.
-        # And it will take over the file copying and ukk file generation.
         inputs.parent_folder_ph = self.ctx.workchain_ph.outputs.remote_folder
-        # nscf_base_wc =  self.ctx.workchain_w90_bands.base.links.get_outgoing(link_label_filter='nscf').first().node
-        # inputs.parent_folder_nscf = nscf_base_wc.outputs.remote_folder
+
         w90_workchain = self.ctx.workchain_w90_bands
         inputs.parent_folder_nscf = w90_workchain.outputs.nscf.remote_folder
         if self.ctx.w90_class_name == 'Wannier90OptimizeWorkChain' and w90_workchain.inputs.optimize_disproj:
@@ -305,32 +313,10 @@ class EpwWorkChain(ProtocolMixin, WorkChain):
         # and the file copying and conversion 
         # is now handled by the EpwBaseWorkChain.
 
-        # parameters = inputs.epw.parameters.get_dict()
-
-        # wannier_params = self.ctx.workchain_w90_bands.inputs.wannier90.wannier90.parameters.get_dict()
-        # exclude_bands = wannier_params.get('exclude_bands') #TODO check this!
-        # if exclude_bands:
-        #     parameters['INPUTEPW']['bands_skipped'] = f'exclude_bands = {exclude_bands[0]}:{exclude_bands[-1]}'
-
-        # parameters['INPUTEPW']['nbndsub'] = wannier_params['num_wann']
-        # inputs.epw.parameters = orm.Dict(parameters)
-
-        # if 'projwfc' in self.inputs.w90_bands:
-        #     w90_remote_data = self.ctx.workchain_w90_bands.outputs.wannier90__remote_folder
-        # else:
-        #     w90_remote_data = self.ctx.workchain_w90_bands.outputs.wannier90_optimal__remote_folder
-
-        # wannier_chk_path = Path(w90_remote_data.get_remote_path(), 'aiida.chk')
-        # nscf_xml_path = Path(self.ctx.workchain_w90_bands.outputs.nscf.remote_folder.get_remote_path(), 'out/aiida.xml')
-
-        # prepend_text = inputs.metadata.options.get('prepend_text', '')
-        # prepend_text += f'\n{self.inputs.w90_chk_to_ukk_script.get_remote_path()} {wannier_chk_path} {nscf_xml_path} aiida.ukk'
-        # inputs.metadata.options.prepend_text = prepend_text
-
         inputs.metadata.call_link_label = 'epw_base'
 
         workchain_node = self.submit(EpwBaseWorkChain, **inputs)
-        self.report(f'launching EpwBaseWorkChain<{workchain_node.pk}>')
+        self.report(f'launching EpwBaseWorkChain<{workchain_node.pk}> in transformation mode')
 
         return ToContext(workchain_epw=workchain_node)
 

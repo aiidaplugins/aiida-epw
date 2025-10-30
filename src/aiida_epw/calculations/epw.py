@@ -207,6 +207,21 @@ class EpwCalculation(CalcJob):
                 remote_list.append(
                     (parent_folder_epw.computer.uuid, Path(epw_path, filename).as_posix(), Path(filename).as_posix())
                 )
+        # check if wannierize is True and if parent_folder_epw or parent_folder_chk is provided
+        wannierize = parameters['INPUTEPW'].get('wannierize', False)
+
+        if wannierize and any(
+            _ in self.inputs
+            for _ in ["parent_folder_epw", "parent_folder_chk"]
+        ):
+            self.report("Should not have a parent folder of epw or chk if wannierize is True")
+            return self.exit_codes.ERROR_PARAMETERS_NOT_VALID
+            
+        # check if nstemp is too large
+        nstemp = parameters['INPUTEPW'].get('nstemp', None)
+        if nstemp and nstemp > self._MAX_NSTEMP:
+            self.report(f'nstemp too large, reset it to maximum allowed: {self._MAX_NSTEMP}')
+            parameters['INPUTEPW']['nstemp'] = self._MAX_NSTEMP
 
         parameters['INPUTEPW']['outdir'] = self._OUTPUT_SUBFOLDER
         parameters['INPUTEPW']['dvscf_dir'] = self._FOLDER_SAVE

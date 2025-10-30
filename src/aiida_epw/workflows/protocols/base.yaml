@@ -3,18 +3,17 @@ default_inputs:
   max_iterations: 5
   qfpoints_distance: 0.1
   kfpoints_factor: 2
-  epw:
-    metadata:
-      options:
-        withmpi: True
-    parameters:
-      INPUTEPW:
-        degaussw: 0.04
-        eps_acoustic: 0.1
-        muc: 0.13
-        temps: 300
-        vme: 'dipole'
-        use_ws: True
+  metadata:
+    options:
+      withmpi: True
+  parameters:
+    INPUTEPW:
+      degaussw: 0.04
+      eps_acoustic: 0.1
+      muc: 0.13
+      temps: 300
+      vme: 'dipole'
+      use_ws: True
 
 default_protocol: moderate
 protocols:
