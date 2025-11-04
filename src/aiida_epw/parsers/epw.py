@@ -3,7 +3,7 @@ import re
 from aiida import orm
 import numpy
 
-from aiida_quantumespresso.calculations.epw import EpwCalculation
+from aiida_epw.calculations.epw import EpwCalculation
 from aiida_quantumespresso.parsers.base import BaseParser
 from aiida_quantumespresso.utils.mapping import get_logging_container
 

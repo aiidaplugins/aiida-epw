@@ -57,11 +57,22 @@ class EpwCalculation(CalcJob):
         spec.input('settings', valid_type=orm.Dict, required=False, help='')
         spec.input('parent_folder_nscf', required=False, valid_type=orm.RemoteData,
                    help='the folder of a completed nscf `PwCalculation`')
+        spec.input('parent_folder_chk', required=False, valid_type=orm.RemoteData,
+                   help='the folder of a completed wannier90 `Wannier90Calculation`')
         spec.input('parent_folder_ph', required=False, valid_type=orm.RemoteData,
                    help='the folder of a completed `PhCalculation`')
         spec.input('parent_folder_epw', required=False, valid_type=(orm.RemoteData, orm.RemoteStashFolderData),
                    help='folder that contains all files required to restart an `EpwCalculation`')
-        spec.inputs['metadata']['options']['parser_name'].default = 'quantumespresso.epw'
+        spec.input(
+            'w90_chk_to_ukk_script',
+            valid_type=orm.RemoteData,
+            required=False,
+            help=(
+                "The script to convert the chk file to a ukk file"
+                )
+            )
+
+        spec.inputs['metadata']['options']['parser_name'].default = 'epw.epw'
 
         spec.output('output_parameters', valid_type=orm.Dict,
                     help='The `output_parameters` output node of the successful calculation.')
@@ -131,6 +142,28 @@ class EpwCalculation(CalcJob):
                 Path(parent_folder_nscf.get_remote_path(), PwCalculation._OUTPUT_SUBFOLDER).as_posix(),
                 self._OUTPUT_SUBFOLDER,
             ))
+            
+        # If parent_folder_chk is provided, we need to copy the .chk, .bvec, and .mmn files to the epw folder.
+        # We can do symlink for .chk and .bvec. .mmn file is already a symlink as defined in wannier workflow.
+        # Note that we do some modification to the .mmn file in site so here we rename it to avoid overwriting.
+        if 'parent_folder_chk' in self.inputs:
+            parent_folder_chk = self.inputs.parent_folder_chk
+
+            for suffix in ['chk', 'bvec']:
+                remote_list.append(
+                    (
+                        parent_folder_chk.computer.uuid, 
+                        Path(parent_folder_chk.get_remote_path(), self._PREFIX + '.' + suffix).as_posix(),
+                        self._PREFIX + '.' + suffix
+                    )
+                )
+            remote_list.append(
+                (
+                    parent_folder_chk.computer.uuid, 
+                    Path(parent_folder_chk.get_remote_path(), self._PREFIX + '.mmn').as_posix(),
+                    self._PREFIX + '.wannier90.mmn'
+                )
+            )
 
         if 'parent_folder_ph' in self.inputs:
             parent_folder_ph = self.inputs.parent_folder_ph
@@ -207,6 +240,21 @@ class EpwCalculation(CalcJob):
                 remote_list.append(
                     (parent_folder_epw.computer.uuid, Path(epw_path, filename).as_posix(), Path(filename).as_posix())
                 )
+        # check if wannierize is True and if parent_folder_epw or parent_folder_chk is provided
+        wannierize = parameters['INPUTEPW'].get('wannierize', False)
+
+        if wannierize and any(
+            _ in self.inputs
+            for _ in ["parent_folder_epw", "parent_folder_chk"]
+        ):
+            self.report("Should not have a parent folder of epw or chk if wannierize is True")
+            return self.exit_codes.ERROR_PARAMETERS_NOT_VALID
+            
+        # check if nstemp is too large
+        nstemp = parameters['INPUTEPW'].get('nstemp', None)
+        if nstemp and nstemp > self._MAX_NSTEMP:
+            self.report(f'nstemp too large, reset it to maximum allowed: {self._MAX_NSTEMP}')
+            parameters['INPUTEPW']['nstemp'] = self._MAX_NSTEMP
 
         parameters['INPUTEPW']['outdir'] = self._OUTPUT_SUBFOLDER
         parameters['INPUTEPW']['dvscf_dir'] = self._FOLDER_SAVE

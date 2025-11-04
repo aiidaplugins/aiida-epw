@@ -24,7 +24,7 @@ default_inputs:
     ph:
       settings:
         PREPARE_FOR_EPW: True
-  epw:
+  epw_base:
     metadata:
       options:
         resources:

@@ -27,3 +27,7 @@ def calculate_lambda_omega(frequency: ArrayLike, spectrum: ArrayLike) -> tuple:
     omega_log = omega_log * meV_to_Kelvin
 
     return lambda_, omega_log
+
+# This function is taken from https://www.sciencedirect.com/science/article/pii/S0010465516302260 eq.81
+def bcs_gap_function(T, Tc, p, Delta_0):
+    return Delta_0 * numpy.sqrt(1 - (T/Tc)**p)

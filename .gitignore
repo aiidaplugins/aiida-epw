@@ -208,3 +208,5 @@ __marimo__/
 
 # MyST documentation build
 docs/_build
+
+dev/
