@@ -61,13 +61,6 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         spec.input('convergence_threshold', valid_type=orm.Float, required=False)
         spec.input('always_run_final', valid_type=orm.Bool, default=lambda: orm.Bool(False))
 
-        # TODO: We can choose how we solve the Migdal-Eliashberg equations.
-        # We can have another input port `do_fbw` such that if we want to do a full-bandwidth calculation, 
-        # we can set it to true.
-
-        # We can have another input port `do_ir` such that if we want to do solve it in the 
-        # intermediate representation space, we can set it to true.
-
         spec.expose_inputs(
             EpwBaseWorkChain, namespace='epw_interp', exclude=(
                 'clean_workdir', 'parent_folder_ph', 'parent_folder_nscf', 'parent_folder_chk', 'qfpoints', 'kfpoints'
@@ -196,8 +189,6 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         if isinstance(inputs['interpolation_distance'], float):
             builder.interpolation_distance = orm.Float(inputs['interpolation_distance'])
         if isinstance(inputs['interpolation_distance'], list):
-            # qpoints_distance = parent_epw.inputs.qpoints_distance
-            # interpolation_distance = [v for v in inputs['interpolation_distance'] if v < qpoints_distance / 2]
             builder.interpolation_distance = orm.List(inputs['interpolation_distance'])
 
         builder.convergence_threshold = orm.Float(inputs['convergence_threshold'])
@@ -283,9 +274,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         if not workchain.is_finished_ok:
             self.report(f'EpwBaseWorkChain<{workchain.pk}> failed with exit status {workchain.exit_status}')
             self.ctx.epw_interp.pop()
-            # return self.exit_codes.ERROR_SUB_PROCESS_EPW_INTERP
         else:
-            # self.ctx.final_interp = workchain.inputs.qfpoints_distance
             try:
                 self.report(f"Allen-Dynes: {workchain.outputs.output_parameters['Allen_Dynes_Tc']}")
             except KeyError:
@@ -297,10 +286,6 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
 
     def should_run_final(self):
         """Check if the final EpwBaseWorkChain should be run."""
-        # if not self.inputs.always_run_final and 'convergence_threshold' in self.inputs:
-        #     return self.ctx.is_converged
-        # if self.ctx.final_interp is None:
-        #     return False
         if self.ctx.is_converged or self.inputs.always_run_final.value:
             return True
         else:

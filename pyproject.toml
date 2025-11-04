@@ -38,7 +38,7 @@ Source = "https://github.com/aiidaplugins/aiida-epw"
 
 [project.entry-points.'aiida.workflows']
 'epw.base' = 'aiida_epw.workflows.base:EpwBaseWorkChain'
-'epw.epw' = 'aiida_epw.workflows.epw:EpwWorkChain'
+'epw.epw_prep' = 'aiida_epw.workflows.prep:EpwPrepWorkChain'
 'epw.supercon' = 'aiida_epw.workflows.supercon:SuperConWorkChain'
 
 [tool.hatch.version]

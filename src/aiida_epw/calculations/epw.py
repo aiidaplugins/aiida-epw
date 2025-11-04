@@ -145,7 +145,7 @@ class EpwCalculation(CalcJob):
             
         # If parent_folder_chk is provided, we need to copy the .chk, .bvec, and .mmn files to the epw folder.
         # We can do symlink for .chk and .bvec. .mmn file is already a symlink as defined in wannier workflow.
-        # Not that we do some modification to the .mmn file in site so here we rename it to avoid overwriting.
+        # Note that we do some modification to the .mmn file in site so here we rename it to avoid overwriting.
         if 'parent_folder_chk' in self.inputs:
             parent_folder_chk = self.inputs.parent_folder_chk
 

@@ -159,9 +159,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
 
         builder.ph_base = ph_base
 
-        # TODO: 
-        # Here I have a loop for the epw builders for furture extension of another epw bands interpolation
-        # .
+        # TODO: Here I have a loop for the epw builders for future extension of another epw bands interpolation
         for namespace in ['epw_base',]:
             epw_inputs = inputs.get(namespace, None)
             if namespace == 'epw_base':
@@ -297,21 +295,16 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         else:
             inputs.parent_folder_chk = w90_workchain.outputs.wannier90.remote_folder
 
+        # Here we explicitly specify the coarse k/q grid so the EpwBaseWorkChain will not deduce it from the parent
+        # folders. This EpwBaseWorkChain is only used for the transition from coarse Bloch representation to Wannier
+        # representation. Thus the fine grid is always [1, 1, 1].
         fine_points = orm.KpointsData()
         fine_points.set_kpoints_mesh([1, 1, 1])
 
-        # Here we explicitely speficy the coarse k/q grid so EpwBaseWorkChain will not deduce it from
-        # the parent folders.
-        # This EpwBaseWorkChain is only used for the transition from coarse BLoch representation to Wannier representation.
-        # Thus the find grid is always [1, 1, 1].
         inputs.kpoints = self.ctx.kpoints_nscf
         inputs.kfpoints = fine_points
         inputs.qpoints = self.ctx.qpoints
         inputs.qfpoints = fine_points      
-
-        # The update of epw parameters according to the wannier parameters
-        # and the file copying and conversion 
-        # is now handled by the EpwBaseWorkChain.
 
         inputs.metadata.call_link_label = 'epw_base'
 
