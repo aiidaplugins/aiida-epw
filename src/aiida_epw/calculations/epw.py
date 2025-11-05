@@ -55,54 +55,102 @@ class EpwCalculation(CalcJob):
     @classmethod
     def define(cls, spec):
         """Define the process specification."""
-        # yapf: disable
         super().define(spec)
-        spec.input('metadata.options.input_filename', valid_type=str, default=cls._DEFAULT_INPUT_FILE)
-        spec.input('metadata.options.output_filename', valid_type=str, default=cls._DEFAULT_OUTPUT_FILE)
-        spec.input('metadata.options.withmpi', valid_type=bool, default=True)
-        spec.input('kpoints', valid_type=orm.KpointsData, help='coarse kpoint mesh')
-        spec.input('qpoints', valid_type=orm.KpointsData, help='coarse qpoint mesh')
-        spec.input('kfpoints', valid_type=orm.KpointsData, help='fine kpoint mesh')
-        spec.input('qfpoints', valid_type=orm.KpointsData, help='fine qpoint mesh')
-        spec.input('parameters', valid_type=orm.Dict, help='')
-        spec.input('settings', valid_type=orm.Dict, required=False, help='')
-        spec.input('parent_folder_nscf', required=False, valid_type=orm.RemoteData,
-                   help='the folder of a completed nscf `PwCalculation`')
-        spec.input('parent_folder_chk', required=False, valid_type=orm.RemoteData,
-                   help='the folder of a completed wannier90 `Wannier90Calculation`')
-        spec.input('parent_folder_ph', required=False, valid_type=orm.RemoteData,
-                   help='the folder of a completed `PhCalculation`')
-        spec.input('parent_folder_epw', required=False, valid_type=(orm.RemoteData, orm.RemoteStashFolderData),
-                   help='folder that contains all files required to restart an `EpwCalculation`')
         spec.input(
-            'w90_chk_to_ukk_script',
+            "metadata.options.input_filename",
+            valid_type=str,
+            default=cls._DEFAULT_INPUT_FILE,
+        )
+        spec.input(
+            "metadata.options.output_filename",
+            valid_type=str,
+            default=cls._DEFAULT_OUTPUT_FILE,
+        )
+        spec.input("metadata.options.withmpi", valid_type=bool, default=True)
+        spec.input("kpoints", valid_type=orm.KpointsData, help="coarse kpoint mesh")
+        spec.input("qpoints", valid_type=orm.KpointsData, help="coarse qpoint mesh")
+        spec.input("kfpoints", valid_type=orm.KpointsData, help="fine kpoint mesh")
+        spec.input("qfpoints", valid_type=orm.KpointsData, help="fine qpoint mesh")
+        spec.input("parameters", valid_type=orm.Dict, help="")
+        spec.input("settings", valid_type=orm.Dict, required=False, help="")
+        spec.input(
+            "parent_folder_nscf",
+            required=False,
+            valid_type=orm.RemoteData,
+            help="the folder of a completed nscf `PwCalculation`",
+        )
+        spec.input(
+            "parent_folder_chk",
+            required=False,
+            valid_type=orm.RemoteData,
+            help="the folder of a completed wannier90 `Wannier90Calculation`",
+        )
+        spec.input(
+            "parent_folder_ph",
+            required=False,
+            valid_type=orm.RemoteData,
+            help="the folder of a completed `PhCalculation`",
+        )
+        spec.input(
+            "parent_folder_epw",
+            required=False,
+            valid_type=(orm.RemoteData, orm.RemoteStashFolderData),
+            help="folder that contains all files required to restart an `EpwCalculation`",
+        )
+        spec.input(
+            "w90_chk_to_ukk_script",
             valid_type=orm.RemoteData,
             required=False,
-            help=(
-                "The script to convert the chk file to a ukk file"
-                )
-            )
+            help=("The script to convert the chk file to a ukk file"),
+        )
 
-        spec.inputs['metadata']['options']['parser_name'].default = 'epw.epw'
+        spec.inputs["metadata"]["options"]["parser_name"].default = "epw.epw"
 
-        spec.output('output_parameters', valid_type=orm.Dict,
-                    help='The `output_parameters` output node of the successful calculation.')
-        spec.output('max_eigenvalue', valid_type=orm.XyData, required=False,
-                    help='The temperature dependence of the max eigenvalue.')
-        spec.output('a2f', valid_type=orm.XyData, required=False,
-                    help='The contents of the `.a2f` file.')
-        spec.output('el_band_structure', valid_type=orm.BandsData, required=False,
-                    help='The interpolated electronic band structure.')
-        spec.output('ph_band_structure', valid_type=orm.BandsData, required=False,
-                    help='The interpolated phonon band structure.')
+        spec.output(
+            "output_parameters",
+            valid_type=orm.Dict,
+            help="The `output_parameters` output node of the successful calculation.",
+        )
+        spec.output(
+            "max_eigenvalue",
+            valid_type=orm.XyData,
+            required=False,
+            help="The temperature dependence of the max eigenvalue.",
+        )
+        spec.output(
+            "a2f",
+            valid_type=orm.XyData,
+            required=False,
+            help="The contents of the `.a2f` file.",
+        )
+        spec.output(
+            "el_band_structure",
+            valid_type=orm.BandsData,
+            required=False,
+            help="The interpolated electronic band structure.",
+        )
+        spec.output(
+            "ph_band_structure",
+            valid_type=orm.BandsData,
+            required=False,
+            help="The interpolated phonon band structure.",
+        )
 
-        spec.exit_code(300, 'ERROR_NO_RETRIEVED_FOLDER',
-            message='The retrieved folder data node could not be accessed.')
-        spec.exit_code(310, 'ERROR_OUTPUT_STDOUT_READ',
-            message='The stdout output file could not be read.')
-        spec.exit_code(312, 'ERROR_OUTPUT_STDOUT_INCOMPLETE',
-            message='The stdout output file was incomplete probably because the calculation got interrupted.')
-        # yapf: enable
+        spec.exit_code(
+            300,
+            "ERROR_NO_RETRIEVED_FOLDER",
+            message="The retrieved folder data node could not be accessed.",
+        )
+        spec.exit_code(
+            310,
+            "ERROR_OUTPUT_STDOUT_READ",
+            message="The stdout output file could not be read.",
+        )
+        spec.exit_code(
+            312,
+            "ERROR_OUTPUT_STDOUT_INCOMPLETE",
+            message="The stdout output file was incomplete probably because the calculation got interrupted.",
+        )
 
     def prepare_for_submission(self, folder):
         """Prepare the calculation job for submission by transforming input nodes into input files.
@@ -114,8 +162,6 @@ class EpwCalculation(CalcJob):
         :param folder: a sandbox folder to temporarily write files on disk.
         :return: :class:`~aiida.common.datastructures.CalcInfo` instance.
         """
-
-        # pylint: disable=too-many-statements,too-many-branches, protected-access
 
         def test_offset(offset):
             """Check if the grid has an offset."""
@@ -245,15 +291,6 @@ class EpwCalculation(CalcJob):
                         Path("save", f"{prefix}.dvscf_q{iqpt}").as_posix(),
                     )
                 )
-                # The following code was a first attempt to also deal with PAW pseudos. Currently not supported.
-                #
-                # remote_copy_list.append((
-                #     parent_folder_ph.computer.uuid,
-                #     Path(
-                #     ph_path, outdir, '_ph0', '' if iqpt == 1 else f'{prefix}.q_{iqpt}', f'{prefix}.{fildvscf}_paw1'
-                #     ).as_posix(),
-                #     Path('save', f"{prefix}.dvscf_paw_q{iqpt}").as_posix()
-                # ))
                 remote_list.append(
                     (
                         parent_folder_ph.computer.uuid,
