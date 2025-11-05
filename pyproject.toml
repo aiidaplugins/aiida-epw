@@ -46,7 +46,8 @@ docs = [
 "mystmd"
 ]
 tests = [
-  "pytest"
+  "pytest",
+  "pytest-regressions"
 ]
 pre-commit = [
   "pre-commit"
