@@ -41,17 +41,55 @@ Source = "https://github.com/aiidaplugins/aiida-epw"
 'epw.epw_prep' = 'aiida_epw.workflows.prep:EpwPrepWorkChain'
 'epw.supercon' = 'aiida_epw.workflows.supercon:SuperConWorkChain'
 
+[project.optional-dependencies]
+docs = [
+"mystmd"
+]
+tests = [
+  "pytest"
+]
+pre-commit = [
+  "pre-commit"
+]
+
+[dependency-groups]
+dev = [
+  "aiida-epw[docs,tests,pre-commit]",
+]
+
 [tool.hatch.version]
 path = "src/aiida_epw/__about__.py"
 
+[tool.hatch.envs.default]
+installer = 'uv'
+
 [tool.hatch.envs.docs]
-dependencies = [
-  "mystmd"
-]
+features = ["docs"]
 scripts.build = "cd docs && myst build"
 scripts.serve = "cd docs && myst start"
 
-[tool.hatch.envs.precommit]
-dependencies = ["pre-commit"]
+[tool.hatch.envs.pre-commit]
+features = ["pre-commit"]
 scripts.install = "pre-commit install"
-scripts.run = "pre-commit run {args:--all-files}"
+scripts.run = "pre-commit run {args}"
+
+[tool.hatch.envs.hatch-test]
+features = ["tests"]
+randomize = false
+parallel = false
+run = "pytest {args}"
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+[tool.ruff]
+lint.ignore = [
+    "TRY003",  # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
+    "EM101",   # https://docs.astral.sh/ruff/rules/raw-string-in-exception/
+    "EM102",   # https://docs.astral.sh/ruff/rules/f-string-in-exception/
+    "PLR2004", # https://docs.astral.sh/ruff/rules/magic-value-comparison/
+    "FBT002",  # https://docs.astral.sh/ruff/rules/boolean-default-value-positional-argument/
+    "TID252",  # https://docs.astral.sh/ruff/rules/relative-imports/
+]
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["INP001", "S101"]

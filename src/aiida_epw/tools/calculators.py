@@ -11,7 +11,11 @@ def allen_dynes(lambo, omega_log, mu_star):
     if lambo - mu_star * (1 + 0.62 * lambo) < 0:
         return 0
     else:
-        return omega_log * numpy.exp(-1.04 * (1 + lambo) / (lambo - mu_star * (1 + 0.62 * lambo))) / 1.2
+        return (
+            omega_log
+            * numpy.exp(-1.04 * (1 + lambo) / (lambo - mu_star * (1 + 0.62 * lambo)))
+            / 1.2
+        )
 
 
 def calculate_lambda_omega(frequency: ArrayLike, spectrum: ArrayLike) -> tuple:
@@ -23,11 +27,16 @@ def calculate_lambda_omega(frequency: ArrayLike, spectrum: ArrayLike) -> tuple:
     :returns: Tuple of the calculated lambda and omega_log values.
     """
     lambda_ = 2 * numpy.trapezoid(spectrum / frequency, frequency)  # unitless
-    omega_log = numpy.exp(2 / lambda_ * numpy.trapezoid(spectrum / frequency * numpy.log(frequency), frequency))  # eV
+    omega_log = numpy.exp(
+        2
+        / lambda_
+        * numpy.trapezoid(spectrum / frequency * numpy.log(frequency), frequency)
+    )  # eV
     omega_log = omega_log * meV_to_Kelvin
 
     return lambda_, omega_log
 
+
 # This function is taken from https://www.sciencedirect.com/science/article/pii/S0010465516302260 eq.81
 def bcs_gap_function(T, Tc, p, Delta_0):
-    return Delta_0 * numpy.sqrt(1 - (T/Tc)**p)
+    return Delta_0 * numpy.sqrt(1 - (T / Tc) ** p)
