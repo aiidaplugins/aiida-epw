@@ -425,7 +425,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
 
     def should_run_epw_bands(self):
         """Check if the `EpwBaseWorkChain` should be run in bands mode."""
-        return self.inputs.get("epw_bands", False)
+        return "epw_bands" in self.inputs
 
     def run_epw_bands(self):
         """Run the `EpwBaseWorkChain`."""
@@ -442,6 +442,9 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                 .first()
                 .node.outputs.explicit_kpoints
             )
+
+        inputs.kpoints = self.ctx.kpoints_nscf
+        inputs.qpoints = self.ctx.qpoints
         inputs.qfpoints = bands_kpoints
         inputs.kfpoints = bands_kpoints
         inputs.parent_folder_epw = self.ctx.workchain_epw.outputs.remote_folder
