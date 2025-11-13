@@ -20,29 +20,31 @@ default_inputs:
             noinv: False
           CONTROL:
             calculation: bands
+    wannier90:
+      wannier90:
+        parameters:
+          write_bvec: True
   ph_base:
     ph:
       settings:
         PREPARE_FOR_EPW: True
   epw_base:
-    metadata:
-      options:
-        resources:
-          num_machines: 1
-        max_wallclock_seconds: 43200  # Twelve hours
-        withmpi: True
-        stash:
-          source_list:
-            - crystal.fmt
-            - dmedata.fmt
-            - epwdata.fmt
-            - selecq.fmt
-            - vmedata.fmt
-            - aiida.kgmap
-            - aiida.kmap
-            - aiida.ukk
-            - out/aiida.epmatwp
-            - save
+    options:
+      resources:
+        num_machines: 1
+      withmpi: True
+      stash:
+        source_list:
+          - crystal.fmt
+          - dmedata.fmt
+          - epwdata.fmt
+          - selecq.fmt
+          - vmedata.fmt
+          - aiida.kgmap
+          - aiida.kmap
+          - aiida.ukk
+          - out/aiida.epmatwp
+          - save
     parameters:
       INPUTEPW:
         a2f: False
@@ -57,6 +59,20 @@ default_inputs:
         phonselfen: False
         temps: 300
         vme: 'dipole'
+        wannierize: False
+  epw_bands:
+    options:
+      resources:
+        num_machines: 1
+      withmpi: True
+    parameters:
+      INPUTEPW:
+        band_plot: True
+        elph: True
+        epbread: False
+        epbwrite: False
+        epwread: True
+        epwwrite: False
         wannierize: False
 default_protocol: moderate
 protocols:

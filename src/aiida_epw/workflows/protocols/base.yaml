@@ -3,9 +3,8 @@ default_inputs:
   max_iterations: 5
   qfpoints_distance: 0.1
   kfpoints_factor: 2
-  metadata:
-    options:
-      withmpi: True
+  options:
+    withmpi: True
   parameters:
     INPUTEPW:
       degaussw: 0.04
