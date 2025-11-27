@@ -58,6 +58,20 @@ default_inputs:
         temps: 300
         vme: 'dipole'
         wannierize: False
+  epw_bands:
+    options:
+      resources:
+        num_machines: 1
+      withmpi: True
+    parameters:
+      INPUTEPW:
+        band_plot: True
+        elph: True
+        epbread: False
+        epbwrite: False
+        epwread: True
+        epwwrite: False
+        wannierize: False
 default_protocol: moderate
 protocols:
   moderate:

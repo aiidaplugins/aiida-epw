@@ -5,7 +5,7 @@ from pathlib import Path
 from aiida import orm
 from aiida.common import AttributeDict
 
-from aiida.engine import WorkChain, ToContext
+from aiida.engine import WorkChain, ToContext, if_
 from aiida_quantumespresso.workflows.ph.base import PhBaseWorkChain
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
@@ -101,7 +101,22 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             ),
             namespace_options={"help": "Inputs for the `EpwBaseWorkChain`."},
         )
-
+        spec.expose_inputs(
+            EpwBaseWorkChain,
+            namespace="epw_bands",
+            exclude=(
+                "structure",
+                "clean_workdir",
+                "kpoints",
+                "qpoints",
+                "kfpoints",
+                "qfpoints",
+                "qfpoints_distance",
+                "kfpoints_factor",
+                "parent_folder_epw",
+            ),
+            namespace_options={"help": "Inputs namespace for `EpwBaseWorkChain` that runs the `epw.x` calculation in interpolation mode, i.e. the interpolated electron and phonon band structures."},
+        )
         spec.output("retrieved", valid_type=orm.FolderData)
         spec.output("epw_folder", valid_type=orm.RemoteStashFolderData)
 
@@ -113,6 +128,10 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             cls.inspect_ph,
             cls.run_epw,
             cls.inspect_epw,
+            if_(cls.should_run_epw_bands)(
+                cls.run_epw_bands,
+                cls.inspect_epw_bands,
+            ),
             cls.results,
         )
         spec.exit_code(
@@ -130,7 +149,11 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             "ERROR_SUB_PROCESS_FAILED_EPW",
             message="The `EpwWorkChain` sub process failed",
         )
-
+        spec.exit_code(
+            406,
+            "ERROR_SUB_PROCESS_FAILED_EPW_BANDS",
+            message="The `EpwBaseWorkChain` sub process failed",
+        )
     @classmethod
     def get_protocol_filepath(cls):
         """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
@@ -212,9 +235,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         builder.ph_base = ph_base
 
         # TODO: Here I have a loop for the epw builders for future extension of another epw bands interpolation
-        for namespace in [
-            "epw_base",
-        ]:
+        for namespace in ["epw_base", "epw_bands"]:
             epw_inputs = inputs.get(namespace, None)
             if namespace == "epw_base":
                 if "target_base" not in epw_inputs["metadata"]["options"]["stash"]:
@@ -402,6 +423,48 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                 f"EpwBaseWorkChain<{workchain.pk}> failed with exit status {workchain.exit_status}"
             )
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_EPW
+    
+    def should_run_epw_bands(self):
+        """Check if the `EpwBaseWorkChain` should be run in bands mode."""
+        return "epw_bands" in self.inputs
+
+    def run_epw_bands(self):
+        """Run the `EpwBaseWorkChain` in bands mode."""
+        inputs = AttributeDict(
+            self.exposed_inputs(EpwBaseWorkChain, namespace="epw_bands")
+        )
+        if "bands_kpoints" in self.ctx.workchain_w90_bands.inputs:
+            bands_kpoints = self.ctx.workchain_w90_bands.inputs.bands_kpoints
+        else:
+            bands_kpoints = (
+                self.ctx.workchain_w90_bands.base.links.get_outgoing(
+                    link_label_filter="seekpath_structure_analysis"
+                )
+                .first()
+                .node.outputs.explicit_kpoints
+            )
+
+        inputs.kpoints = self.ctx.kpoints_nscf
+        inputs.qpoints = self.ctx.qpoints
+        inputs.qfpoints = bands_kpoints
+        inputs.kfpoints = bands_kpoints
+        inputs.parent_folder_epw = self.ctx.workchain_epw.outputs.remote_folder
+        inputs.metadata.call_link_label = "epw_bands"
+        workchain_node = self.submit(EpwBaseWorkChain, **inputs)
+        self.report(
+            f"launching EpwBaseWorkChain<{workchain_node.pk}> in bands interpolation mode"
+        )
+
+        return {"workchain_epw_bands": workchain_node}
+
+    def inspect_epw_bands(self):
+        """Verify that the `EpwBaseWorkChain` finished successfully."""
+        workchain = self.ctx.workchain_epw_bands
+        if not workchain.is_finished_ok:
+            self.report(
+                f"EpwBaseWorkChain<{workchain.pk}> failed with exit status {workchain.exit_status}"
+            )
+            return self.exit_codes.ERROR_SUB_PROCESS_FAILED_EPW_BANDS
 
     def results(self):
         """Add the most important results to the outputs of the work chain."""
