@@ -1,0 +1,223 @@
+                                                                                      
+                                       ``:oss/                                        
+                           `.+s+.     .+ys--yh+     `./ss+.                           
+                          -sh//yy+`   +yy   +yy    -+h+-oyy                           
+                          -yh- .oyy/.-sh.   .syo-.:sy-  /yh                           
+                 `.-.`    `yh+   -oyyyo.     `/syys:    oys      `.`                  
+               `/+ssys+-` `sh+      `                   oys`   .:osyo`                
+               -yh- ./syyooyo`                          .sys+/oyo--yh/                
+               `yy+    .-:-.                             `-/+/:`  -sh-                
+                /yh.                                              oys                 
+          ``..---hho---------`   .---------..`      `.-----.`    -hd+---.             
+       `./osmNMMMMMMMMMMMMMMMs. +NNMMMMMMMMNNmh+.   yNMMMMMNm-  oNMMMMMNmo++:`        
+       +sy--/sdMMMhyyyyyyyNMMh- .oyNMMmyyyyyhNMMm+` -yMMMdyyo:` .oyyNMMNhs+syy`       
+       -yy/   /MMM+.`-+/``mMMy-   `mMMh:`````.dMMN:` `MMMy-`-dhhy```mMMy:``+hs        
+        -yy+` /MMMo:-mMM+`-oo/.    mMMh:     `dMMN/`  dMMm:`dMMMMy..MMMo-.+yo`        
+         .sys`/MMMMNNMMMs-         mMMmyooooymMMNo:   oMMM/sMMMMMM++MMN//oh:          
+          `sh+/MMMhyyMMMs- `-`     mMMMMMMMMMNmy+-`   -MMMhMMMsmMMmdMMd/yy+           
+    `-/+++oyy-/MMM+.`/hh/.`mNm:`   mMMd+/////:-.`      NMMMMMd/:NMMMMMy:/yyo/:.`      
+   +os+//:-..-oMMMo:--:::-/MMMo. .-mMMd+---`           hMMMMN+. oMMMMMo. `-+osyso:`   
+   syo     `mNMMMMMNNNNNNNNMMMo.oNNMMMMMNNNN:`         +MMMMs:`  dMMMN/`     ``:syo   
+   /yh`     :syyyyyyyyyyyyyyyy+.`+syyyyyyyyo:`         .oyys:`   .oyys:`        +yh   
+   -yh-        ````````````````    `````````              ``        ``          oys   
+   -+h/------------------------::::::::://////++++++++++++++++++++++///////::::/yd:   
+   shdddddddddddddddddddddddddddddhhhhhhhhyyyyyssssssssssssssssyyyyyyyhhhhhhhddddh`   
+                                                                                      
+  S. Ponce, E. R. Margine, C. Verdi, and F. Giustino,                                 
+                                                Comput. Phys. Commun. 209, 116 (2016) 
+                                                                                      
+
+     Program EPW v.5.7 starts on 15May2023 at  5: 1: 8 
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on   128 processors
+
+     MPI processes distributed on     1 nodes
+     K-points division:     npool     =     128
+     172648 MiB available memory on the printing compute node when the environment starts
+
+     Reading input from aiida.in
+      Title line not specified: using 'default'.
+
+     Generating evenly spaced temperature list.
+                      
+     ------------------------------------------------------------------------ 
+                   RESTART - RESTART - RESTART - RESTART                         
+     Restart is done without reading PWSCF save file.                  
+     Be aware that some consistency checks are therefore not done.                  
+     ------------------------------------------------------------------------ 
+                      
+
+     default                                                                    
+
+     bravais-lattice index     =            0
+     lattice parameter (a_0)   =       0.0000  a.u.
+     unit-cell volume          =       0.0000 (a.u.)^3
+     number of atoms/cell      =            0
+     number of atomic types    =            0
+     kinetic-energy cut-off    =       0.0000  Ry
+     charge density cut-off    =       0.0000  Ry
+     Exchange-correlation= not set
+                           (  -1  -1  -1  -1  -1  -1  -1)
+
+
+     celldm(1)=    0.00000  celldm(2)=    0.00000  celldm(3)=    0.00000
+     celldm(4)=    0.00000  celldm(5)=    0.00000  celldm(6)=    0.00000
+
+     crystal axes: (cart. coord. in units of a_0)
+               a(1) = (  0.0000  0.0000  0.0000 )  
+               a(2) = (  0.0000  0.0000  0.0000 )  
+               a(3) = (  0.0000  0.0000  0.0000 )  
+
+     reciprocal axes: (cart. coord. in units 2 pi/a_0)
+               b(1) = (  0.0000  0.0000  0.0000 )  
+               b(2) = (  0.0000  0.0000  0.0000 )  
+               b(3) = (  0.0000  0.0000  0.0000 )  
+
+
+     Atoms inside the unit cell: 
+
+   Cartesian axes
+
+     site n.  atom      mass           positions (a_0 units)
+
+
+     No symmetry!
+
+     G cutoff =    0.0000  (      0 G-vectors)     FFT grid: (  0,  0,  0)
+     number of k points=    0
+                       cart. coord. in units 2pi/a_0
+
+     ===================================================================
+     Solve isotropic Eliashberg equations
+     ===================================================================
+
+
+     Finish reading freq file
+
+                  Fermi level (eV) =     1.0673979818E+01
+     DOS(states/spin/eV/Unit Cell) =     9.0087486874E-01
+            Electron smearing (eV) =     1.0000000000E-01
+                 Fermi window (eV) =     8.0000000000E-01
+     Nr irreducible k-points within the Fermi shell =         6 out of        16
+
+           2 bands within the Fermi window
+
+
+     Finish reading egnv file 
+
+
+     Max nr of q-points =       114
+
+
+     Finish reading ikmap files
+
+
+     Start reading .ephmat files
+
+
+     Finish reading .ephmat files
+
+     a2f file is not found to estimate initial gap: calculating a2f files
+ 
+
+     Finish reading a2f file
+
+     Electron-phonon coupling strength =    3.1076643
+ 
+     Estimated Allen-Dynes Tc =    10.325787 K for muc =    0.13000
+  
+     Estimated w_log in Allen-Dynes Tc =     5.114145 meV
+  
+     Estimated BCS superconducting gap =     1.566061 meV
+  
+     Estimated Tc from machine learning model =    15.259757 K
+  
+  
+     WARNING WARNING WARNING 
+  
+     The code may crash since tempsmax =   40.000 K is larger than Allen-Dynes Tc =    10.326 K
+
+     Start: Solving (isotropic) linearized Eliashberg equation with solver = power 
+
+     For the first Temp.    1.00  K
+       Total number of frequency points nsiw(     1) =    923
+       Cutoff frequency wscut =     0.5000
+
+     Superconducting transition temp. Tc is the one which has Max. eigenvalue close to 1
+      -----------------------------------------------------------------
+             Temp.       Max.         nsiw     wscut    Nr. of iters
+             (K)       eigenvalue    (itemp)   (eV)      to Converge
+      -----------------------------------------------------------------
+             1.00      8.0749492      923      0.5000        6
+             2.00      6.0952433      462      0.5008        6
+             3.00      4.9550287      308      0.5011        7
+             4.00      4.1510260      231      0.5014        8
+             5.00      3.5411762      185      0.5022        9
+             6.00      3.0481143      154      0.5019       10
+             7.00      2.6452945      132      0.5022       12
+             8.00      2.3084969      115      0.5003       14
+             9.00      2.0241404      103      0.5044       16
+            10.00      1.7817168       92      0.5008       18
+            11.00      1.5758625       84      0.5033       21
+            12.00      1.3970469       77      0.5035       25
+            13.00      1.2423247       71      0.5033       31
+            14.00     -1.2895975       66      0.5041      102
+            15.00     -1.1884091       62      0.5076       84
+            16.00     -1.0969646       58      0.5068       72
+            17.00     -1.0142853       54      0.5016       62
+            18.00     -0.9395173       51      0.5019       55
+            19.00     -0.8718618       49      0.5092       50
+            20.00     -0.8103122       46      0.5035       45
+            21.00     -0.7545709       44      0.5060       44
+            22.00     -0.7036040       42      0.5062       45
+            23.00     -0.5270683       40      0.5044       22
+            24.00     -0.5195246       38      0.5003       14
+            25.00     -0.5219724       37      0.5076       10
+            26.00     -0.5249400       36      0.5138        8
+            27.00     -0.4947943       34      0.5044        7
+            28.00     -0.5261210       33      0.5079        6
+            29.00     -0.5236440       32      0.5103        6
+            30.00     -0.4999166       31      0.5117        5
+            31.00     -0.5051196       30      0.5119        5
+            32.00     -0.5090324       29      0.5111        5
+            33.00     -0.5118799       28      0.5092        5
+            34.00     -0.5339493       27      0.5062        4
+            35.00     -0.5315130       26      0.5022        4
+            36.00     -0.5353007       26      0.5165        4
+            37.00     -0.5330202       25      0.5109        4
+            38.00     -0.5305653       24      0.5041        4
+            39.00     -0.5346307       24      0.5173        4
+            40.00     -0.5319354       23      0.5090        4
+      -----------------------------------------------------------------
+     Finish: Solving (isotropic) linearized Eliashberg equation
+
+
+     Unfolding on the coarse grid
+
+     INITIALIZATION: 
+
+
+
+
+     Electron-Phonon interpolation
+
+
+     ELIASHBERG   :      2.66s CPU      4.40s WALL (       1 calls)
+
+     Total program execution
+     EPW          :      2.68s CPU      4.43s WALL
+
+     ===============================================================================
+     The functionality-dependent EPW.bib file was created with suggested citations. 
+     Please consider citing the papers listed in EPW.bib.                           
+     ===============================================================================
+                                                                                    
