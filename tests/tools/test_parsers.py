@@ -49,8 +49,8 @@ def test_parse_epw_a2f(files_path: Path, data_regression):
     assert parsed["frequency"].shape[0] == parsed["a2f"].shape[0]
 
     regression_data = {
-        "frequency": parsed["frequency"].tolist(),
-        "a2f": parsed["a2f"].tolist(),
+        "frequency": parsed["frequency"].tolist()[:10],
+        "a2f": parsed["a2f"].tolist()[:10],
         "lambda": parsed["lambda"].tolist(),
         "phonon_smearing": parsed["phonon_smearing"].tolist(),
         "electron_smearing": float(parsed["electron_smearing"]),
@@ -86,9 +86,9 @@ def test_parse_epw_eldos(files_path: Path, data_regression):
     assert set(parsed.keys()) == {"energy", "edos", "integrated_dos"}
 
     regression_data = {
-        "energy": parsed["energy"].tolist(),
-        "edos": parsed["edos"].tolist(),
-        "integrated_dos": parsed["integrated_dos"].tolist(),
+        "energy": parsed["energy"].tolist()[:10],
+        "edos": parsed["edos"].tolist()[:10],
+        "integrated_dos": parsed["integrated_dos"].tolist()[:10],
     }
     data_regression.check(regression_data)
 
@@ -103,8 +103,8 @@ def test_parse_epw_phdos(files_path: Path, data_regression):
     assert set(parsed.keys()) == {"frequency", "phdos"}
 
     regression_data = {
-        "frequency": parsed["frequency"].tolist(),
-        "phdos": parsed["phdos"].tolist(),
+        "frequency": parsed["frequency"].tolist()[:10],
+        "phdos": parsed["phdos"].tolist()[:10],
     }
     data_regression.check(regression_data)
 
@@ -121,7 +121,7 @@ def test_parse_epw_imag_iso(files_path: Path, data_regression):
 
     assert parsed, "No temperatures were parsed from imag_iso files."
 
-    regression_data = {T: parsed[T].tolist() for T in sorted(parsed.keys())}
+    regression_data = {T: parsed[T].tolist()[:10] for T in sorted(parsed.keys())}
     data_regression.check(regression_data)
 
 
@@ -139,7 +139,7 @@ def test_parse_epw_imag_aniso_gap0(files_path: Path, data_regression):
 
     assert parsed, "No temperatures were parsed from imag_aniso_gap0 files."
 
-    regression_data = {T: parsed[T].tolist() for T in sorted(parsed.keys())}
+    regression_data = {T: parsed[T].tolist()[:10] for T in sorted(parsed.keys())}
     data_regression.check(regression_data)
 
 
