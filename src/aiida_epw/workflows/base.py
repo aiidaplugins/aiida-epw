@@ -94,8 +94,9 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             required=True,
             serializer=to_aiida_type,
             help=(
-                "The options dictionary for the calculation."
-                "It must be defined in the top-level as a solution of the conflict between `metadata_calculation` of the WorkChain and `metadata` of the Calculation."
+                "Dictionary containing the options for the calculation job."
+                "This input is defined at the top-level to resolve the conflict between"
+                "the WorkChain's `metadata` and the Calculation's `metadata` namespace."
                 )
             )
 
@@ -104,12 +105,14 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             valid_type=orm.StructureData,
             required=False,
             help=(
-                "The structure data to use for the generation of k/q points by `create_kpoints_from_distance` calcfunction."
-                "In principle, we should take the structure as the one we used in the previous calculation."
-                "However, it is a bit difficult to take all the restart cases into account if we have a long chain of EPW calculations."
-                "Therefore, for now we just provide it manually as an input."
-                "But in the future, it will be removed."
-                "In cases that the coarse and fine k/q points are explicitly speficied, this input is not necessary anymore."
+                "The StructureData used for generating k-points and q-points via the "
+                "`create_kpoints_from_distance` calculation function. This structure should match "
+                "the one used in the previous calculation (e.g., SCF, NSCF, or phonon calculation). "
+                "This input is only required when fine k/q-points need to be generated from a "
+                "distance specification. If coarse and fine k/q-points are explicitly provided "
+                "as `KpointsData` nodes, this input is not necessary. Note: This manual input "
+                "may be removed in future versions when automatic structure extraction from parent "
+                "calculations is implemented."
                 )
             )
 
@@ -119,9 +122,12 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             serializer=to_aiida_type,
             required=False,
             help=(
-                "The q-points distance to generate the find qpoints"
-                "If specified, the fine qpoints will be generated from `create_kpoints_from_distance` calcfunction."
-                "If not specified, the fine qpoints will be read from the inputs.qfpoints input."
+                "The distance between q-points in the fine q-point mesh. "
+                "If specified, the fine q-points will be automatically generated using the "
+                "`create_kpoints_from_distance` calculation function based on this distance and "
+                "the input StructureData. If not specified, the fine q-points must be explicitly "
+                "provided via the `qfpoints` input as a `KpointsData` node. This parameter is "
+                "mutually exclusive with `qfpoints` - only one should be provided."
                 )
             )
 
@@ -132,8 +138,13 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             serializer=to_aiida_type,
             required=False,
             help=(
-                "The factor to multiply the q-point mesh to get the fine k-point mesh"
-                "If not specified, the fine kpoints will be generated from the parent folder of the nscf calculation."
+                "Integer factor used to multiply each dimension of the fine q-point mesh to "
+                "obtain the fine k-point mesh. For example, if the fine q-point mesh is [4, 4, 4] "
+                "and `kfpoints_factor` is 2, the fine k-point mesh will be [8, 8, 8]. This ensures "
+                "that the k-point and q-point meshes are compatible. If not specified, the fine "
+                "k-points will be automatically extracted from the parent folder of the NSCF "
+                "calculation (when available), or must be explicitly provided via the `kfpoints` "
+                "input. This parameter is mutually exclusive with `kfpoints` - only one should be provided."
                 )
             )
 
