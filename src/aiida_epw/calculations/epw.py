@@ -48,6 +48,7 @@ class EpwCalculation(CalcJob):
     _output_phbands_file = "phband.freq"
     _FOLDER_SAVE = "save"
     _FOLDER_DYNAMICAL_MATRIX = "DYN_MAT"
+    _MAX_NSTEMP = 1000
 
     # Not using symlink in pw to allow multiple nscf to run on top of the same scf
     _default_symlink_usage = False
@@ -102,6 +103,12 @@ class EpwCalculation(CalcJob):
             valid_type=orm.RemoteData,
             required=False,
             help=("The script to convert the chk file to a ukk file"),
+        )
+        spec.input(
+            "quadrupole_dir",
+            valid_type=(orm.Str, orm.RemoteData),
+            required=False,
+            help=("RemoteData containing the quadrupole.fmt file, or its absolute path string."),
         )
 
         spec.inputs["metadata"]["options"]["parser_name"].default = "epw.epw"
@@ -299,6 +306,22 @@ class EpwCalculation(CalcJob):
                     )
                 )
 
+        if 'quadrupole_dir' in self.inputs:
+            source_path = self.inputs.quadrupole_dir.value
+
+            code = self.inputs.epw.code
+
+            remote_list.append(
+                (
+                    code.computer.uuid,
+                    Path(
+                        source_path, ".quadrupole.fmt"
+                    ).as_posix(),
+                    "quadrupole.fmt",
+                )
+            )
+
+
         if "parent_folder_epw" in self.inputs:
             parent_folder_epw = self.inputs.parent_folder_epw
             if isinstance(parent_folder_epw, orm.RemoteStashFolderData):
@@ -314,7 +337,14 @@ class EpwCalculation(CalcJob):
                 "selecq.fmt",
                 "crystal.fmt",
                 "epwdata.fmt",
-                vme_fmt_dict[parameters["INPUTEPW"]["vme"]],
+                "dmedata.fmt",
+                "vmedata.fmt",
+                "quadrupole.fmt",
+                "decay.H",
+                "decay.dynmat",
+                "decay.epmate",
+                "decay.epmatp",
+                # vme_fmt_dict[parameters["INPUTEPW"]["vme"]],
                 f"{self._PREFIX}.kgmap",
                 f"{self._PREFIX}.kmap",
                 f"{self._PREFIX}.ukk",
