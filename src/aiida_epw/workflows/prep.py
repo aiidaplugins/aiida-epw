@@ -166,7 +166,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         builder.structure = structure
 
         w90_bands_inputs = inputs.get("w90_bands", {})
-        pseudo_family = w90_bands_inputs.pop("pseudo_family", None)
+        pseudo_family = inputs.pop("pseudo_family", None)
 
         if wannier_projection_type == WannierProjectionType.ATOMIC_PROJECTORS_QE:
             if reference_bands is None:

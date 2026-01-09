@@ -1,5 +1,6 @@
 default_inputs:
   clean_workdir: True
+  pseudo_family: 'PseudoDojo/0.5/PBE/SR/standard/upf'
   qpoints_distance: 0.5
   kpoints_distance_scf: 0.15
   kpoints_factor_nscf: 2
