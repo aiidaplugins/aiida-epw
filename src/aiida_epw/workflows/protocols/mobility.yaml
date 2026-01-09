@@ -1,0 +1,76 @@
+default_inputs:
+  clean_workdir: False
+  interpolation_distance:
+    - 0.5
+    - 0.3
+    - 0.2
+    - 0.1
+    - 0.08
+    - 0.06
+    - 0.05
+    - 0.04
+    - 0.03
+  convergence_threshold: 0.5
+  epw_mobility:
+    metadata:
+      options:
+        resources:
+          num_machines: 1
+        max_wallclock_seconds: 86400  # Twelve hours
+        withmpi: True
+    parameters:
+      INPUTEPW:
+        elph: True
+        restart: true
+        restart_step: 1000
+        etf_mem: 3
+          # --- I/O Settings ---
+        epbwrite: false
+        epbread: false
+        epwwrite: false
+        epwread: true
+        epmatkqread: false
+        selecqread: false
+        vme: 'dipole' #'wannier'
+        use_ws: true
+        lpolar: true
+        mp_mesh_k: true
+        lifc: false
+          # --- Carrier & Physics ---
+        carrier: true
+        ncarrier: 1.0e+13
+        nstemp: 1
+        temps: 300
+        fsthick: 0.35  # Window of 0.4 eV
+        degaussw: 0.0
+        efermi_read: true
+        fermi_energy: 10.79385284
+            # --- Scattering & Mobility (BTE) ---
+        scattering: true
+        scattering_serta: true
+        int_mob: false
+        iterative_bte: true
+        mob_maxiter: 300
+        broyden_beta: 1.0
+          # --- Self Energy & A2F (Disabled) ---
+        elecselfen: false
+        phonselfen: false
+        a2f: false
+        # --- Magnetic Field ---
+        bfieldx: 0.0
+        bfieldy: 0.0
+        bfieldz: 1.0e-10
+
+        wannierize: False
+
+        
+default_protocol: moderate
+protocols:
+  moderate:
+    description: 'Protocol to perform a electron-phonon calculation at normal precision at moderate computational cost.'
+  precise:
+    description: 'Protocol to perform a electron-phonon calculation at high precision at higher computational cost.'
+    interpolation_distance: 0.05
+  fast:
+    description: 'Protocol to perform a electron-phonon calculation at low precision at minimal computational cost for testing purposes.'
+    interpolation_distance: 0.5

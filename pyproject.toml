@@ -40,6 +40,8 @@ Source = "https://github.com/aiidaplugins/aiida-epw"
 'epw.base' = 'aiida_epw.workflows.base:EpwBaseWorkChain'
 'epw.epw_prep' = 'aiida_epw.workflows.prep:EpwPrepWorkChain'
 'epw.supercon' = 'aiida_epw.workflows.supercon:SuperConWorkChain'
+'epw.mobility' = 'aiida_epw.workflows.mobility:MobilityWorkChain'
+
 
 [project.optional-dependencies]
 docs = [
