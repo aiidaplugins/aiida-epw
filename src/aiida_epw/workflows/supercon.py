@@ -54,17 +54,59 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         """Define the work chain specification."""
         super().define(spec)
 
-        spec.input("structure", valid_type=orm.StructureData)
         spec.input(
-            "clean_workdir", valid_type=orm.Bool, default=lambda: orm.Bool(False)
+            "structure",
+            valid_type=orm.StructureData,
+            help=(
+                "Structure used for this `SuperConWorkChain`. Should match the structure "
+                "used in the parent `EpwBaseWorkChain` or `EpwPrepWorkChain` that "
+                "produced `parent_folder_epw`."
+            )
         )
         spec.input(
-            "parent_folder_epw", valid_type=(orm.RemoteData, orm.RemoteStashFolderData)
+            "clean_workdir",
+            valid_type=orm.Bool,
+            default=lambda: orm.Bool(False),
+            help=(
+                "Whether the remote working directories of all child calculations "
+                "will be cleaned up after the workchain terminates."
+            )
         )
-        spec.input("interpolation_distance", valid_type=(orm.Float, orm.List))
-        spec.input("convergence_threshold", valid_type=orm.Float, required=False)
         spec.input(
-            "always_run_final", valid_type=orm.Bool, default=lambda: orm.Bool(False)
+            "parent_folder_epw",
+            valid_type=(orm.RemoteData, orm.RemoteStashFolderData),
+            help=(
+                "Remote folder with outputs from a previous `epw.x` run (typically from "
+                "`EpwBaseWorkChain` or `EpwPrepWorkChain`). Must contain files such as "
+                "`out/prefix.epmatwp`, `crystal.fmt`, `dmedata.fmt`, `vmedata.fmt`, etc., "
+                "needed by the next `EpwBaseWorkChain` calculations."
+            )
+        )
+        spec.input(
+            "interpolation_distance",
+            valid_type=(orm.Float, orm.List),
+            help=(
+                "Distance (or list of distances) between q-points in the fine mesh used "
+                "to converge the Allen-Dynes critical temperature."
+            )
+        )
+        spec.input(
+            "convergence_threshold",
+            valid_type=orm.Float,
+            required=False,
+            help=(
+                "Stopping threshold for the Allen-Dynes critical temperature: the loop "
+                "stops when consecutive values differ by less than this amount."
+            )
+        )
+        spec.input(
+            "always_run_final",
+            valid_type=orm.Bool,
+            default=lambda: orm.Bool(False),
+            help=(
+                "Run the final isotropic and anisotropic `EpwBaseWorkChain`s even if the "
+                "Allen-Dynes temperature has not yet converged."
+            )
         )
 
         spec.expose_inputs(
@@ -79,7 +121,10 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "kfpoints",
             ),
             namespace_options={
-                "help": "Inputs for the interpolation `EpwBaseWorkChain`s."
+                "help": (
+                    "Inputs forwarded to `EpwBaseWorkChain` for the `epw.x` runs used in "
+                    "the Allen-Dynes Tc convergence."
+                )
             },
         )
         spec.expose_inputs(
@@ -94,7 +139,10 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "kfpoints_factor",
             ),
             namespace_options={
-                "help": "Inputs for the final isotropic `EpwBaseWorkChain`."
+                "help": (
+                    "Inputs forwarded to the final `EpwBaseWorkChain` for the isotropic "
+                    "Migdal-Eliashberg calculation."
+                )
             },
         )
         spec.expose_inputs(
@@ -109,7 +157,10 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "kfpoints_factor",
             ),
             namespace_options={
-                "help": "Inputs for the final anisotropic `EpwBaseWorkChain`."
+                "help": (
+                    "Inputs forwarded to the final `EpwBaseWorkChain` for the anisotropic "
+                    "Migdal-Eliashberg calculation."
+                )
             },
         )
         spec.outline(

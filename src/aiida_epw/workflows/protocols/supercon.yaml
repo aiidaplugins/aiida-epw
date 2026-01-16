@@ -13,12 +13,11 @@ default_inputs:
   convergence_threshold: 0.5
   always_run_final: True
   epw_interp:
-    metadata:
-      options:
-        resources:
-          num_machines: 1
-        max_wallclock_seconds: 43200  # Twelve hours
-        withmpi: True
+    options:
+      resources:
+        num_machines: 1
+      max_wallclock_seconds: 43200  # Twelve hours
+      withmpi: True
     parameters:
       INPUTEPW:
         broyden_beta: 0.4
@@ -52,12 +51,11 @@ default_inputs:
         wannierize: False
         wscut: 0.5
   epw_final_iso:
-    metadata:
-      options:
-        resources:
-          num_machines: 1
-        max_wallclock_seconds: 43200  # Twelve hours
-        withmpi: True
+    options:
+      resources:
+        num_machines: 1
+      max_wallclock_seconds: 43200  # Twelve hours
+      withmpi: True
     parameters:
       INPUTEPW:
         conv_thr_iaxis: 0.01
@@ -91,12 +89,11 @@ default_inputs:
         wannierize: False
         wscut: 0.5
   epw_final_aniso:
-    metadata:
-      options:
-        resources:
-          num_machines: 1
-        max_wallclock_seconds: 43200  # Twelve hours
-        withmpi: True
+    options:
+      resources:
+        num_machines: 1
+      max_wallclock_seconds: 43200  # Twelve hours
+      withmpi: True
     parameters:
       INPUTEPW:
         conv_thr_iaxis: 0.01
