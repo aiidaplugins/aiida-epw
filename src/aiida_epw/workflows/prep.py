@@ -5,7 +5,7 @@ from pathlib import Path
 from aiida import orm
 from aiida.common import AttributeDict
 
-from aiida.engine import WorkChain, ToContext, if_
+from aiida.engine import WorkChain, if_
 from aiida_quantumespresso.workflows.ph.base import PhBaseWorkChain
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
@@ -378,7 +378,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         workchain_node = self.submit(w90_class, **inputs)
         self.report(f"launching {w90_class.get_name()}<{workchain_node.pk}>")
 
-        return ToContext(workchain_w90_bands=workchain_node)
+        return {'workchain_w90_bands': workchain_node}
 
     def inspect_wannier90(self):
         """Verify that the wannier90 workflow finished successfully."""
@@ -411,7 +411,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         workchain_node = self.submit(PhBaseWorkChain, **inputs)
         self.report(f"launching PhBaseWorkChain<{workchain_node.pk}>")
 
-        return ToContext(workchain_ph=workchain_node)
+        return {'workchain_ph': workchain_node}
 
     def inspect_ph(self):
         """Verify that the `PhBaseWorkChain` finished successfully."""
@@ -463,7 +463,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             f"launching EpwBaseWorkChain<{workchain_node.pk}> in transformation mode"
         )
 
-        return ToContext(workchain_epw=workchain_node)
+        return {'workchain_epw': workchain_node}
 
     def inspect_epw(self):
         """Verify that the `EpwBaseWorkChain` finished successfully."""
