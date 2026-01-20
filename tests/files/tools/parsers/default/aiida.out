@@ -1,0 +1,391 @@
+                                                                                      
+                                       ``:oss/                                        
+                           `.+s+.     .+ys--yh+     `./ss+.                           
+                          -sh//yy+`   +yy   +yy    -+h+-oyy                           
+                          -yh- .oyy/.-sh.   .syo-.:sy-  /yh                           
+                 `.-.`    `yh+   -oyyyo.     `/syys:    oys      `.`                  
+               `/+ssys+-` `sh+      `                   oys`   .:osyo`                
+               -yh- ./syyooyo`                          .sys+/oyo--yh/                
+               `yy+    .-:-.                             `-/+/:`  -sh-                
+                /yh.                                              oys                 
+          ``..---hho---------`   .---------..`      `.-----.`    -hd+---.             
+       `./osmNMMMMMMMMMMMMMMMs. +NNMMMMMMMMNNmh+.   yNMMMMMNm-  oNMMMMMNmo++:`        
+       +sy--/sdMMMhyyyyyyyNMMh- .oyNMMmyyyyyhNMMm+` -yMMMdyyo:` .oyyNMMNhs+syy`       
+       -yy/   /MMM+.`-+/``mMMy-   `mMMh:`````.dMMN:` `MMMy-`-dhhy```mMMy:``+hs        
+        -yy+` /MMMo:-mMM+`-oo/.    mMMh:     `dMMN/`  dMMm:`dMMMMy..MMMo-.+yo`        
+         .sys`/MMMMNNMMMs-         mMMmyooooymMMNo:   oMMM/sMMMMMM++MMN//oh:          
+          `sh+/MMMhyyMMMs- `-`     mMMMMMMMMMNmy+-`   -MMMhMMMsmMMmdMMd/yy+           
+    `-/+++oyy-/MMM+.`/hh/.`mNm:`   mMMd+/////:-.`      NMMMMMd/:NMMMMMy:/yyo/:.`      
+   +os+//:-..-oMMMo:--:::-/MMMo. .-mMMd+---`           hMMMMN+. oMMMMMo. `-+osyso:`   
+   syo     `mNMMMMMNNNNNNNNMMMo.oNNMMMMMNNNN:`         +MMMMs:`  dMMMN/`     ``:syo   
+   /yh`     :syyyyyyyyyyyyyyyy+.`+syyyyyyyyo:`         .oyys:`   .oyys:`        +yh   
+   -yh-        ````````````````    `````````              ``        ``          oys   
+   -+h/------------------------::::::::://////++++++++++++++++++++++///////::::/yd:   
+   shdddddddddddddddddddddddddddddhhhhhhhhyyyyyssssssssssssssssyyyyyyyhhhhhhhddddh`   
+                                                                                      
+ Lee, H., Poncé, S., Bushick, K., Hajinazar, S., Lafuente-Bartolome, J.,Leveillee, J.,
+    Lian, C., Lihm, J., Macheda, F., Mori, H., Paudyal, H., Sio, W., Tiwari, S.,      
+ Zacharias, M., Zhang, X., Bonini, N., Kioupakis, E., Margine, E.R., and Giustino F., 
+                                                     npj Comput Mater 9, 156 (2023)   
+                                                                                      
+
+     Program EPW v.6.0 starts on 17Jan2026 at 13:40:28 
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on   128 processors
+
+     MPI processes distributed on     1 nodes
+     K-points division:     npool     =     128
+     241290 MiB available memory on the printing compute node when the environment starts
+ 
+     Reading input from aiida.in
+      Title line not specified: using 'default'.
+
+     Reading supplied temperature list.
+                      
+     ------------------------------------------------------------------------ 
+                   RESTART - RESTART - RESTART - RESTART                         
+     Restart is done without reading PWSCF save file.                  
+     Be aware that some consistency checks are therefore not done.                  
+     ------------------------------------------------------------------------ 
+                      
+
+     default                                                                    
+
+     bravais-lattice index     =            0
+     lattice parameter (a_0)   =       0.0000  a.u.
+     unit-cell volume          =       0.0000 (a.u.)^3
+     number of atoms/cell      =            0
+     number of atomic types    =            0
+     kinetic-energy cut-off    =       0.0000  Ry
+     charge density cut-off    =       0.0000  Ry
+     Exchange-correlation= not set
+                           (  -1  -1  -1  -1  -1  -1  -1)
+
+
+     celldm(1)=    0.00000  celldm(2)=    0.00000  celldm(3)=    0.00000
+     celldm(4)=    0.00000  celldm(5)=    0.00000  celldm(6)=    0.00000
+
+     crystal axes: (cart. coord. in units of a_0)
+               a(1) = (  0.0000  0.0000  0.0000 )  
+               a(2) = (  0.0000  0.0000  0.0000 )  
+               a(3) = (  0.0000  0.0000  0.0000 )  
+
+     reciprocal axes: (cart. coord. in units 2 pi/a_0)
+               b(1) = (  0.0000  0.0000  0.0000 )  
+               b(2) = (  0.0000  0.0000  0.0000 )  
+               b(3) = (  0.0000  0.0000  0.0000 )  
+
+
+     Atoms inside the unit cell: 
+
+   Cartesian axes
+
+     site n.  atom      mass           positions (a_0 units)
+
+ 
+     No symmetry!
+
+     G cutoff =    0.0000  (      0 G-vectors)     FFT grid: (  0,  0,  0)
+     number of k points=    0
+                       cart. coord. in units 2pi/a_0
+     EPW          :      0.01s CPU      0.02s WALL
+
+     EPW          :      0.01s CPU      0.02s WALL
+
+
+     -------------------------------------------------------------------
+     Using aiida.ukk from disk
+     -------------------------------------------------------------------
+
+     HDF5 is NOT used in the current build. Exciton-phonon coupling calculations are disabled.
+     Symmetries of Bravais lattice:  48
+     Symmetries of crystal:          24
+
+     Do not need to read .epb files; read .fmt files
+
+
+     Band disentanglement is used: nbndsub =   16
+     Construct the Wigner-Seitz cell using Wannier centers and atomic positions 
+     Number of WS vectors for electrons      149
+     Number of WS vectors for phonons       35
+     Number of WS vectors for electron-phonon       35
+     Maximum number of cores for efficient parallelization      105
+
+     Reading Hamiltonian, Dynamical matrix and EP vertex in Wann rep from file
+
+
+     Finished reading Wann rep data from file
+
+     ===================================================================
+     Memory usage:  VmHWM =        51Mb
+                   VmPeak =      1669Mb
+     ===================================================================
+     
+     Using uniform q-mesh:    18   18   18
+     Size of q point mesh for interpolation:       5832
+     Using uniform MP k-mesh:    18   18   18
+     Size of k point mesh for interpolation:        335
+     Max number of k points per pool:                3
+
+     Fermi energy coarse grid =  14.879474 eV
+
+     Skipping   13 occupied bands:
+
+     The Fermi level will be determined with  17.00000 electrons
+
+     Fermi energy is calculated from the fine k-mesh: Ef =  14.902512 eV
+
+     ===================================================================
+
+              ibndmin =     7  ebndmin =    14.103 eV
+              ibndmax =     9  ebndmax =    15.287 eV
+
+
+     Number of ep-matrix elements per pool :          243 ~=    1.90 Kb (@ 8 bytes/ DP)
+     Number selected, total            100            100
+     Number selected, total            200            200
+     Number selected, total            300            300
+     Number selected, total            400            400
+     Number selected, total            500            500
+     Number selected, total            600            600
+     Number selected, total            700            700
+     Number selected, total            800            800
+     Number selected, total            900            900
+     Number selected, total           1000           1000
+     Number selected, total           1100           1100
+     Number selected, total           1200           1200
+     Number selected, total           1300           1300
+     Number selected, total           1400           1400
+     Number selected, total           1500           1500
+     Number selected, total           1600           1600
+     Number selected, total           1700           1700
+     Number selected, total           1800           1800
+     Number selected, total           1900           1900
+     Number selected, total           2000           2000
+     Number selected, total           2100           2100
+     Number selected, total           2200           2200
+     Number selected, total           2300           2300
+     Number selected, total           2400           2400
+     Number selected, total           2500           2500
+     Number selected, total           2600           2600
+     Number selected, total           2700           2700
+     Number selected, total           2800           2800
+     Number selected, total           2900           2900
+     Number selected, total           3000           3000
+     Number selected, total           3100           3100
+     Number selected, total           3200           3200
+     Number selected, total           3300           3300
+     Number selected, total           3400           3400
+     Number selected, total           3500           3500
+     Number selected, total           3600           3600
+     Number selected, total           3700           3700
+     Number selected, total           3800           3800
+     Number selected, total           3900           3900
+     Number selected, total           4000           4000
+     Number selected, total           4100           4100
+     Number selected, total           4200           4200
+     Number selected, total           4300           4300
+     Number selected, total           4400           4400
+     Number selected, total           4500           4500
+     Number selected, total           4600           4600
+     Number selected, total           4700           4700
+     Number selected, total           4800           4800
+     Number selected, total           4900           4900
+     Number selected, total           5000           5000
+     Number selected, total           5100           5100
+     Number selected, total           5200           5200
+     Number selected, total           5300           5300
+     Number selected, total           5400           5400
+     Number selected, total           5500           5500
+     Number selected, total           5600           5600
+     Number selected, total           5700           5700
+     Number selected, total           5800           5800
+     We only need to compute     5832 q-points
+      
+
+     Nr. of irreducible k-points on the uniform grid:       335
+
+
+     Finish mapping k+sign*q onto the fine irreducibe k-mesh and writing .ikmap file
+
+
+     Nr irreducible k-points within the Fermi shell =       332 out of       335
+
+     Progression iq (fine) =        100/      5832
+     Progression iq (fine) =        200/      5832
+     Progression iq (fine) =        300/      5832
+     Progression iq (fine) =        400/      5832
+     Progression iq (fine) =        500/      5832
+     Progression iq (fine) =        600/      5832
+     Progression iq (fine) =        700/      5832
+     Progression iq (fine) =        800/      5832
+     Progression iq (fine) =        900/      5832
+     Progression iq (fine) =       1000/      5832
+     Progression iq (fine) =       1100/      5832
+     Progression iq (fine) =       1200/      5832
+     Progression iq (fine) =       1300/      5832
+     Progression iq (fine) =       1400/      5832
+     Progression iq (fine) =       1500/      5832
+     Progression iq (fine) =       1600/      5832
+     Progression iq (fine) =       1700/      5832
+     Progression iq (fine) =       1800/      5832
+     Progression iq (fine) =       1900/      5832
+     Progression iq (fine) =       2000/      5832
+     Progression iq (fine) =       2100/      5832
+     Progression iq (fine) =       2200/      5832
+     Progression iq (fine) =       2300/      5832
+     Progression iq (fine) =       2400/      5832
+     Progression iq (fine) =       2500/      5832
+     Progression iq (fine) =       2600/      5832
+     Progression iq (fine) =       2700/      5832
+     Progression iq (fine) =       2800/      5832
+     Progression iq (fine) =       2900/      5832
+     Progression iq (fine) =       3000/      5832
+     Progression iq (fine) =       3100/      5832
+     Progression iq (fine) =       3200/      5832
+     Progression iq (fine) =       3300/      5832
+     Progression iq (fine) =       3400/      5832
+     Progression iq (fine) =       3500/      5832
+     Progression iq (fine) =       3600/      5832
+     Progression iq (fine) =       3700/      5832
+     Progression iq (fine) =       3800/      5832
+     Progression iq (fine) =       3900/      5832
+     Progression iq (fine) =       4000/      5832
+     Progression iq (fine) =       4100/      5832
+     Progression iq (fine) =       4200/      5832
+     Progression iq (fine) =       4300/      5832
+     Progression iq (fine) =       4400/      5832
+     Progression iq (fine) =       4500/      5832
+     Progression iq (fine) =       4600/      5832
+     Progression iq (fine) =       4700/      5832
+     Progression iq (fine) =       4800/      5832
+     Progression iq (fine) =       4900/      5832
+     Progression iq (fine) =       5000/      5832
+     Progression iq (fine) =       5100/      5832
+     Progression iq (fine) =       5200/      5832
+     Progression iq (fine) =       5300/      5832
+     Progression iq (fine) =       5400/      5832
+     Progression iq (fine) =       5500/      5832
+     Progression iq (fine) =       5600/      5832
+     Progression iq (fine) =       5700/      5832
+     Progression iq (fine) =       5800/      5832
+                  Fermi level (eV) =    0.149025120573133D+02
+     DOS(states/spin/eV/Unit Cell) =    0.190857404537746D+01
+            Electron smearing (eV) =    0.500000000000000D-01
+                 Fermi window (eV) =    0.800000000000000D+00
+      
+     Finish writing .ephmat files
+
+     ===================================================================
+     Memory usage:  VmHWM =        85Mb
+                   VmPeak =      1700Mb
+     ===================================================================
+
+
+     Finish writing dos file aiida.dos
+
+
+     Finish writing phdos files aiida.phdos and aiida.phdos_proj
+
+
+     ===================================================================
+     Calculate Eliashberg spectral function
+     ===================================================================
+
+
+     Finish reading freq file
+
+                  Fermi level (eV) =     1.4902512057E+01
+     DOS(states/spin/eV/Unit Cell) =     1.9085740454E+00
+            Electron smearing (eV) =     5.0000000000E-02
+                 Fermi window (eV) =     8.0000000000E-01
+     Nr irreducible k-points within the Fermi shell =       332 out of       335
+
+           3 bands within the Fermi window
+
+
+     Finish reading egnv file 
+
+
+     Max nr of q-points =      5817
+
+
+     Finish reading ikmap files
+
+
+     Start reading .ephmat files
+
+
+     Finish reading .ephmat files
+
+     a2f file is not found to estimate initial gap: calculating a2f files
+ 
+
+     Finish reading a2f file
+
+     Electron-phonon coupling strength =    0.6953481
+ 
+     Estimated Tc using McMillan expression =   4.1595 K for muc =   0.1300
+  
+     Estimated Tc using Allen-Dynes modified McMillan expression =   4.2946 K
+  
+     Estimated Tc using SISSO machine learning model =   4.1960 K
+  
+     Estimated w_log =  13.7115 meV
+  
+     Estimated BCS superconducting gap using McMillan Tc =   0.6309 meV
+  
+
+     Unfolding on the coarse grid
+     elphon_wrap  :      0.00s CPU      0.02s WALL (       1 calls)
+
+     INITIALIZATION: 
+
+
+
+
+     Electron-Phonon interpolation
+     ep-interp    :    307.56s CPU    490.36s WALL (    5832 calls)
+
+     wigner_seitz :      0.03s CPU      0.03s WALL (       1 calls)
+     DynW2B       :      0.18s CPU      0.25s WALL (   11664 calls)
+     HamW2B       :      6.82s CPU      7.18s WALL (   35001 calls)
+     ephW2Bp      :    200.58s CPU    324.22s WALL (    5832 calls)
+     ephW2B       :     36.92s CPU     37.46s WALL (   17451 calls)
+
+     ELIASHBERG   :     50.76s CPU     51.22s WALL (       1 calls)
+
+
+     Total program execution
+     EPW          :   6m 3.45s CPU   9m 7.24s WALL
+
+     % Copyright (C) 2016-2023 EPW-Collaboration                                    
+                                                                                    
+     ===============================================================================
+     Please consider citing the following papers.                                   
+                                                                                                 
+     % Paper describing the method on which EPW relies                                           
+       F. Giustino and M. L. Cohen and S. G. Louie, Phys. Rev. B 76, 165108 (2007)               
+                                                                                                 
+     % Papers describing the EPW software                                                        
+       H. Lee et al., npj Comput. Mater. 9, 156 (2023)                                           
+       S. Ponc\'e, E.R. Margine, C. Verdi and F. Giustino, Comput. Phys. Commun. 209, 116 (2016) 
+       J. Noffsinger et al., Comput. Phys. Commun. 181, 2140 (2010)                              
+                                                                                                 
+                                                                                             
+     % Since you used the [eliashberg] input,     please consider also citing                    
+       E. R. Margine and F. Giustino, Phys. Rev. B 87, 024505 (2013)                         
+                                                                                    
+     For your convenience, this information is also reported in the                 
+     functionality-dependent EPW.bib file.                                          
+     ===============================================================================
+                                                                                    

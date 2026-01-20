@@ -143,4 +143,121 @@ def test_parse_epw_imag_aniso_gap0(files_path: Path, data_regression):
     data_regression.check(regression_data)
 
 
+def test_parse_epw_a2f_proj(files_path: Path, data_regression):
+    """Parse an existing ``aiida.a2f_proj`` file."""
+    # Use the a2f directory where we put the dummy a2f_proj
+    a2f_proj_path = files_path / "tools" / "parsers" / "a2f" / "aiida.a2f_proj"
+    content = a2f_proj_path.read_text()
+
+    parsed = parsers.parse_epw_a2f_proj(content)
+
+    assert "frequency" in parsed
+    assert "a2f_proj" in parsed
+    
+    regression_data = {
+        "frequency": parsed["frequency"].tolist(),
+        "a2f_proj": parsed["a2f_proj"].tolist(),
+    }
+    data_regression.check(regression_data)
+
+
+def test_parse_epw_lambda_FS(files_path: Path, data_regression):
+    """Parse an existing ``aiida.lambda_FS`` file."""
+    lambda_fs_path = files_path / "tools" / "parsers" / "lambda" / "aiida.lambda_FS"
+    content = lambda_fs_path.read_text()
+
+    parsed = parsers.parse_epw_lambda_FS(content)
+
+    for key in ("kpoints", "band", "Enk", "lambda"):
+        assert key in parsed
+    
+    regression_data = {
+        "kpoints": parsed["kpoints"].tolist(),
+        "band": parsed["band"].tolist(),
+        "Enk": parsed["Enk"].tolist(),
+        "lambda": parsed["lambda"].tolist(),
+    }
+    data_regression.check(regression_data)
+
+
+def test_parse_epw_lambda_k_pairs(files_path: Path, data_regression):
+    """Parse an existing ``aiida.lambda_k_pairs`` file."""
+    lambda_k_pairs_path = files_path / "tools" / "parsers" / "lambda" / "aiida.lambda_k_pairs"
+    content = lambda_k_pairs_path.read_text()
+
+    parsed = parsers.parse_epw_lambda_k_pairs(content)
+
+    assert "lambda_nk" in parsed
+    assert "rho" in parsed
+    
+    regression_data = {
+        "lambda_nk": parsed["lambda_nk"].tolist(),
+        "rho": parsed["rho"].tolist(),
+    }
+    data_regression.check(regression_data)
+
+
+def test_parse_epw_stdout(files_path: Path, data_regression):
+    """Parse a fake ``stdout`` file."""
+    stdout_path = files_path / "tools" / "parsers" / "default" / "aiida.out"
+    content = stdout_path.read_text()
+
+    # Pass version explicitly as string
+    parsed = parsers.parse_epw_stdout(content, code_version="6.0")
+
+    # Filter out potential erratic values or just dump everything if stable
+    data_regression.check(parsed)
+
+
+def test_parse_epw_dos(files_path: Path, data_regression):
+    """Parse an existing ``aiida.dos`` file using the basic parser."""
+    dos_path = files_path / "tools" / "parsers" / "a2f" / "aiida.dos"
+    content = dos_path.read_text()
+
+    parsed = parsers.parse_epw_dos(content)
+
+    assert "Energy" in parsed
+    assert "EDOS" in parsed
+    
+    regression_data = {
+        "Energy": parsed["Energy"].tolist()[:10],
+        "EDOS": parsed["EDOS"].tolist()[:10],
+    }
+    data_regression.check(regression_data)
+
+
+def test_parse_epw_phdos(files_path: Path, data_regression):
+    """Parse an existing ``aiida.phdos`` file using the basic parser."""
+    phdos_path = files_path / "tools" / "parsers" / "a2f" / "aiida.phdos"
+    content = phdos_path.read_text()
+
+    parsed = parsers.parse_epw_phdos(content)
+
+    assert "Frequency" in parsed
+    assert "PHDOS" in parsed
+    
+    regression_data = {
+        "Frequency": parsed["Frequency"].tolist()[:10],
+        "PHDOS": parsed["PHDOS"].tolist()[:10],
+    }
+    data_regression.check(regression_data)
+
+
+def test_parse_epw_gap_function(files_path: Path, data_regression):
+    """Parse an existing gap function file."""
+    # Re-using imag_iso file as a generic gap function file
+    gap_path = files_path / "tools" / "parsers" / "full_iso_eliashberg" / "aiida.imag_iso_003.00"
+    content = gap_path.read_text()
+
+    # Skipping first row as it has comments usually or just headers
+    parsed = parsers.parse_epw_gap_function(content, skiprows=1)
+
+    assert isinstance(parsed, numpy.ndarray)
+    
+    regression_data = {
+        "gap_function": parsed.tolist()[:10],
+    }
+    data_regression.check(regression_data)
+
+
 

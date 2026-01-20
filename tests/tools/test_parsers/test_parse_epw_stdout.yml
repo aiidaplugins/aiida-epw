@@ -1,0 +1,27 @@
+Allen_Dynes_Tc: 4.2946
+BCS_gap: 0.6309
+DOS: 1.9085740454
+McMillan_Tc: 4.1595
+SISSO_Tc: 4.196
+ebndmax: 15.287
+ebndmin: 14.103
+electron_smearing: 0.05
+fermi_energy_coarse: 14.879474
+fermi_energy_fine: 14.902512
+fermi_level: 14.902512057
+fermi_window: 0.8
+fine_q_mesh:
+- 18
+- 18
+- 18
+ibndmax: 9
+ibndmin: 7
+lambda: 0.6953481
+max_cores_parallelization: 105
+muc: 0.13
+nbnd_skip: 13
+nbndsub: 16
+w_log: 13.7115
+ws_vectors_electron_phonon: 35
+ws_vectors_electrons: 149
+ws_vectors_phonons: 35

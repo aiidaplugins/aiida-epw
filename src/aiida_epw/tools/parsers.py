@@ -1,9 +1,11 @@
 """Manual parsing functions for post-processing. These functions can either be used independently or as helper functions of the `EpwParser` class.
 It would be good to always have a `parsed_data` dictionary as an output."""
 
-import numpy
-import re
 import io
+import re
+from packaging.version import Version
+
+import numpy
 
 Ry2eV = 13.605662285137
 
@@ -107,7 +109,7 @@ def parse_epw_a2f(file_content):
 def parse_epw_max_eigenvalue(file_content):
     """Parse the max_eigenvalue part of the `stdout` file when solving the linearized Eliashberg equation."""
     parsed_data = {}
-    re_pattern = re.compile(r"\s+([\d\.]+)\s+([\d\.-]+)\s+\d+\s+[\d\.]+\s+\d+\n")
+    re_pattern = re.compile(r"\s+([\d\.]+)\s+([\d\.D+-Ee]+)\s+\d+\s+[\d\.]+\s+\d+\n")
     parsing_block = file_content.split(
         "Finish: Solving (isotropic) linearized Eliashberg"
     )[0]
@@ -161,3 +163,183 @@ def parse_epw_imag_aniso_gap0(file_contents, prefix="aiida"):
             )
             parsed_data[T] = gap_function
     return parsed_data
+
+
+def parse_epw_stdout(file_content, code_version="6.0"):
+    """Parse the ``stdout`` of EPW calculation."""
+    if isinstance(code_version, str):
+        code_version = Version(code_version)
+
+    def parse_max_eigenvalue(stdout_block):
+        re_pattern = re.compile(
+            r"\s+([\d\.]+)\s+([\d\.D+-Ee]+)\s+\d+\s+[\d\.]+\s+\d+\n"
+        )
+        parsing_block = stdout_block.split(
+            "Finish: Solving (isotropic) linearized Eliashberg"
+        )[0]
+        max_eigenvalue_array = {}
+        max_eigenvalue_array["max_eigenvalue"] = numpy.array(re_pattern.findall(parsing_block), dtype=float)
+        return max_eigenvalue_array
+
+    if code_version < Version("5.9"):
+        data_type_regex = (
+            (
+                "Allen_Dynes_Tc",
+                float,
+                re.compile(r"\s+Estimated Allen-Dynes Tc =\s+([\d\.]+) K"),
+            ),
+            (
+                "fermi_energy_coarse",
+                float,
+                re.compile(r"\s+Fermi energy coarse grid =\s+([\d\.-]+)\seV"),
+            ),
+        )
+    else:
+        pattern_nbndsub = re.compile(r"nbndsub\s*=\s*(\d+)")
+        pattern_ws_vectors_electrons = re.compile(r"^\s*Number of WS vectors for electrons\s+(\d+)")
+        pattern_ws_vectors_phonons = re.compile(r"^\s*Number of WS vectors for phonons\s+(\d+)")
+        pattern_ws_vectors_electron_phonon = re.compile(r"^\s*Number of WS vectors for electron-phonon\s+(\d+)")
+        pattern_max_cores = re.compile(r"^\s*Maximum number of cores for efficient parallelization\s+(\d+)")
+        pattern_ibndmin = re.compile(r"ibndmin\s*=\s*(\d+)")
+        pattern_ebndmin = re.compile(r"ebndmin\s*=\s*([+-]?[\d\.D+-Ee]+)")
+        pattern_ibndmax = re.compile(r"ibndmax\s*=\s*(\d+)")
+        pattern_ebndmax = re.compile(r"ebndmax\s*=\s*([+-]?[\d\.D+-Ee]+)")
+        pattern_nbnd_skip = re.compile(r"^\s*Skipping\s+(\d+)\s+occupied bands:")
+        pattern_fermi_coarse = re.compile(r"^\s*Fermi energy coarse grid =\s*([+-]?[\d\.D+-Ee]+)\s+eV")
+        pattern_fermi_fine = re.compile(r"^\s*Fermi energy is calculated from the fine k-mesh: Ef =\s*([+-]?[\d\.D+-Ee]+)\s+eV")
+        
+        # Simplified regex for mesh to avoid complexity in this tool call
+        pattern_q_mesh = re.compile(r"^\s*Using uniform q-mesh:\s+((?:\d+\s*)+)")
+        pattern_k_mesh = re.compile(r"^\s*Using uniform k-mesh:\s+((?:\d+\s*)+)")
+        
+        pattern_fermi_level = re.compile(r"Fermi level \(eV\)\s*=\s*([\d\.D+-Ee]+)")
+        pattern_dos = re.compile(r"DOS\(states/spin/eV/Unit Cell\)\s*=\s*([\d\.D+-Ee]+)")
+        pattern_electron_smearing = re.compile(r"Electron smearing \(eV\)\s*=\s*([\d\.D+-Ee]+)")
+        pattern_fermi_window = re.compile(r"Fermi window \(eV\)\s*=\s*([\d\.D+-Ee]+)")
+        pattern_lambda = re.compile(r"Electron-phonon coupling strength\s*=\s*([\d\.D+-Ee]+)")
+        pattern_mcmillan = re.compile(r"Estimated Tc using McMillan expression\s*=\s*([\d\.D+-Ee]+) K for muc")
+        pattern_allen_dynes = re.compile(r"Estimated Tc using Allen-Dynes modified McMillan expression\s*=\s*([\d\.D+-Ee]+) K")
+        pattern_sisso = re.compile(r"Estimated Tc using SISSO machine learning model\s*=\s*([\d\.D+-Ee]+) K")
+        pattern_muc = re.compile(r"for muc\s*=\s*([\d\.D+-Ee]+)")
+        pattern_w_log = re.compile(r"Estimated w_log\s*=\s*([\d\.D+-Ee]+) meV")
+        pattern_bcs = re.compile(r"Estimated BCS superconducting gap using McMillan Tc\s*=\s*([\d\.D+-Ee]+) meV")
+
+        data_type_regex = (
+            ("nbndsub", int, pattern_nbndsub),
+            ("ws_vectors_electrons", int, pattern_ws_vectors_electrons),
+            ("ws_vectors_phonons", int, pattern_ws_vectors_phonons),
+            ("ws_vectors_electron_phonon", int, pattern_ws_vectors_electron_phonon),
+            ("max_cores_parallelization", int, pattern_max_cores),
+            ("ibndmin", int, pattern_ibndmin),
+            ("ebndmin", float, pattern_ebndmin),
+            ("ibndmax", int, pattern_ibndmax),
+            ("ebndmax", float, pattern_ebndmax),
+            ("nbnd_skip", int, pattern_nbnd_skip),
+            ("fermi_energy_coarse", float, pattern_fermi_coarse),
+            ("fermi_energy_fine", float, pattern_fermi_fine),
+            ("fine_q_mesh", lambda m: [int(x) for x in m.split()], pattern_q_mesh),
+            ("fine_k_mesh", lambda m: [int(x) for x in m.split()], pattern_k_mesh),
+            ("fermi_level", lambda s: float(s.replace("D", "E").replace("d", "E")), pattern_fermi_level),
+            ("DOS", lambda s: float(s.replace("D", "E").replace("d", "E")), pattern_dos),
+            ("electron_smearing", lambda s: float(s.replace("D", "E").replace("d", "E")), pattern_electron_smearing),
+            ("fermi_window", lambda s: float(s.replace("D", "E").replace("d", "E")), pattern_fermi_window),
+            ("lambda", float, pattern_lambda),
+            ("McMillan_Tc", float, pattern_mcmillan),
+            ("Allen_Dynes_Tc", float, pattern_allen_dynes),
+            ("SISSO_Tc", float, pattern_sisso),
+            ("muc", float, pattern_muc),
+            ("w_log", float, pattern_w_log),
+            ("BCS_gap", float, pattern_bcs),
+        )
+
+    data_block_marker_parser = (
+        (
+            "max_eigenvalue",
+            "Superconducting transition temp. Tc",
+            parse_max_eigenvalue,
+        ),
+    )
+    parsed_data = {}
+    stdout_lines = file_content.split("\n")
+
+    for line_number, line in enumerate(stdout_lines):
+        for data_key, type, re_pattern in data_type_regex:
+            match = re.search(re_pattern, line)
+            if match:
+                parsed_data[data_key] = type(match.group(1))
+
+        for data_key, data_marker, block_parser in data_block_marker_parser:
+            if data_marker in line:
+                parsed_data.update(block_parser(file_content[line_number:]))
+
+    return parsed_data
+
+
+def parse_epw_a2f_proj(file_content):
+    """Parse the contents of the `.a2f_proj` file."""
+    parsed_data = {}
+    a2f_proj_array = numpy.array(
+        [line.split() for line in file_content.splitlines()[1:-1]], dtype=float
+    )
+
+    parsed_data["frequency"] = a2f_proj_array[:, 0]
+    parsed_data["a2f_proj"] = a2f_proj_array[:, 1:]
+
+    return parsed_data
+
+
+def parse_epw_lambda_FS(file_content):
+    """Parse the contents of the `.lambda_FS` file."""
+    parsed_data = {}
+    lambda_FS = numpy.loadtxt(
+        io.StringIO(file_content), dtype=float, comments="#"
+    )
+
+    parsed_data["kpoints"] = lambda_FS[:, :3]
+    parsed_data["band"] = lambda_FS[:, 3]
+    parsed_data["Enk"] = lambda_FS[:, 4]
+    parsed_data["lambda"] = lambda_FS[:, 5]
+
+    return parsed_data
+
+
+def parse_epw_lambda_k_pairs(file_content):
+    """Parse the contents of the `.lambda_k_pairs` file."""
+    parsed_data = {}
+    lambda_k_pairs = numpy.loadtxt(
+        io.StringIO(file_content), dtype=float, comments="#"
+    )
+    parsed_data["lambda_nk"] = lambda_k_pairs[:, 0]
+    parsed_data["rho"] = lambda_k_pairs[:, 1]
+
+    return parsed_data
+
+
+def parse_epw_dos(file_content):
+    """Parse the contents of the `.dos` file."""
+    parsed_data = {}
+    dos = numpy.loadtxt(io.StringIO(file_content), dtype=float, comments="#")
+
+    parsed_data["Energy"] = dos[:, 0]
+    parsed_data["EDOS"] = dos[:, 1]
+
+    return parsed_data
+
+
+def parse_epw_phdos(file_content):
+    """Parse the contents of the `.phdos` file."""
+    parsed_data = {}
+    phdos = numpy.loadtxt(io.StringIO(file_content), dtype=float, skiprows=1)
+    parsed_data["Frequency"] = phdos[:, 0]
+    parsed_data["PHDOS"] = phdos[:, 1:]
+
+    return parsed_data
+
+
+def parse_epw_gap_function(file_content, skiprows=0):
+    """Parse the contents of the `gap_function.dat` file."""
+    gap_function = numpy.loadtxt(
+        io.StringIO(file_content), dtype=float, comments="#", skiprows=skiprows
+    )
+
+    return gap_function
