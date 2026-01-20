@@ -10,7 +10,7 @@ default_inputs:
     - 0.05
     - 0.04
     - 0.03
-  convergence_threshold: 0.5
+  convergence_threshold: 0.05
   always_run_final: True
   epw_interp:
     options:
