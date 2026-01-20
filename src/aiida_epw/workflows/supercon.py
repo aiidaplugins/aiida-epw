@@ -255,13 +255,13 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
 
         if parent_folder_epw is None:
             if (
-                epw_source.inputs.epw.code.computer.hostname
+                epw_source.inputs.code.computer.hostname
                 != epw_code.computer.hostname
             ):
                 raise ValueError(
                     "The `epw_code` must be configured on the same computer as that where the `parent_epw` was run."
                 )
-            parent_folder_epw = parent_epw.outputs.epw_folder
+            parent_folder_epw = epw_source.outputs.remote_folder
         else:
             # TODO: Add check to make sure parent_folder_epw is on same computer as epw_code
             pass
@@ -331,7 +331,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                     "allen_dynes"
                 ]
                 self.ctx.is_converged = (
-                    abs(prev_allen_dynes - new_allen_dynes)
+                    abs(prev_allen_dynes - new_allen_dynes) / new_allen_dynes
                     < self.inputs.convergence_threshold
                 )
                 self.report(
@@ -365,7 +365,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs = AttributeDict(
             self.exposed_inputs(EpwBaseWorkChain, namespace="epw_interp")
         )
-
+        inputs.structure = self.inputs.structure
         inputs.parent_folder_epw = self.inputs.parent_folder_epw
         inputs.kfpoints_factor = self.inputs.epw_interp.kfpoints_factor
         inputs.qfpoints_distance = self.ctx.interpolation_list.pop()
@@ -423,6 +423,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             self.exposed_inputs(EpwBaseWorkChain, namespace="epw_final_iso")
         )
 
+        inputs.structure = self.inputs.structure
         parent_folder_epw = self.ctx.epw_interp[-1].outputs.remote_folder
         inputs.parent_folder_epw = parent_folder_epw
         inputs.kfpoints = parent_folder_epw.creator.inputs.kfpoints
@@ -458,6 +459,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             self.exposed_inputs(EpwBaseWorkChain, namespace="epw_final_aniso")
         )
 
+        inputs.structure = self.inputs.structure
         parent_folder_epw = self.ctx.epw_interp[-1].outputs.remote_folder
         inputs.parent_folder_epw = parent_folder_epw
         inputs.kfpoints = parent_folder_epw.creator.inputs.kfpoints
