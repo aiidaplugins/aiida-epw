@@ -1,8 +1,10 @@
 [![Templated from python-copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/mbercx/python-copier/refs/heads/main/docs/img/badge.json)](https://github.com/mbercx/python-copier)
-# `aiida-epw`
 
-<img src="https://www.aiida.net/_static/logo-light.svg" alt="AiiDA logo" width="400">
-<img src="https://epw-code.org/assets/img/epw_logo.png" alt="EPW logo" width="200">
+<p align="center">
+  <img src="aiida-epw-logo.svg" alt="aiida-epw logo" width="420">
+</p>
+
+# `aiida-epw`
 
 This is an [AiiDA](http://www.aiida.net/) plugin for [EPW](https://epw-code.org/).
 
@@ -44,5 +46,4 @@ MIT
 * [Marnik Bercx](https://www.psi.ch/en/lms/people/marnik-bercx)
 * [Samuel Poncé](https://www.samuelponce.com/) - samuel.ponce@uclouvain.be
 * [Yiming Zhang](https://www.samuelponce.com/group#h.h4zp3wph86c2) - yiming.zhang@uclouvain.be
-
-
+* [Binbin Liu](https://people.epfl.ch/binbin.liu) - binbin.liu@epfl.ch
