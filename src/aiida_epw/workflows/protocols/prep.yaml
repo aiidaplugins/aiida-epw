@@ -41,6 +41,8 @@ default_inputs:
           - aiida.kgmap
           - aiida.kmap
           - aiida.ukk
+          - aiida.mmn
+          - aiida.bvec
           - out/aiida.epmatwp
           - save
     parameters:
