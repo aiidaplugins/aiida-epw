@@ -8,17 +8,17 @@ dynamic = ["version"]
 description = "AiiDA plugin package for interfacing with the Electron Phonon Wannier (EPW) code."
 authors = [{name = "Marnik Bercx", email = "marnik.bercx@psi.ch"}]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {file = "LICENSE"}
 keywords = []
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "aiida-core~=2.5",
@@ -63,6 +63,10 @@ path = "src/aiida_epw/__about__.py"
 
 [tool.hatch.envs.default]
 installer = 'uv'
+scripts.bump = [
+  "hatch version {args}",
+  "python dev/update_changelog.py",
+]
 
 [tool.hatch.envs.docs]
 features = ["docs"]
@@ -78,10 +82,9 @@ scripts.run = "pre-commit run {args}"
 features = ["tests"]
 randomize = false
 parallel = false
-run = "pytest {args}"
 
 [[tool.hatch.envs.hatch-test.matrix]]
-python = ["3.9", "3.10", "3.11", "3.12", "3.13"]
+python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
 [tool.ruff]
 lint.ignore = [
@@ -94,3 +97,4 @@ lint.ignore = [
 ]
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["INP001", "S101"]
+"dev/**/*.py" = ["INP001", "T201"]
