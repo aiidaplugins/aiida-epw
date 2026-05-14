@@ -61,7 +61,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "Structure used for this `SuperConWorkChain`. Should match the structure "
                 "used in the parent `EpwBaseWorkChain` or `EpwPrepWorkChain` that "
                 "produced `parent_folder_epw`."
-            )
+            ),
         )
         spec.input(
             "clean_workdir",
@@ -70,7 +70,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             help=(
                 "Whether the remote working directories of all child calculations "
                 "will be cleaned up after the workchain terminates."
-            )
+            ),
         )
         spec.input(
             "parent_folder_epw",
@@ -80,7 +80,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "`EpwBaseWorkChain` or `EpwPrepWorkChain`). Must contain files such as "
                 "`out/prefix.epmatwp`, `crystal.fmt`, `dmedata.fmt`, `vmedata.fmt`, etc., "
                 "needed by the next `EpwBaseWorkChain` calculations."
-            )
+            ),
         )
         spec.input(
             "interpolation_distance",
@@ -88,7 +88,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             help=(
                 "Distance (or list of distances) between q-points in the fine mesh used "
                 "to converge the Allen-Dynes critical temperature."
-            )
+            ),
         )
         spec.input(
             "convergence_threshold",
@@ -97,7 +97,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             help=(
                 "Stopping threshold for the Allen-Dynes critical temperature: the loop "
                 "stops when consecutive values differ by less than this amount."
-            )
+            ),
         )
         spec.input(
             "always_run_final",
@@ -106,7 +106,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             help=(
                 "Run the final isotropic and anisotropic `EpwBaseWorkChain`s even if the "
                 "Allen-Dynes temperature has not yet converged."
-            )
+            ),
         )
 
         spec.expose_inputs(
@@ -384,7 +384,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             f"launching EpwBaseWorkChain<{workchain_node.pk}> in a2f mode: convergence #{self.ctx.iteration}"
         )
 
-        return {'epw_interp': append_(workchain_node)}
+        return {"epw_interp": append_(workchain_node)}
 
     def inspect_conv(self):
         """Verify that the EpwBaseWorkChain in interpolation mode finished successfully."""
@@ -440,7 +440,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             f"launching EpwBaseWorkChain<{workchain_node.pk}> in isotropic mode"
         )
 
-        return {'final_epw_iso': workchain_node}
+        return {"final_epw_iso": workchain_node}
 
     def inspect_final_epw_iso(self):
         """Verify that the final EpwBaseWorkChain in isotropic mode finished successfully."""
@@ -469,7 +469,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             f"launching EpwBaseWorkChain<{workchain_node.pk}> in anisotropic mode"
         )
 
-        return {'final_epw_aniso': workchain_node}
+        return {"final_epw_aniso": workchain_node}
 
     def inspect_final_epw_aniso(self):
         """Verify that the final EpwBaseWorkChain in anisotropic mode finished successfully."""

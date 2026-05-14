@@ -45,7 +45,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                 "Structure used to generate k-point and q-point meshes and passed to all "
                 "child workflows (`Wannier90BandsWorkChain`/`Wannier90OptimizeWorkChain`, "
                 "`PhBaseWorkChain`, and `EpwBaseWorkChain`)."
-            )
+            ),
         )
         spec.input(
             "clean_workdir",
@@ -54,7 +54,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             help=(
                 "Whether the remote working directories of all child calculations will be "
                 "cleaned up after the workchain terminates."
-            )
+            ),
         )
         spec.input(
             "qpoints_distance",
@@ -62,7 +62,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             default=lambda: orm.Float(0.5),
             help=(
                 "Distance between q-points in the coarse q-point mesh used for the `PhBaseWorkChain`."
-            )
+            ),
         )
         spec.input(
             "kpoints_distance_scf",
@@ -71,7 +71,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             help=(
                 "Distance between k-points in the k-point mesh used for the "
                 "`Wannier90OptimizeWorkChain`/`Wannier90BandsWorkChain`."
-            )
+            ),
         )
         spec.input(
             "kpoints_factor_nscf",
@@ -81,7 +81,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                 "Factor applied to each dimension of the coarse q-point mesh to build the "
                 "coarse k-point mesh for the `Wannier90OptimizeWorkChain`/`Wannier90BandsWorkChain`. "
                 "For example, a q-mesh [4, 4, 4] with `kpoints_factor_nscf=2` becomes a k-mesh [8, 8, 8]. "
-            )
+            ),
         )
         spec.input(
             "w90_chk_to_ukk_script",
@@ -90,7 +90,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                 "Julia script that converts `prefix.chk` from `wannier90.x` to the "
                 "`epw.x`-readable `prefix.ukk` (and adapts `prefix.mmn` for EPW >= v6.0). "
                 "Run as a prepend command before launching `epw.x`."
-            )
+            ),
         )
 
         spec.expose_inputs(
@@ -205,6 +205,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             "ERROR_SUB_PROCESS_FAILED_EPW_BANDS",
             message="The `EpwBaseWorkChain` sub process failed",
         )
+
     @classmethod
     def get_protocol_filepath(cls):
         """Return ``pathlib.Path`` to the ``.yaml`` file that defines the protocols."""
@@ -378,7 +379,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         workchain_node = self.submit(w90_class, **inputs)
         self.report(f"launching {w90_class.get_name()}<{workchain_node.pk}>")
 
-        return {'workchain_w90_bands': workchain_node}
+        return {"workchain_w90_bands": workchain_node}
 
     def inspect_wannier90(self):
         """Verify that the wannier90 workflow finished successfully."""
@@ -411,7 +412,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         workchain_node = self.submit(PhBaseWorkChain, **inputs)
         self.report(f"launching PhBaseWorkChain<{workchain_node.pk}>")
 
-        return {'workchain_ph': workchain_node}
+        return {"workchain_ph": workchain_node}
 
     def inspect_ph(self):
         """Verify that the `PhBaseWorkChain` finished successfully."""
@@ -463,7 +464,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             f"launching EpwBaseWorkChain<{workchain_node.pk}> in transformation mode"
         )
 
-        return {'workchain_epw': workchain_node}
+        return {"workchain_epw": workchain_node}
 
     def inspect_epw(self):
         """Verify that the `EpwBaseWorkChain` finished successfully."""
@@ -474,7 +475,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                 f"EpwBaseWorkChain<{workchain.pk}> failed with exit status {workchain.exit_status}"
             )
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_EPW
-    
+
     def should_run_epw_bands(self):
         """Check if the `EpwBaseWorkChain` should be run in bands mode."""
         return "epw_bands" in self.inputs

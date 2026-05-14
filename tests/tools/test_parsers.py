@@ -62,7 +62,9 @@ def test_parse_epw_a2f(files_path: Path, data_regression):
 
 def test_parse_epw_max_eigenvalue(files_path: Path, data_regression):
     """Parse the max eigenvalue table from a real ``aiida.out`` file."""
-    stdout_path = files_path / "tools" / "parsers" / "linearized_iso_eliashberg" / "aiida.out"
+    stdout_path = (
+        files_path / "tools" / "parsers" / "linearized_iso_eliashberg" / "aiida.out"
+    )
     content = stdout_path.read_text()
 
     parsed = parsers.parse_epw_max_eigenvalue(content)
@@ -114,7 +116,9 @@ def test_parse_epw_imag_iso(files_path: Path, data_regression):
     iso_dir = files_path / "tools" / "parsers" / "full_iso_eliashberg"
 
     file_contents = {
-        path.name: path.read_text() for path in sorted(iso_dir.iterdir()) if path.is_file()
+        path.name: path.read_text()
+        for path in sorted(iso_dir.iterdir())
+        if path.is_file()
     }
 
     parsed = parsers.parse_epw_imag_iso(file_contents, prefix="aiida")
@@ -141,6 +145,3 @@ def test_parse_epw_imag_aniso_gap0(files_path: Path, data_regression):
 
     regression_data = {T: parsed[T].tolist()[:10] for T in sorted(parsed.keys())}
     data_regression.check(regression_data)
-
-
-
