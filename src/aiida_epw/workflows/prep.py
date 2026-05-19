@@ -357,9 +357,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
     def run_wannier90(self):
         """Run the wannier90 workflow."""
         inputs = AttributeDict(
-            self.exposed_inputs(
-                Wannier90OptimizeWorkChain, namespace="w90_bands"
-            )
+            self.exposed_inputs(Wannier90OptimizeWorkChain, namespace="w90_bands")
         )
         if "reference_bands" in self.inputs.w90_bands:
             w90_class = Wannier90OptimizeWorkChain
