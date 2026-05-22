@@ -95,7 +95,7 @@ class EpwParser(BaseParser):
                     return None, None
 
                 lines_start = start_match.end()
-                lines = text[lines_start:].strip().split('\n')
+                lines = text[lines_start:].strip().split("\n")
                 # Take up to 3 lines
                 lines = lines[:3]
 
