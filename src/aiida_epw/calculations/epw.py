@@ -99,9 +99,29 @@ class EpwCalculation(CalcJob):
         )
         spec.input(
             "w90_chk_to_ukk_script",
-            valid_type=orm.RemoteData,
+            valid_type=(orm.RemoteData, orm.SinglefileData),
             required=False,
-            help=("The script to convert the chk file to a ukk file"),
+            help=(
+                "Julia script that converts `prefix.chk` from `wannier90.x` to the "
+                "`epw.x`-readable `prefix.ukk` (and adapts `prefix.mmn` for EPW >= v6.0). "
+                "Run as a prepend command before launching `epw.x`."
+            )
+        )
+        spec.input(
+            "quadrupole_dir",
+            valid_type=(orm.Str, orm.RemoteData),
+            required=False,
+            help=("RemoteData containing the quadrupole.fmt file, or its absolute path string."),
+        )
+        spec.input(
+            "quadrupole_file",
+            valid_type=orm.SinglefileData,
+            required=False,
+            help=(
+                "SinglefileData containing the quadrupole.fmt file. "
+                "Use this instead of `quadrupole_dir` when the quadrupole data lives on a "
+                "different computer than the EPW code (cross-computer transfer)."
+            ),
         )
 
         spec.inputs["metadata"]["options"]["parser_name"].default = "epw.epw"
@@ -299,6 +319,31 @@ class EpwCalculation(CalcJob):
                     )
                 )
 
+        if 'quadrupole_file' in self.inputs:
+            # SinglefileData: upload directly from the AiiDA repository (cross-computer safe)
+            quadrupole_file = self.inputs.quadrupole_file
+            local_copy_list.append(
+                (quadrupole_file.uuid, quadrupole_file.filename, "quadrupole.fmt")
+            )
+        elif 'quadrupole_dir' in self.inputs:
+            quadrupole_dir = self.inputs.quadrupole_dir
+            if isinstance(quadrupole_dir, orm.RemoteData):
+                source_path = quadrupole_dir.get_remote_path()
+                # Use the computer where the quadrupole data actually lives, not the EPW computer
+                quad_computer_uuid = quadrupole_dir.computer.uuid
+            else:
+                source_path = quadrupole_dir.value
+                quad_computer_uuid = self.inputs.code.computer.uuid
+
+            remote_list.append(
+                (
+                    quad_computer_uuid,
+                    Path(source_path, "quadrupole.fmt").as_posix(),
+                    "quadrupole.fmt",
+                )
+            )
+
+
         if "parent_folder_epw" in self.inputs:
             parent_folder_epw = self.inputs.parent_folder_epw
             if isinstance(parent_folder_epw, orm.RemoteStashFolderData):
@@ -306,15 +351,20 @@ class EpwCalculation(CalcJob):
             else:
                 epw_path = Path(parent_folder_epw.get_remote_path())
 
-            vme_fmt_dict = {
-                "dipole": "dmedata.fmt",
-                "wannier": "vmedata.fmt",
-            }
             file_list = [
                 "selecq.fmt",
                 "crystal.fmt",
                 "epwdata.fmt",
-                vme_fmt_dict[parameters["INPUTEPW"]["vme"]],
+                "dmedata.fmt",
+                "vmedata.fmt",
+                "wigner.fmt",
+                "quadrupole.fmt",
+                "decay.H",
+                "decay.v",
+                "decay.P",
+                "decay.dynmat",
+                "decay.epmate",
+                "decay.epmatp",
                 f"{self._PREFIX}.kgmap",
                 f"{self._PREFIX}.kmap",
                 f"{self._PREFIX}.ukk",
