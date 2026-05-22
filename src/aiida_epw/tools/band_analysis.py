@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 #  Core band-edge detection (pure numpy, no AiiDA graph navigation)  #
 # ------------------------------------------------------------------ #
 
+
 def detect_bandgap_from_nscf(bands_array, num_electrons, exclude_bands=None):
     """Detect bandgap from a bands array using the electron count.
 
@@ -31,10 +32,7 @@ def detect_bandgap_from_nscf(bands_array, num_electrons, exclude_bands=None):
     num_val_bands = int(num_electrons / 2)  # spin-degenerate
 
     if exclude_bands:
-        keep = [
-            i for i in range(bands_array.shape[1])
-            if (i + 1) not in exclude_bands
-        ]
+        keep = [i for i in range(bands_array.shape[1]) if (i + 1) not in exclude_bands]
         bands_array = bands_array[:, keep]
         num_excluded_below = sum(1 for b in exclude_bands if b <= num_val_bands)
         num_val_bands -= num_excluded_below
@@ -42,7 +40,8 @@ def detect_bandgap_from_nscf(bands_array, num_electrons, exclude_bands=None):
     if num_val_bands <= 0 or num_val_bands >= bands_array.shape[1]:
         logger.warning(
             "Cannot detect bandgap: num_val_bands=%d, num_bands=%d",
-            num_val_bands, bands_array.shape[1],
+            num_val_bands,
+            bands_array.shape[1],
         )
         return None
 
@@ -163,7 +162,10 @@ def detect_band_edges_from_occupations(bands_data, threshold=0.005):
 #  Wrappers that obtain electron count from different sources         #
 # ------------------------------------------------------------------ #
 
-def detect_bandgap_from_bands(reference_bands, structure, pseudo_family, exclude_bands=None):
+
+def detect_bandgap_from_bands(
+    reference_bands, structure, pseudo_family, exclude_bands=None
+):
     """Detect the true bandgap from reference bands using electron count.
 
     Unlike ``get_homo_lumo`` which uses the Fermi energy (unreliable for
@@ -192,6 +194,7 @@ def detect_bandgap_from_bands(reference_bands, structure, pseudo_family, exclude
 # ------------------------------------------------------------------ #
 #  Band-exclusion helpers (semicore, energy cutoff, VBM-relative)    #
 # ------------------------------------------------------------------ #
+
 
 def _extract_bands_array(reference_bands):
     """Extract a 2-D (nkpts, nbands) numpy array from BandsData or ndarray.
@@ -438,7 +441,10 @@ def compute_w90_exclusion_overrides(
     logger.info(
         "compute_w90_exclusion_overrides: excluding bands %s → "
         "num_wann=%d (unchanged), num_bands=%d (was %d)",
-        exclude_bands, num_wann, num_bands, num_bands_base,
+        exclude_bands,
+        num_wann,
+        num_bands,
+        num_bands_base,
     )
 
     return {
@@ -459,6 +465,7 @@ def compute_w90_exclusion_overrides(
 #  AiiDA graph navigation helpers                                     #
 # ------------------------------------------------------------------ #
 
+
 def _find_w90_workchain(epw_prep_node):
     """Locate the Wannier90 workchain child of an EpwPrepWorkChain.
 
@@ -474,9 +481,9 @@ def _find_w90_workchain(epw_prep_node):
     # Try link label (reliable, set by prep.py)
     try:
         return (
-            epw_prep_node.base.links
-            .get_outgoing(link_label_filter="w90_bands")
-            .first().node
+            epw_prep_node.base.links.get_outgoing(link_label_filter="w90_bands")
+            .first()
+            .node
         )
     except (AttributeError, IndexError, ValueError):
         pass
@@ -494,8 +501,8 @@ def _find_w90_workchain(epw_prep_node):
         if "parent_folder_w90" in epw_prep_node.inputs:
             parent_w90_folder = epw_prep_node.inputs.parent_folder_w90
             logger.info(
-                "No W90 child found, tracing back via parent_folder_w90 "
-                "(PK %s)", parent_w90_folder.pk
+                "No W90 child found, tracing back via parent_folder_w90 (PK %s)",
+                parent_w90_folder.pk,
             )
             # Navigate backwards through incoming links to find the W90 workchain
             for link in parent_w90_folder.base.links.get_incoming().all():
@@ -506,7 +513,9 @@ def _find_w90_workchain(epw_prep_node):
                 ):
                     logger.info(
                         "Found original W90 workchain via parent_folder_w90: "
-                        "%s (PK %s)", caller.process_label, caller.pk
+                        "%s (PK %s)",
+                        caller.process_label,
+                        caller.pk,
                     )
                     return caller
     except (AttributeError, KeyError):
@@ -538,9 +547,7 @@ def _get_nscf_data(w90_wc):
     if nscf_params is None or nscf_bands is None:
         try:
             nscf_base = (
-                w90_wc.base.links
-                .get_outgoing(link_label_filter="nscf")
-                .first().node
+                w90_wc.base.links.get_outgoing(link_label_filter="nscf").first().node
             )
             if nscf_params is None and "output_parameters" in nscf_base.outputs:
                 nscf_params = nscf_base.outputs.output_parameters.get_dict()
@@ -562,9 +569,9 @@ def _get_epw_coarse_bands(epw_prep_node):
     # epw_bands child
     try:
         epw_bands = (
-            epw_prep_node.base.links
-            .get_outgoing(link_label_filter="epw_bands")
-            .first().node
+            epw_prep_node.base.links.get_outgoing(link_label_filter="epw_bands")
+            .first()
+            .node
         )
         if "el_band_structure" in epw_bands.outputs:
             return epw_bands.outputs.el_band_structure
@@ -578,9 +585,9 @@ def _get_epw_coarse_bands(epw_prep_node):
     # epw_base child
     try:
         epw_base = (
-            epw_prep_node.base.links
-            .get_outgoing(link_label_filter="epw_base")
-            .first().node
+            epw_prep_node.base.links.get_outgoing(link_label_filter="epw_base")
+            .first()
+            .node
         )
         if "el_band_structure" in epw_base.outputs:
             return epw_base.outputs.el_band_structure
@@ -644,12 +651,14 @@ def extract_band_edges_from_epw_prep(epw_prep_node):
         else:
             logger.warning(
                 "Could not access nscf output_parameters or output_band "
-                "from W90 workchain <%s>", w90_wc.pk,
+                "from W90 workchain <%s>",
+                w90_wc.pk,
             )
     else:
         logger.warning(
             "No Wannier90OptimizeWorkChain/Wannier90BandsWorkChain found "
-            "under EpwPrepWorkChain <%s>", epw_prep_node.pk,
+            "under EpwPrepWorkChain <%s>",
+            epw_prep_node.pk,
         )
 
     if partial_occupation_result is not None:
@@ -673,6 +682,7 @@ def extract_band_edges_from_epw_prep(epw_prep_node):
 # ------------------------------------------------------------------ #
 #  Fermi-energy-based helpers (kept for backward compatibility)       #
 # ------------------------------------------------------------------ #
+
 
 def get_vbm_cbm(bands, fermi_energy):
     """Extract VBM and CBM from band structure using fermi_energy as reference.
@@ -710,7 +720,9 @@ def get_vbm_cbm(bands, fermi_energy):
 
 
 @calcfunction
-def extract_band_edges(bands_data: orm.BandsData, fermi_energy: orm.Float = None) -> orm.Dict:
+def extract_band_edges(
+    bands_data: orm.BandsData, fermi_energy: orm.Float = None
+) -> orm.Dict:
     """Extract CBM and VBM from BandsData using fermi_energy as reference.
 
     .. warning::
@@ -726,13 +738,17 @@ def extract_band_edges(bands_data: orm.BandsData, fermi_energy: orm.Float = None
     if fermi_energy is None:
         result = detect_bandgap_largest_gap(bands)
         if result is None:
-            return orm.Dict({"vbm": None, "cbm": None, "band_gap": None, "fermi_energy": None})
-        return orm.Dict({
-            "vbm": result["vbm"],
-            "cbm": result["cbm"],
-            "band_gap": result["bandgap"],
-            "fermi_energy": None,
-        })
+            return orm.Dict(
+                {"vbm": None, "cbm": None, "band_gap": None, "fermi_energy": None}
+            )
+        return orm.Dict(
+            {
+                "vbm": result["vbm"],
+                "cbm": result["cbm"],
+                "band_gap": result["bandgap"],
+                "fermi_energy": None,
+            }
+        )
 
     try:
         idx_vbm, vbm, idx_cbm, cbm = get_vbm_cbm(bands, fermi_energy.value)
@@ -773,8 +789,7 @@ def extract_band_edges(bands_data: orm.BandsData, fermi_energy: orm.Float = None
 
 @calcfunction
 def set_fermi_energy_from_band_edges(
-    band_edges: orm.Dict,
-    carrier_type: orm.Str
+    band_edges: orm.Dict, carrier_type: orm.Str
 ) -> orm.Dict:
     """Set fermi energy based on carrier type and band edges.
 
@@ -795,13 +810,15 @@ def set_fermi_energy_from_band_edges(
     else:
         fermi_energy = (vbm + cbm) / 2.0
 
-    return orm.Dict({
-        "fermi_energy": float(fermi_energy),
-        "carrier_type": carrier_type_str,
-        "vbm": vbm,
-        "cbm": cbm,
-        "band_gap": band_edges_dict.get("band_gap"),
-    })
+    return orm.Dict(
+        {
+            "fermi_energy": float(fermi_energy),
+            "carrier_type": carrier_type_str,
+            "vbm": vbm,
+            "cbm": cbm,
+            "band_gap": band_edges_dict.get("band_gap"),
+        }
+    )
 
 
 def parse_vbm_cbm_from_epw_output(stdout_content):
@@ -814,8 +831,10 @@ def parse_vbm_cbm_from_epw_output(stdout_content):
     :return: dict with ``vbm``, ``cbm``, ``band_gap`` (and ``warning``),
         or ``None`` if not found.
     """
-    vbm_match = re.search(r'Valence band maximum\s+=\s+([\d\.]+)\s+eV', stdout_content)
-    cbm_match = re.search(r'Conduction band minimum\s+=\s+([\d\.]+)\s+eV', stdout_content)
+    vbm_match = re.search(r"Valence band maximum\s+=\s+([\d\.]+)\s+eV", stdout_content)
+    cbm_match = re.search(
+        r"Conduction band minimum\s+=\s+([\d\.]+)\s+eV", stdout_content
+    )
 
     if vbm_match and cbm_match:
         vbm = float(vbm_match.group(1))

@@ -230,7 +230,9 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         type_check(code, orm.Code)
         type_check(structure, orm.StructureData)
 
-        inputs = cls.get_protocol_inputs(protocol, overrides, filename=protocol_filename)
+        inputs = cls.get_protocol_inputs(
+            protocol, overrides, filename=protocol_filename
+        )
 
         # Update the parameters based on the protocol inputs
         parameters = inputs["parameters"]
@@ -464,7 +466,10 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE
             )
 
-    @process_handler(priority=500, exit_codes=[EpwCalculation.exit_codes.ERROR_OUTPUT_STDOUT_INCOMPLETE])
+    @process_handler(
+        priority=500,
+        exit_codes=[EpwCalculation.exit_codes.ERROR_OUTPUT_STDOUT_INCOMPLETE],
+    )
     def handle_mesh_refinement(self, calculation):
         """Handle exit code 312 (incomplete output) by adjusting mesh parameters.
 
@@ -478,28 +483,35 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         stdout_content = ""
         scheduler_stderr = ""
 
-        if 'retrieved' in calculation.outputs:
+        if "retrieved" in calculation.outputs:
             retrieved = calculation.outputs.retrieved
             try:
-                output_filename = calculation.get_option('output_filename') or 'aiida.out'
+                output_filename = (
+                    calculation.get_option("output_filename") or "aiida.out"
+                )
                 if output_filename in retrieved.list_object_names():
                     stdout_content = retrieved.get_object_content(output_filename)
             except Exception:
                 pass
             try:
-                if '_scheduler-stderr.txt' in retrieved.list_object_names():
-                    scheduler_stderr = retrieved.get_object_content('_scheduler-stderr.txt')
+                if "_scheduler-stderr.txt" in retrieved.list_object_names():
+                    scheduler_stderr = retrieved.get_object_content(
+                        "_scheduler-stderr.txt"
+                    )
             except Exception:
                 pass
 
         is_lu_failure = "LU factorization failed" in stdout_content
-        is_oom = any(x in scheduler_stderr.upper() for x in ["KILLED", "SIGKILL", "OOM", "OUT OF MEMORY"])
+        is_oom = any(
+            x in scheduler_stderr.upper()
+            for x in ["KILLED", "SIGKILL", "OOM", "OUT OF MEMORY"]
+        )
 
         action_taken = None
 
         if is_lu_failure:
             # Mesh too coarse - need finer mesh
-            if 'kfpoints_factor' in self.ctx.inputs:
+            if "kfpoints_factor" in self.ctx.inputs:
                 current_factor = self.ctx.inputs.kfpoints_factor.value
                 if current_factor == 1:
                     # Increase factor from 1 to 2
@@ -507,13 +519,13 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                     action_taken = f"Increased kfpoints_factor from {current_factor} to 2 due to LU factorization failure."
                 else:
                     # Factor already > 1, refine qfpoints_distance instead
-                    if 'qfpoints_distance' in self.ctx.inputs:
+                    if "qfpoints_distance" in self.ctx.inputs:
                         current_dist = self.ctx.inputs.qfpoints_distance.value
                         new_dist = current_dist * 0.8
                         if new_dist >= 0.03:  # Don't go below minimum
                             self.ctx.inputs.qfpoints_distance = orm.Float(new_dist)
                             action_taken = f"Decreased qfpoints_distance from {current_dist:.3f} to {new_dist:.3f} due to LU factorization failure."
-            elif 'qfpoints_distance' in self.ctx.inputs:
+            elif "qfpoints_distance" in self.ctx.inputs:
                 current_dist = self.ctx.inputs.qfpoints_distance.value
                 new_dist = current_dist * 0.8
                 if new_dist >= 0.03:
@@ -522,13 +534,13 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
 
         elif is_oom:
             # Mesh too dense - need coarser mesh
-            if 'qfpoints_distance' in self.ctx.inputs:
+            if "qfpoints_distance" in self.ctx.inputs:
                 current_dist = self.ctx.inputs.qfpoints_distance.value
                 new_dist = current_dist * 1.25
                 if new_dist <= 0.15:  # Don't go above maximum
                     self.ctx.inputs.qfpoints_distance = orm.Float(new_dist)
                     action_taken = f"Increased qfpoints_distance from {current_dist:.3f} to {new_dist:.3f} due to OOM."
-            elif 'kfpoints_factor' in self.ctx.inputs:
+            elif "kfpoints_factor" in self.ctx.inputs:
                 current_factor = self.ctx.inputs.kfpoints_factor.value
                 if current_factor > 1:
                     new_factor = current_factor - 1
@@ -537,25 +549,32 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
 
         if action_taken:
             # Regenerate kfpoints/qfpoints with updated parameters
-            if 'qfpoints_distance' in self.ctx.inputs:
+            if "qfpoints_distance" in self.ctx.inputs:
                 qf_inputs = {
                     "structure": self.inputs.structure,
                     "distance": self.ctx.inputs.qfpoints_distance,
-                    "force_parity": self.inputs.get("qfpoints_force_parity", orm.Bool(False)),
-                    "metadata": {"call_link_label": "create_qfpoints_from_distance_retry"},
+                    "force_parity": self.inputs.get(
+                        "qfpoints_force_parity", orm.Bool(False)
+                    ),
+                    "metadata": {
+                        "call_link_label": "create_qfpoints_from_distance_retry"
+                    },
                 }
                 qfpoints = create_kpoints_from_distance(**qf_inputs)
                 self.ctx.inputs.qfpoints = qfpoints
 
                 # Regenerate kfpoints based on qfpoints
-                if 'kfpoints_factor' in self.ctx.inputs:
+                if "kfpoints_factor" in self.ctx.inputs:
                     qfpoints_mesh = qfpoints.get_kpoints_mesh()[0]
                     kfpoints = orm.KpointsData()
                     kfpoints.set_kpoints_mesh(
-                        [v * self.ctx.inputs.kfpoints_factor.value for v in qfpoints_mesh]
+                        [
+                            v * self.ctx.inputs.kfpoints_factor.value
+                            for v in qfpoints_mesh
+                        ]
                     )
                     self.ctx.inputs.kfpoints = kfpoints
-            elif 'kfpoints_factor' in self.ctx.inputs and 'qfpoints' in self.ctx.inputs:
+            elif "kfpoints_factor" in self.ctx.inputs and "qfpoints" in self.ctx.inputs:
                 # Just regenerate kfpoints from existing qfpoints with new factor
                 qfpoints_mesh = self.ctx.inputs.qfpoints.get_kpoints_mesh()[0]
                 kfpoints = orm.KpointsData()
@@ -568,5 +587,9 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             return ProcessHandlerReport(True)
 
         # Could not diagnose or fix - let it fail
-        self.report_error_handled(calculation, "Could not diagnose cause of exit code 312. Aborting.")
-        return ProcessHandlerReport(True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE)
+        self.report_error_handled(
+            calculation, "Could not diagnose cause of exit code 312. Aborting."
+        )
+        return ProcessHandlerReport(
+            True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+        )

@@ -105,13 +105,15 @@ class EpwCalculation(CalcJob):
                 "Julia script that converts `prefix.chk` from `wannier90.x` to the "
                 "`epw.x`-readable `prefix.ukk` (and adapts `prefix.mmn` for EPW >= v6.0). "
                 "Run as a prepend command before launching `epw.x`."
-            )
+            ),
         )
         spec.input(
             "quadrupole_dir",
             valid_type=(orm.Str, orm.RemoteData),
             required=False,
-            help=("RemoteData containing the quadrupole.fmt file, or its absolute path string."),
+            help=(
+                "RemoteData containing the quadrupole.fmt file, or its absolute path string."
+            ),
         )
         spec.input(
             "quadrupole_file",
@@ -319,13 +321,13 @@ class EpwCalculation(CalcJob):
                     )
                 )
 
-        if 'quadrupole_file' in self.inputs:
+        if "quadrupole_file" in self.inputs:
             # SinglefileData: upload directly from the AiiDA repository (cross-computer safe)
             quadrupole_file = self.inputs.quadrupole_file
             local_copy_list.append(
                 (quadrupole_file.uuid, quadrupole_file.filename, "quadrupole.fmt")
             )
-        elif 'quadrupole_dir' in self.inputs:
+        elif "quadrupole_dir" in self.inputs:
             quadrupole_dir = self.inputs.quadrupole_dir
             if isinstance(quadrupole_dir, orm.RemoteData):
                 source_path = quadrupole_dir.get_remote_path()
@@ -342,7 +344,6 @@ class EpwCalculation(CalcJob):
                     "quadrupole.fmt",
                 )
             )
-
 
         if "parent_folder_epw" in self.inputs:
             parent_folder_epw = self.inputs.parent_folder_epw

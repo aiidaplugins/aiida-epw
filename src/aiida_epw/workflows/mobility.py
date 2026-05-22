@@ -278,7 +278,10 @@ class MobilityWorkChain(ProtocolMixin, WorkChain):
             epw_mob.clean_workdir = epw_builder.clean_workdir
         if "kfpoints_factor" in epw_builder and epw_builder.kfpoints_factor is not None:
             epw_mob.kfpoints_factor = epw_builder.kfpoints_factor
-        if "qfpoints_distance" in epw_builder and epw_builder.qfpoints_distance is not None:
+        if (
+            "qfpoints_distance" in epw_builder
+            and epw_builder.qfpoints_distance is not None
+        ):
             epw_mob.qfpoints_distance = epw_builder.qfpoints_distance
 
         if epw_inputs and "settings" in epw_inputs:
@@ -354,10 +357,10 @@ class MobilityWorkChain(ProtocolMixin, WorkChain):
                 # Extract band edges from EpwPrepWorkChain
                 self.report("Attempting to extract band edges from NSCF data")
                 band_edges_dict = extract_band_edges_from_epw_prep(prep_wc)
-                if band_edges_dict and 'method' in band_edges_dict:
-                    vbm_log = band_edges_dict.get('vbm')
-                    cbm_log = band_edges_dict.get('cbm')
-                    gap_log = band_edges_dict.get('bandgap')
+                if band_edges_dict and "method" in band_edges_dict:
+                    vbm_log = band_edges_dict.get("vbm")
+                    cbm_log = band_edges_dict.get("cbm")
+                    gap_log = band_edges_dict.get("bandgap")
                     vbm_str = f"{vbm_log:.6f}" if vbm_log is not None else "None"
                     cbm_str = f"{cbm_log:.6f}" if cbm_log is not None else "None"
                     gap_str = f"{gap_log:.6f}" if gap_log is not None else "None"
@@ -369,15 +372,15 @@ class MobilityWorkChain(ProtocolMixin, WorkChain):
                     )
 
                 if band_edges_dict:  # Check if band edges were successfully extracted
-                    if 'warning' in band_edges_dict:
+                    if "warning" in band_edges_dict:
                         self.report(f"WARNING: {band_edges_dict['warning']}")
 
                     carrier_type = self.inputs.carrier_type.value.lower()
 
-                    vbm = band_edges_dict.get('vbm')
-                    cbm = band_edges_dict.get('cbm')
+                    vbm = band_edges_dict.get("vbm")
+                    cbm = band_edges_dict.get("cbm")
 
-                    if carrier_type == 'ele':
+                    if carrier_type == "ele":
                         # For electrons, set fermi energy slightly above CBM
                         if cbm is not None:
                             self.ctx.fermi_energy_override = cbm - 0.1
@@ -386,7 +389,7 @@ class MobilityWorkChain(ProtocolMixin, WorkChain):
                                 "Warning: CBM is unavailable from band-edge extraction. "
                                 "Cannot set electron fermi_energy override."
                             )
-                    elif carrier_type == 'hole':
+                    elif carrier_type == "hole":
                         # For holes, set fermi energy slightly below VBM
                         if vbm is not None:
                             self.ctx.fermi_energy_override = vbm + 0.1
@@ -420,6 +423,7 @@ class MobilityWorkChain(ProtocolMixin, WorkChain):
                     )
             except Exception as e:
                 import traceback
+
                 self.report(
                     f"Warning: Error extracting band edges: {e}. "
                     f"Traceback: {traceback.format_exc()}"
@@ -472,10 +476,14 @@ class MobilityWorkChain(ProtocolMixin, WorkChain):
         # Override fermi_energy if it was set from band edges
         if self.ctx.fermi_energy_override is not None:
             parameters = inputs["parameters"].get_dict()
-            parameters.setdefault("INPUTEPW", {})["fermi_energy"] = self.ctx.fermi_energy_override
+            parameters.setdefault("INPUTEPW", {})["fermi_energy"] = (
+                self.ctx.fermi_energy_override
+            )
             parameters.setdefault("INPUTEPW", {})["efermi_read"] = True
             inputs["parameters"] = orm.Dict(parameters)
-            self.report(f"Using fermi_energy override: {self.ctx.fermi_energy_override:.6f} eV")
+            self.report(
+                f"Using fermi_energy override: {self.ctx.fermi_energy_override:.6f} eV"
+            )
 
         # Override ncarrier sign based on carrier_type
         if "carrier_type" in self.inputs:
@@ -487,7 +495,9 @@ class MobilityWorkChain(ProtocolMixin, WorkChain):
                 self.report(f"Setting ncarrier to negative for hole: {ncarrier:.2e}")
             elif carrier_type == "ele":
                 ncarrier = abs(ncarrier)
-                self.report(f"Setting ncarrier to positive for electron: {ncarrier:.2e}")
+                self.report(
+                    f"Setting ncarrier to positive for electron: {ncarrier:.2e}"
+                )
             parameters.setdefault("INPUTEPW", {})["ncarrier"] = ncarrier
             inputs["parameters"] = orm.Dict(parameters)
 
@@ -549,9 +559,15 @@ class MobilityWorkChain(ProtocolMixin, WorkChain):
                 prev_mobility = self.ctx.mobility_values[-2]
                 new_mobility = self.ctx.mobility_values[-1]
 
-                if prev_mobility is not None and new_mobility is not None and prev_mobility != 0:
+                if (
+                    prev_mobility is not None
+                    and new_mobility is not None
+                    and prev_mobility != 0
+                ):
                     relative_diff = abs((new_mobility - prev_mobility) / prev_mobility)
-                    is_converged = relative_diff < self.inputs.convergence_threshold.value
+                    is_converged = (
+                        relative_diff < self.inputs.convergence_threshold.value
+                    )
                     self.ctx.is_converged = is_converged
                     self.report(
                         f"Convergence check: old={prev_mobility:.4f}, new={new_mobility:.4f}, "
