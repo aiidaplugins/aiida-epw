@@ -85,6 +85,98 @@ class EpwParser(BaseParser):
             )
             return max_eigenvalue_array
 
+        def parse_transport_matrices(block):
+            """Parse transport tensor matrices from a text block."""
+            parsed = {}
+
+            def extract_matrix_pair(header_pattern, text):
+                start_match = re.search(header_pattern, text)
+                if not start_match:
+                    return None, None
+
+                lines_start = start_match.end()
+                lines = text[lines_start:].strip().split('\n')
+                # Take up to 3 lines
+                lines = lines[:3]
+
+                m1 = []
+                m2 = []
+                try:
+                    for line in lines:
+                        # Format " val1 val2 val3 | val4 val5 val6 " (approx)
+                        parts = line.split("|")
+                        if len(parts) < 2:
+                            continue
+
+                        # Handle Fortran D notation
+                        row1 = [
+                            float(x.replace("D", "E").replace("d", "e"))
+                            for x in parts[0].split()
+                        ]
+                        row2 = [
+                            float(x.replace("D", "E").replace("d", "e"))
+                            for x in parts[1].split()
+                        ]
+
+                        if len(row1) == 3 and len(row2) == 3:
+                            m1.append(row1)
+                            m2.append(row2)
+                except ValueError:
+                    pass
+
+                if len(m1) == 3 and len(m2) == 3:
+                    return m1, m2
+                return None, None
+
+            def extract_single_matrix(header_pattern, text):
+                start_match = re.search(header_pattern, text)
+                if not start_match:
+                    return None
+
+                lines_start = start_match.end()
+                lines = text[lines_start:].strip().split("\n")[:3]
+                m = []
+                try:
+                    for line in lines:
+                        # Just one set of 3 values
+                        row = [
+                            float(x.replace("D", "E").replace("d", "e"))
+                            for x in line.split()
+                        ]
+                        if len(row) == 3:
+                            m.append(row)
+                except ValueError:
+                    pass
+
+                if len(m) == 3:
+                    return m
+                return None
+
+            # 1. Conductivity
+            cond, cond_B = extract_matrix_pair(
+                r"Conductivity tensor without magnetic field\s*\|\s*with magnetic field \[Siemens/m\]",
+                block,
+            )
+            if cond:
+                parsed["conductivity"] = cond
+                parsed["conductivity_with_B"] = cond_B
+
+            # 2. Mobility
+            mob, hall_mob = extract_matrix_pair(
+                r"Mobility tensor without magnetic field\s*\|\s*(?:Hall mobility|with magnetic field) \[cm\^2/Vs\]",
+                block,
+            )
+            if mob:
+                parsed["mobility"] = mob
+                parsed["hall_mobility"] = hall_mob
+
+            # 3. Hall Factor
+            hall_fac = extract_single_matrix(r"Hall factor", block)
+            if hall_fac:
+                parsed["hall_factor"] = hall_fac
+
+            return parsed
+
         data_type_regex = (
             (
                 "allen_dynes",
@@ -116,6 +208,44 @@ class EpwParser(BaseParser):
             for data_key, data_marker, block_parser in data_block_marker_parser:
                 if data_marker in line:
                     parsed_data[data_key] = block_parser(stdout[line_number:])
+
+        # Parse carrier mobility matrices (SERTA and iBTE)
+        # Identify SERTA block
+        serta_match = re.search(
+            r"BTE in the self-energy relaxation time approximation \(SERTA\)", stdout
+        )
+        # Identify BTE block (looking for standalone BTE header)
+        bte_match = re.search(r"\n\s+BTE\s*\n", stdout)
+
+        serta_idx = serta_match.start() if serta_match else -1
+        bte_idx = bte_match.start() if bte_match else -1
+
+        if serta_idx != -1:
+            end_serta = bte_idx if bte_idx > serta_idx else len(stdout)
+            serta_block = stdout[serta_idx:end_serta]
+            serta_data = parse_transport_matrices(serta_block)
+
+            for k, v in serta_data.items():
+                parsed_data[f"serta_{k}"] = v
+
+            # Maintain backward compatibility for mobility scalar
+            if "mobility" in serta_data:
+                parsed_data["mobility_SERTA"] = (
+                    numpy.trace(numpy.array(serta_data["mobility"])) / 3.0
+                )
+
+        if bte_idx != -1:
+            ibte_block = stdout[bte_idx:]
+            ibte_data = parse_transport_matrices(ibte_block)
+
+            for k, v in ibte_data.items():
+                parsed_data[f"ibte_{k}"] = v
+
+            # Maintain backward compatibility for mobility scalar
+            if "mobility" in ibte_data:
+                parsed_data["mobility_iBTE"] = (
+                    numpy.trace(numpy.array(ibte_data["mobility"])) / 3.0
+                )
 
         return parsed_data, logs
 
