@@ -161,3 +161,56 @@ def parse_epw_imag_aniso_gap0(file_contents, prefix="aiida"):
             )
             parsed_data[T] = gap_function
     return parsed_data
+
+
+@staticmethod
+def parse_stdout(stdout, logs):
+    """Parse the ``stdout``."""
+
+    def parse_max_eigenvalue(stdout_block):
+        re_pattern = re.compile(
+            r"\s+([\d\.]+)\s+([\d\.-]+)\s+\d+\s+[\d\.]+\s+\d+\n"
+        )
+        parsing_block = stdout_block.split(
+            "Finish: Solving (isotropic) linearized Eliashberg"
+        )[0]
+        max_eigenvalue_array = orm.XyData()
+        max_eigenvalue_array.set_array(
+            "max_eigenvalue",
+            numpy.array(re_pattern.findall(parsing_block), dtype=float),
+        )
+        return max_eigenvalue_array
+
+    data_type_regex = (
+        (
+            "allen_dynes",
+            float,
+            re.compile(r"\s+Estimated Allen-Dynes Tc =\s+([\d\.]+) K"),
+        ),
+        (
+            "fermi_energy_coarse",
+            float,
+            re.compile(r"\s+Fermi energy coarse grid =\s+([\d\.-]+)\seV"),
+        ),
+    )
+    data_block_marker_parser = (
+        (
+            "max_eigenvalue",
+            "Superconducting transition temp. Tc",
+            parse_max_eigenvalue,
+        ),
+    )
+    parsed_data = {}
+    stdout_lines = stdout.split("\n")
+
+    for line_number, line in enumerate(stdout_lines):
+        for data_key, type, re_pattern in data_type_regex:
+            match = re.search(re_pattern, line)
+            if match:
+                parsed_data[data_key] = type(match.group(1))
+
+        for data_key, data_marker, block_parser in data_block_marker_parser:
+            if data_marker in line:
+                parsed_data[data_key] = block_parser(stdout[line_number:])
+
+    return parsed_data, logs
