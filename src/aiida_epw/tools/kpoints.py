@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+"""Utilities for handling k-point and q-point grids."""
+
+
 def check_kpoints_qpoints_compatibility(
     kpoints,
     qpoints,

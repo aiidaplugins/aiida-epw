@@ -4,6 +4,7 @@ from aiida import orm
 import numpy
 
 from aiida_epw.calculations.epw import EpwCalculation
+from aiida_epw.data import A2fData
 from aiida_quantumespresso.parsers.base import BaseParser
 from aiida_quantumespresso.utils.mapping import get_logging_container
 
@@ -12,6 +13,11 @@ class EpwParser(BaseParser):
     """``Parser`` implementation for the ``EpwCalculation`` calculation job."""
 
     success_string = "EPW.bib"
+
+    @staticmethod
+    def get_parser_settings_key():
+        """Return the settings key reserved for parser-specific options."""
+        return "parser_options"
 
     def parse(self, **kwargs):
         """Parse the retrieved files of a completed ``EpwCalculation`` into output nodes."""
@@ -256,12 +262,11 @@ class EpwParser(BaseParser):
             [line.split() for line in content.splitlines()[1:501]], dtype=float
         )
 
-        a2f_xydata = orm.XyData()
-        a2f_xydata.set_array("frequency", a2f_array[:, 0])
-        a2f_xydata.set_array("a2f", a2f_array[:, 1:])
-        a2f_xydata.set_array(
-            "lambda",
-            numpy.array(
+        a2f_data = A2fData()
+        a2f_data.set_a2f_data(
+            frequency=a2f_array[:, 0],
+            spectrum=a2f_array[:, 1:],
+            lambda_values=numpy.array(
                 [
                     value
                     for value in re.search(
@@ -272,10 +277,7 @@ class EpwParser(BaseParser):
                 ],
                 dtype=float,
             ),
-        )
-        a2f_xydata.set_array(
-            "degaussq",
-            numpy.array(
+            phonon_smearing=numpy.array(
                 [
                     value
                     for value in re.search(
@@ -286,6 +288,12 @@ class EpwParser(BaseParser):
                 ],
                 dtype=float,
             ),
+            electron_smearing=float(
+                re.search(r"Electron smearing \(eV\)\s+([\d\.]+)", content).groups()[0]
+            ),
+            fermi_window=float(
+                re.search(r"Fermi window \(eV\)\s+([\d\.]+)", content).groups()[0]
+            ),
         )
         parsed_data = {
             "degaussw": float(
@@ -295,7 +303,7 @@ class EpwParser(BaseParser):
                 re.search(r"Fermi window \(eV\)\s+([\d\.]+)", content).groups()[0]
             ),
         }
-        return a2f_xydata, parsed_data
+        return a2f_data, parsed_data
 
     @staticmethod
     def parse_bands(content):
