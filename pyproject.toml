@@ -36,6 +36,13 @@ Source = "https://github.com/aiidaplugins/aiida-epw"
 [project.entry-points.'aiida.parsers']
 'epw.epw' = 'aiida_epw.parsers.epw:EpwParser'
 
+[project.entry-points.'aiida.data']
+'epw.a2f' = 'aiida_epw.data.a2f:A2fData'
+'epw.gap_function' = 'aiida_epw.data.gap_function:GapFunctionData'
+'epw.lambda_fs' = 'aiida_epw.data.lambda_fs:LambdaFSData'
+'epw.lambda_k_pairs' = 'aiida_epw.data.lambda_k_pairs:LambdaKPairsData'
+'epw.projected_spectrum' = 'aiida_epw.data.projected_spectrum:ProjectedSpectrumData'
+
 [project.entry-points.'aiida.workflows']
 'epw.base' = 'aiida_epw.workflows.base:EpwBaseWorkChain'
 'epw.epw_prep' = 'aiida_epw.workflows.prep:EpwPrepWorkChain'
