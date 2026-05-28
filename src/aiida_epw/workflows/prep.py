@@ -26,7 +26,6 @@ from aiida_wannier90_workflows.utils.workflows.builder.setter import set_kpoints
 from aiida_wannier90_workflows.common.types import WannierProjectionType
 
 from aiida_epw.workflows.base import EpwBaseWorkChain
-from aiida_epw.tools.band_analysis import detect_bandgap_from_bands
 
 try:
     from aiida_quantumespresso_ph.workflows.phonon_bands import PhononBandsWorkChain
@@ -503,9 +502,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         :param protocol: protocol to use, if not specified, the default will be used.
         :param overrides: optional dictionary of inputs to override the defaults of the protocol.
         :param workflow_type: Type of workflow, either "mob" (mobility) or "sc" (superconductivity).
-            This determines which protocol files to use:
-            - "mob": uses prep_mob.yaml and base_mob.yaml
-            - "sc": uses prep_sc.yaml and base_sc.yaml
+            Both variants currently use the shared `prep.yaml` and `base.yaml` protocol files.
         :param electronic_type: indicate the electronic character of the system through ``ElectronicType`` instance.
             Use ``ElectronicType.INSULATOR`` for valence bands only (e.g., for insulators/semiconductors),
             or ``ElectronicType.METAL`` (default) to include conduction bands.
@@ -514,16 +511,12 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         :return: a process builder instance with all inputs defined ready for launch.
         """
         # Determine protocol filenames based on workflow_type
-        if workflow_type == "mob":
-            prep_filename = "prep_mob.yaml"
-            base_filename = "base_mob.yaml"
-        elif workflow_type == "sc":
-            prep_filename = "prep_sc.yaml"
-            base_filename = "base_sc.yaml"
-        else:
+        if workflow_type not in {"mob", "sc"}:
             raise ValueError(
                 f"Invalid workflow_type '{workflow_type}'. Must be 'mob' or 'sc'."
             )
+        prep_filename = "prep.yaml"
+        base_filename = "base.yaml"
 
         inputs = cls.get_protocol_inputs(protocol, overrides, filename=prep_filename)
 
@@ -570,45 +563,6 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             # pop useless inputs, otherwise the builder validation will fail
             # at validating empty inputs
             w90_bands.pop("projwfc", None)
-
-            # ── Insulator-aware dis_froz_max adjustment ──
-            # For insulators/semiconductors using ElectronicType.METAL + auto_projections,
-            # the default dis_froz_max = Ef + 2.0 eV may fall inside the bandgap and miss
-            # the CBM entirely.  The upstream get_homo_lumo function fails to detect the
-            # true gap because Ef = VBM for 'fixed' occupations.  Here we use the electron
-            # count to reliably identify VBM/CBM and override dis_froz_max accordingly.
-            _pf = pseudo_family or w90_bands_inputs.get("meta_parameters", {}).get(
-                "pseudo_family", "PseudoDojo/0.5/PBE/SR/standard/upf"
-            )
-            w90_params = w90_bands.wannier90.wannier90.parameters.get_dict()
-            gap_info = detect_bandgap_from_bands(
-                reference_bands,
-                structure,
-                _pf,
-                exclude_bands=w90_params.get("exclude_bands", None),
-            )
-            if gap_info is not None:
-                # System is an insulator – set dis_froz_max relative to CBM
-                # The value in w90 parameters is *relative* (shifted by Ef or LUMO at
-                # runtime).  Since shift_energy_windows is True and the runtime logic
-                # in Wannier90BaseWorkChain.prepare_inputs() will shift by either Ef or
-                # LUMO, but LUMO detection also fails (same get_homo_lumo bug), we
-                # instead set an *absolute* dis_froz_max and disable the shift.
-                DIS_FROZ_MARGIN = 1.0  # eV above CBM
-                abs_dis_froz_max = gap_info["cbm"] + DIS_FROZ_MARGIN
-                w90_params["dis_froz_max"] = abs_dis_froz_max
-                w90_bands.wannier90.wannier90.parameters = orm.Dict(w90_params)
-                # Disable shift_energy_windows so that dis_froz_max is used as-is
-                w90_bands.wannier90.shift_energy_windows = orm.Bool(False)
-                logger.info(
-                    "Insulator detected (bandgap=%.3f eV, CBM=%.3f eV). "
-                    "Set absolute dis_froz_max=%.3f eV (CBM + %.1f eV), "
-                    "shift_energy_windows=False.",
-                    gap_info["bandgap"],
-                    gap_info["cbm"],
-                    abs_dis_froz_max,
-                    DIS_FROZ_MARGIN,
-                )
         elif wannier_projection_type == WannierProjectionType.SCDM:
             w90_codes = {
                 k: v
@@ -661,22 +615,6 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                 external_projectors=kwargs.get("external_projectors"),
                 external_projectors_path=kwargs.get("external_projectors_path"),
             )
-            if reference_bands is not None:
-                _pf = pseudo_family or w90_bands_inputs.get("meta_parameters", {}).get(
-                    "pseudo_family", "PseudoDojo/0.5/PBE/SR/standard/upf"
-                )
-                w90_params = w90_bands.wannier90.wannier90.parameters.get_dict()
-                gap_info = detect_bandgap_from_bands(
-                    reference_bands,
-                    structure,
-                    _pf,
-                    exclude_bands=w90_params.get("exclude_bands", None),
-                )
-                if gap_info is not None:
-                    w90_params["dis_froz_max"] = gap_info["cbm"] + 1.0
-                    w90_bands.wannier90.wannier90.parameters = orm.Dict(w90_params)
-                    w90_bands.wannier90.shift_energy_windows = orm.Bool(False)
-                    w90_bands.wannier90.auto_energy_windows = orm.Bool(False)
         else:
             raise ValueError(
                 f"Unsupported wannier_projection_type: {wannier_projection_type}"
