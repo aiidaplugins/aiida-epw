@@ -48,6 +48,7 @@ class EpwCalculation(CalcJob):
     _output_phbands_file = "phband.freq"
     _FOLDER_SAVE = "save"
     _FOLDER_DYNAMICAL_MATRIX = "DYN_MAT"
+    _MAX_NSTEMP = 1000
 
     # Not using symlink in pw to allow multiple nscf to run on top of the same scf
     _default_symlink_usage = False
