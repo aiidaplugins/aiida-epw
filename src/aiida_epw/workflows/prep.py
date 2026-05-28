@@ -128,9 +128,7 @@ def has_manual_wannierization_inputs(w90_bands_inputs, manual_wannierization=Non
         return True
 
     parameters = (
-        w90_bands_inputs.get("wannier90", {})
-        .get("wannier90", {})
-        .get("parameters", {})
+        w90_bands_inputs.get("wannier90", {}).get("wannier90", {}).get("parameters", {})
     )
     return "projections" in parameters
 
@@ -416,8 +414,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         missing_codes = [name for name in required_codes if name not in codes]
         if missing_codes:
             raise ValueError(
-                "bandplot mode requires explicit codes for "
-                f"{', '.join(missing_codes)}"
+                f"bandplot mode requires explicit codes for {', '.join(missing_codes)}"
             )
 
         dm_config = cls._get_phonon_bands_dynamical_matrix_config(

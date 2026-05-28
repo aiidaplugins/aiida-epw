@@ -5,6 +5,8 @@ import numpy
 import re
 import io
 
+from aiida import orm
+
 Ry2eV = 13.605662285137
 
 
@@ -168,9 +170,7 @@ def parse_stdout(stdout, logs):
     """Parse the ``stdout``."""
 
     def parse_max_eigenvalue(stdout_block):
-        re_pattern = re.compile(
-            r"\s+([\d\.]+)\s+([\d\.-]+)\s+\d+\s+[\d\.]+\s+\d+\n"
-        )
+        re_pattern = re.compile(r"\s+([\d\.]+)\s+([\d\.-]+)\s+\d+\s+[\d\.]+\s+\d+\n")
         parsing_block = stdout_block.split(
             "Finish: Solving (isotropic) linearized Eliashberg"
         )[0]
