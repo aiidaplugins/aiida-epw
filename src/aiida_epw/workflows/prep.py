@@ -9,7 +9,7 @@ from aiida.common import AttributeDict
 from aiida.engine import WorkChain, ToContext, if_
 from aiida_quantumespresso.workflows.ph.base import PhBaseWorkChain
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
-from aiida_quantumespresso.common.types import ElectronicType, SpinType
+from aiida_quantumespresso.common.types import ElectronicType
 
 from aiida_quantumespresso.calculations.functions.create_kpoints_from_distance import (
     create_kpoints_from_distance,
