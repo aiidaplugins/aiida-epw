@@ -9,7 +9,7 @@ from aiida.common import AttributeDict
 from aiida.engine import WorkChain, ToContext, if_
 from aiida_quantumespresso.workflows.ph.base import PhBaseWorkChain
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
-from aiida_quantumespresso.common.types import ElectronicType, SpinType
+from aiida_quantumespresso.common.types import ElectronicType
 
 from aiida_quantumespresso.calculations.functions.create_kpoints_from_distance import (
     create_kpoints_from_distance,
@@ -502,7 +502,9 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         :param protocol: protocol to use, if not specified, the default will be used.
         :param overrides: optional dictionary of inputs to override the defaults of the protocol.
         :param workflow_type: Type of workflow, either "mob" (mobility) or "sc" (superconductivity).
-            Both variants currently use the shared `prep.yaml` and `base.yaml` protocol files.
+            This determines which protocol files to use:
+            - "mob": uses prep_mob.yaml and base_mob.yaml
+            - "sc": uses prep_sc.yaml and base_sc.yaml
         :param electronic_type: indicate the electronic character of the system through ``ElectronicType`` instance.
             Use ``ElectronicType.INSULATOR`` for valence bands only (e.g., for insulators/semiconductors),
             or ``ElectronicType.METAL`` (default) to include conduction bands.
@@ -511,12 +513,16 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         :return: a process builder instance with all inputs defined ready for launch.
         """
         # Determine protocol filenames based on workflow_type
-        if workflow_type not in {"mob", "sc"}:
+        if workflow_type == "mob":
+            prep_filename = "prep_mob.yaml"
+            base_filename = "base_mob.yaml"
+        elif workflow_type == "sc":
+            prep_filename = "prep_sc.yaml"
+            base_filename = "base_sc.yaml"
+        else:
             raise ValueError(
                 f"Invalid workflow_type '{workflow_type}'. Must be 'mob' or 'sc'."
             )
-        prep_filename = "prep.yaml"
-        base_filename = "base.yaml"
 
         inputs = cls.get_protocol_inputs(protocol, overrides, filename=prep_filename)
 
@@ -531,8 +537,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         )
         if manual_wannier_requested:
             kwargs.setdefault("print_summary", False)
-            if wannier_projection_type == WannierProjectionType.ATOMIC_PROJECTORS_QE:
-                wannier_projection_type = WannierProjectionType.ANALYTIC
+            wannier_projection_type = WannierProjectionType.ANALYTIC
 
         if wannier_projection_type == WannierProjectionType.ATOMIC_PROJECTORS_QE:
             if reference_bands is None:
@@ -563,6 +568,46 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             # pop useless inputs, otherwise the builder validation will fail
             # at validating empty inputs
             w90_bands.pop("projwfc", None)
+            from aiida_epw.tools.band_analysis import detect_bandgap_from_bands
+
+            # ── Insulator-aware dis_froz_max adjustment ──
+            # For insulators/semiconductors using ElectronicType.METAL + auto_projections,
+            # the default dis_froz_max = Ef + 2.0 eV may fall inside the bandgap and miss
+            # the CBM entirely.  The upstream get_homo_lumo function fails to detect the
+            # true gap because Ef = VBM for 'fixed' occupations.  Here we use the electron
+            # count to reliably identify VBM/CBM and override dis_froz_max accordingly.
+            _pf = pseudo_family or w90_bands_inputs.get("meta_parameters", {}).get(
+                "pseudo_family", "PseudoDojo/0.5/PBE/SR/standard/upf"
+            )
+            w90_params = w90_bands.wannier90.wannier90.parameters.get_dict()
+            gap_info = detect_bandgap_from_bands(
+                reference_bands,
+                structure,
+                _pf,
+                exclude_bands=w90_params.get("exclude_bands", None),
+            )
+            if gap_info is not None:
+                # System is an insulator – set dis_froz_max relative to CBM
+                # The value in w90 parameters is *relative* (shifted by Ef or LUMO at
+                # runtime).  Since shift_energy_windows is True and the runtime logic
+                # in Wannier90BaseWorkChain.prepare_inputs() will shift by either Ef or
+                # LUMO, but LUMO detection also fails (same get_homo_lumo bug), we
+                # instead set an *absolute* dis_froz_max and disable the shift.
+                DIS_FROZ_MARGIN = 1.0  # eV above CBM
+                abs_dis_froz_max = gap_info["cbm"] + DIS_FROZ_MARGIN
+                w90_params["dis_froz_max"] = abs_dis_froz_max
+                w90_bands.wannier90.wannier90.parameters = orm.Dict(w90_params)
+                # Disable shift_energy_windows so that dis_froz_max is used as-is
+                w90_bands.wannier90.shift_energy_windows = orm.Bool(False)
+                logger.info(
+                    "Insulator detected (bandgap=%.3f eV, CBM=%.3f eV). "
+                    "Set absolute dis_froz_max=%.3f eV (CBM + %.1f eV), "
+                    "shift_energy_windows=False.",
+                    gap_info["bandgap"],
+                    gap_info["cbm"],
+                    abs_dis_froz_max,
+                    DIS_FROZ_MARGIN,
+                )
         elif wannier_projection_type == WannierProjectionType.SCDM:
             w90_codes = {
                 k: v
@@ -595,32 +640,13 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                 bands_kpoints=bands_kpoints,
                 **kwargs,
             )
-        elif (
-            wannier_projection_type == WannierProjectionType.ATOMIC_PROJECTORS_EXTERNAL
-        ):
-            w90_codes = {
-                k: v
-                for k, v in codes.items()
-                if k in ["pw", "pw2wannier90", "wannier90", "projwfc", "open_grid"]
-            }
-            w90_bands = Wannier90BandsWorkChain.get_builder_from_protocol(
-                structure=structure,
-                codes=w90_codes,
-                pseudo_family=pseudo_family,
-                overrides=w90_bands_inputs,
-                electronic_type=electronic_type,
-                projection_type=wannier_projection_type,
-                bands_kpoints=bands_kpoints,
-                spin_type=kwargs.get("spin_type", SpinType.NONE),
-                external_projectors=kwargs.get("external_projectors"),
-                external_projectors_path=kwargs.get("external_projectors_path"),
-            )
         else:
             raise ValueError(
                 f"Unsupported wannier_projection_type: {wannier_projection_type}"
             )
 
-        apply_manual_wannierization(w90_bands, manual_wannierization)
+        if manual_wannier_requested:
+            apply_manual_wannierization(w90_bands, manual_wannierization)
 
         w90_bands.pop("structure", None)
         w90_bands.pop("open_grid", None)
@@ -945,7 +971,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
     def run_ph(self):
         """Run the `PhBaseWorkChain` or `PhononBandsWorkChain` depending on bandplot."""
         if self.inputs.bandplot.value != 0:
-            if PhononBandsWorkChain is None:
+            if PhononBandsWorkChain is None or DynamicalMatrixWorkChain is None:
                 self.report(
                     "ERROR: bandplot is enabled but aiida_quantumespresso_ph is "
                     "not installed."
