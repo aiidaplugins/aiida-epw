@@ -11,6 +11,7 @@ from aiida_quantumespresso.calculations import (
     BasePwCpInputGenerator,
     _pop_parser_options,
     _case_transform_dict,
+    _uppercase_dict,
 )
 from aiida_quantumespresso.calculations.namelists import NamelistsCalculation
 from aiida_quantumespresso.calculations.ph import PhCalculation
@@ -30,10 +31,6 @@ from aiida_epw.tools.workchain import get_parent_ph_qpoint_ibz_count
 
 def _lowercase_dict(dictionary, dict_name):
     return _case_transform_dict(dictionary, dict_name, "_lowercase_dict", str.lower)
-
-
-def _uppercase_dict(dictionary, dict_name):
-    return _case_transform_dict(dictionary, dict_name, "_uppercase_dict", str.upper)
 
 
 class EpwCalculation(NamelistsCalculation):
