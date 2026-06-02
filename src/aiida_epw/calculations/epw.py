@@ -96,6 +96,11 @@ class EpwCalculation(NamelistsCalculation):
         """Define the process specification."""
         super().define(spec)
         spec.input(
+            "parameters",
+            valid_type=orm.Dict,
+            help="Parameters for the `epw.x` input file.",
+        )
+        spec.input(
             "kpoints",
             valid_type=orm.KpointsData,
             help=(
