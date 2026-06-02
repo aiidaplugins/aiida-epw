@@ -95,10 +95,40 @@ class EpwCalculation(NamelistsCalculation):
     def define(cls, spec):
         """Define the process specification."""
         super().define(spec)
-        spec.input("kpoints", valid_type=orm.KpointsData, help="coarse kpoint mesh")
-        spec.input("qpoints", valid_type=orm.KpointsData, help="coarse qpoint mesh")
-        spec.input("kfpoints", valid_type=orm.KpointsData, help="fine kpoint mesh")
-        spec.input("qfpoints", valid_type=orm.KpointsData, help="fine qpoint mesh")
+        spec.input(
+            "kpoints",
+            valid_type=orm.KpointsData,
+            help=(
+                "The coarse kpoint mesh from nscf calculation."
+                "should be consistent with kpoints from parent_folder_nscf "
+                "or `parent_folder_epw` if restarting."
+            ),
+        )
+        spec.input(
+            "qpoints",
+            valid_type=orm.KpointsData,
+            help=(
+                "The coarse qpoint mesh from ph calculation."
+                "should be consistent with qpoints from `parent_folder_ph` "
+                "or `parent_folder_epw` if restarting."
+            ),
+        )
+        spec.input(
+            "kfpoints",
+            valid_type=orm.KpointsData,
+            help=(
+                "The fine kpoint mesh for interpolation of electron bands."
+                "should be consistent with kpoints from `parent_folder_epw` if restarting."
+            ),
+        )
+        spec.input(
+            "qfpoints",
+            valid_type=orm.KpointsData,
+            help=(
+                "The fine qpoint mesh for interpolation of phonon bands."
+                "should be consistent with qpoints from `parent_folder_epw` if restarting."
+            ),
+        )
         spec.input(
             "parallelization",
             valid_type=orm.Dict,
