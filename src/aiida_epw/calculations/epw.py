@@ -291,6 +291,16 @@ class EpwCalculation(NamelistsCalculation):
             message="The calculation stopped prematurely because it ran out of walltime.",
         )
         spec.exit_code(
+            310,
+            "ERROR_OUTPUT_STDOUT_READ",
+            message="The stdout output file could not be read.",
+        )
+        spec.exit_code(
+            312,
+            "ERROR_OUTPUT_STDOUT_INCOMPLETE",
+            message="The stdout output file was incomplete probably because the calculation got interrupted.",
+        )
+        spec.exit_code(
             313,
             "ERROR_MEMORY_EXCEEDS_MAX_MEMLT",
             message="The required memory exceeds the EPW `max_memlt` setting.",
