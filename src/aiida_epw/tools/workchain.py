@@ -6,7 +6,7 @@ def _filter_essential_parameters(params):
     Only keep essential physical parameters for strict comparison.
     Ignores all other differences (e.g., max_seconds, tprnfor, etc.).
     """
-    # 这里定义你认为必须绝对一致的参数（白名单）
+    # Define parameters that must be strictly identical (allowlist)
     essential_keys = {
         "SYSTEM": ["smearing", "degauss", "ecutwfc", "ecutrho"],
         "ELECTRONS": ["conv_thr"],
@@ -15,13 +15,13 @@ def _filter_essential_parameters(params):
     filtered = {}
     for namelist, keys in essential_keys.items():
         if namelist in params:
-            # 如果原字典中存在这个 namelist，我们就提取关心的 key
+            # If the namelist exists in the original dictionary, extract the keys of interest
             extracted_namelist = {}
             for key in keys:
                 if key in params[namelist]:
                     extracted_namelist[key] = params[namelist][key]
 
-            # 只有当提取出实质内容时，才放入最终的比对字典中
+            # Add to the final comparison dictionary only when essential content is extracted
             if extracted_namelist:
                 filtered[namelist] = extracted_namelist
 
@@ -256,18 +256,18 @@ def validate_parent_ph_inputs(
         if parent_parameters is None:
             mismatches.append("missing SCF pw.parameters on the parent PwCalculation")
         else:
-            # 1. 提取父计算的白名单参数
+            # 1. Extract the allowlisted parameters of the parent calculation
             parent_dict = _filter_essential_parameters(
                 _normalize_structure_component(parent_parameters.get_dict())
             )
-            # 2. 提取当前准备传入的白名单参数
+            # 2. Extract the current allowlisted parameters to be passed
             current_dict = _filter_essential_parameters(
                 _normalize_structure_component(_as_plain_mapping(scf_parameters))
             )
 
-            # 3. 只比对这些核心物理量
+            # 3. Compare only these core physical quantities
             if parent_dict != current_dict:
-                # 为了后续排错方便，我们甚至可以把不一样的地方打印出来
+                # For easier troubleshooting, we can print the mismatch details
                 mismatches.append(
                     f"SCF pw.parameters mismatch in essential keys (Parent: {parent_dict} vs Current: {current_dict})"
                 )
