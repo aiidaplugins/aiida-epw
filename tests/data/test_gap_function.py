@@ -58,3 +58,38 @@ def test_gap_function_data_validates_shape_contract():
 def test_gap_function_data_entry_point():
     """Test the datatype is registered through ``aiida.data``."""
     assert DataFactory("epw.gap_function") is GapFunctionData
+
+
+def test_gap_function_serialization_factories(files_path):
+    """Test GapFunctionData.from_files and from_directory classmethods."""
+    iso_dir = files_path / "tools" / "parsers" / "full_iso_eliashberg"
+
+    # Test from_directory
+    node_dir = GapFunctionData.from_directory(iso_dir, prefix="aiida", kind="iso")
+    assert isinstance(node_dir, GapFunctionData)
+    assert node_dir.kind == "iso"
+    assert node_dir.get_temperatures().tolist() == [3.0, 4.0, 5.0]
+    assert node_dir.get_gap_function(3.0).shape[1] == 3
+
+    # Test from_files (dict of contents)
+    file_contents = {
+        path.name: path.read_text()
+        for path in sorted(iso_dir.iterdir())
+        if path.is_file()
+    }
+    node_files_dict = GapFunctionData.from_files(
+        file_contents, prefix="aiida", kind="iso"
+    )
+    assert node_files_dict.get_temperatures().tolist() == [3.0, 4.0, 5.0]
+
+    # Test from_files (list of filepaths)
+    filepaths = [str(path) for path in sorted(iso_dir.iterdir()) if path.is_file()]
+    node_files_list = GapFunctionData.from_files(filepaths, prefix="aiida", kind="iso")
+    assert node_files_list.get_temperatures().tolist() == [3.0, 4.0, 5.0]
+
+    # Test anisotropic loading
+    aniso_dir = files_path / "tools" / "parsers" / "fsr_aniso_eliashberg"
+    node_aniso = GapFunctionData.from_directory(aniso_dir, prefix="aiida", kind="aniso")
+    assert node_aniso.kind == "aniso"
+    assert node_aniso.get_temperatures().tolist() == [3.0, 4.0, 5.0]
+    assert node_aniso.get_gap_function(3.0).shape[1] == 5

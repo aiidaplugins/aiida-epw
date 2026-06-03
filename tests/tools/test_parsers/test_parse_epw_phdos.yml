@@ -9,6 +9,7 @@ frequency:
 - 0.1915455
 - 0.2154887
 - 0.2394319
+num_smearings: 10
 phdos:
 - - 5.0e-07
   - 2.5e-06

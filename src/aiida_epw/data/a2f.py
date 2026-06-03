@@ -161,3 +161,120 @@ class A2fData(orm.ArrayData):
         """Delete an optional array if it exists."""
         if name in self.get_arraynames():
             self.delete_array(name)
+
+    @classmethod
+    def from_string(cls, content):
+        """Instantiate and populate an `A2fData` node directly from `.a2f` string content."""
+        from aiida_epw.tools.parsers import parse_epw_a2f
+
+        parsed = parse_epw_a2f(content)
+        node = cls()
+        node.set_a2f_data(
+            frequency=parsed["frequency"],
+            spectrum=parsed["a2f"],
+            lambda_values=parsed["lambda"],
+            phonon_smearing=parsed["phonon_smearing"],
+            cumulative_lambda=parsed.get("cumulative_lambda"),
+            electron_smearing=parsed.get("electron_smearing"),
+            fermi_window=parsed.get("fermi_window"),
+            summed_elph_coupling=parsed.get("summed_elph_coupling"),
+        )
+        return node
+
+    @classmethod
+    def from_file(cls, filepath):
+        """Instantiate and populate an `A2fData` node directly from a `.a2f` file."""
+        from pathlib import Path
+
+        content = Path(filepath).read_text(encoding="utf-8")
+        return cls.from_string(content)
+
+
+class PA2fData(orm.ArrayData):
+    """Store the EPW projected a2f table with semantic getters."""
+
+    ARRAY_FREQUENCY = "frequency"
+    ARRAY_A2F = "a2f"
+    ARRAY_PROJECTED_A2F = "projected_a2f"
+    ATTRIBUTE_LAMBDA_INT = "lambda_int"
+    ATTRIBUTE_LAMBDA_SUM = "lambda_sum"
+
+    def set_pa2f_data(
+        self, frequency, a2f, projected_a2f, lambda_int=None, lambda_sum=None
+    ):
+        """Store the projected a2f arrays."""
+        frequency = numpy.array(frequency, dtype=float)
+        a2f = numpy.array(a2f, dtype=float)
+        projected_a2f = numpy.array(projected_a2f, dtype=float)
+
+        if frequency.ndim != 1:
+            raise exceptions.ValidationError(
+                "`frequency` must be a one-dimensional array."
+            )
+        if a2f.ndim != 1:
+            raise exceptions.ValidationError("`a2f` must be a one-dimensional array.")
+        if projected_a2f.ndim != 2:
+            raise exceptions.ValidationError(
+                "`projected_a2f` must be a two-dimensional array."
+            )
+        if (
+            frequency.shape[0] != a2f.shape[0]
+            or frequency.shape[0] != projected_a2f.shape[0]
+        ):
+            raise exceptions.ValidationError(
+                "Arrays `frequency`, `a2f`, and `projected_a2f` must have the same length."
+            )
+
+        self.set_array(self.ARRAY_FREQUENCY, frequency)
+        self.set_array(self.ARRAY_A2F, a2f)
+        self.set_array(self.ARRAY_PROJECTED_A2F, projected_a2f)
+        if lambda_int is not None:
+            self.base.attributes.set(self.ATTRIBUTE_LAMBDA_INT, float(lambda_int))
+        if lambda_sum is not None:
+            self.base.attributes.set(self.ATTRIBUTE_LAMBDA_SUM, float(lambda_sum))
+
+    def get_frequency(self):
+        """Return the frequency array."""
+        return self.get_array(self.ARRAY_FREQUENCY)
+
+    def get_a2f(self):
+        """Return the total a2f array."""
+        return self.get_array(self.ARRAY_A2F)
+
+    def get_projected_a2f(self):
+        """Return the projected a2f array."""
+        return self.get_array(self.ARRAY_PROJECTED_A2F)
+
+    @property
+    def lambda_int(self):
+        """Return the lambda_int attribute."""
+        return self.base.attributes.get(self.ATTRIBUTE_LAMBDA_INT, None)
+
+    @property
+    def lambda_sum(self):
+        """Return the lambda_sum attribute."""
+        return self.base.attributes.get(self.ATTRIBUTE_LAMBDA_SUM, None)
+
+    @classmethod
+    def from_string(cls, content):
+        """Instantiate a `PA2fData` node from `.a2f_proj` string content."""
+        from aiida_epw.tools.parsers import parse_epw_a2f_proj
+
+        parsed = parse_epw_a2f_proj(content)
+        node = cls()
+        node.set_pa2f_data(
+            frequency=parsed["frequency"],
+            a2f=parsed["a2f"],
+            projected_a2f=parsed["projected_a2f"],
+            lambda_int=parsed.get("lambda_int"),
+            lambda_sum=parsed.get("lambda_sum"),
+        )
+        return node
+
+    @classmethod
+    def from_file(cls, filepath):
+        """Instantiate a `PA2fData` node from a `.a2f_proj` file."""
+        from pathlib import Path
+
+        content = Path(filepath).read_text(encoding="utf-8")
+        return cls.from_string(content)
