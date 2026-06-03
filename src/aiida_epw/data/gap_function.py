@@ -98,3 +98,53 @@ class GapFunctionData(orm.ArrayData):
             return
 
         self.base.attributes.set(key, value)
+
+    @classmethod
+    def from_files(cls, file_contents_or_paths, prefix="aiida", kind="iso"):
+        """Instantiate and populate a `GapFunctionData` node from multiple files.
+
+        :param file_contents_or_paths: list of filepaths or a dict mapping filenames to string contents.
+        :param prefix: prefix of the files (e.g. 'aiida').
+        :param kind: kind of gap function ('iso' or 'aniso').
+        """
+        from aiida_epw.tools.parsers import (
+            parse_epw_imag_iso,
+            parse_epw_imag_aniso_gap0,
+        )
+        from pathlib import Path
+
+        file_contents = {}
+        if isinstance(file_contents_or_paths, dict):
+            file_contents = file_contents_or_paths
+        else:
+            for filepath in file_contents_or_paths:
+                path = Path(filepath)
+                file_contents[path.name] = path.read_text(encoding="utf-8")
+
+        if kind == "iso":
+            gap_functions = parse_epw_imag_iso(file_contents, prefix=prefix)
+        elif kind == "aniso":
+            gap_functions = parse_epw_imag_aniso_gap0(file_contents, prefix=prefix)
+        else:
+            raise ValueError(f"Unknown kind '{kind}': Must be either 'iso' or 'aniso'.")
+
+        node = cls()
+        node.set_gap_functions(gap_functions, kind=kind)
+        return node
+
+    @classmethod
+    def from_directory(cls, dirpath, prefix="aiida", kind="iso"):
+        """Instantiate and populate a `GapFunctionData` node from gap files in a directory."""
+        from pathlib import Path
+
+        path = Path(dirpath)
+        pattern = (
+            f"{prefix}.imag_iso_*" if kind == "iso" else f"{prefix}.imag_aniso_gap0_*"
+        )
+        filepaths = list(path.glob(pattern))
+        if not filepaths:
+            raise FileNotFoundError(
+                f"No files matching '{pattern}' in directory '{dirpath}'"
+            )
+
+        return cls.from_files(filepaths, prefix=prefix, kind=kind)

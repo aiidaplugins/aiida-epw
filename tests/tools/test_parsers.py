@@ -8,6 +8,7 @@ their parsed output.
 from pathlib import Path
 
 import numpy
+import pytest
 
 from aiida_epw.tools import parsers
 
@@ -78,18 +79,18 @@ def test_parse_epw_max_eigenvalue(files_path: Path, data_regression):
     data_regression.check(regression_data)
 
 
-def test_parse_epw_eldos(files_path: Path, data_regression):
+def test_parse_epw_dos(files_path: Path, data_regression):
     """Parse an existing ``aiida.dos`` file and regress on the DOS arrays."""
     dos_path = files_path / "tools" / "parsers" / "a2f" / "aiida.dos"
     content = dos_path.read_text()
 
-    parsed = parsers.parse_epw_eldos(content)
+    parsed = parsers.parse_epw_dos(content)
 
-    assert set(parsed.keys()) == {"energy", "edos", "integrated_dos"}
+    assert set(parsed.keys()) == {"energy", "dos", "integrated_dos"}
 
     regression_data = {
         "energy": parsed["energy"].tolist()[:10],
-        "edos": parsed["edos"].tolist()[:10],
+        "dos": parsed["dos"].tolist()[:10],
         "integrated_dos": parsed["integrated_dos"].tolist()[:10],
     }
     data_regression.check(regression_data)
@@ -102,13 +103,82 @@ def test_parse_epw_phdos(files_path: Path, data_regression):
 
     parsed = parsers.parse_epw_phdos(content)
 
-    assert set(parsed.keys()) == {"frequency", "phdos"}
+    assert set(parsed.keys()) == {"frequency", "phdos", "num_smearings"}
 
     regression_data = {
+        "num_smearings": parsed["num_smearings"],
         "frequency": parsed["frequency"].tolist()[:10],
         "phdos": parsed["phdos"].tolist()[:10],
     }
     data_regression.check(regression_data)
+
+
+def test_parse_epw_a2f_proj(files_path: Path):
+    """Parse an existing ``aiida.a2f_proj`` file and validate the projected spectrum payload."""
+    a2f_proj_path = files_path / "tools" / "parsers" / "a2f" / "aiida.a2f_proj"
+    content = a2f_proj_path.read_text()
+
+    parsed = parsers.parse_epw_a2f_proj(content)
+
+    assert set(parsed) == {
+        "frequency",
+        "a2f",
+        "projected_a2f",
+        "lambda_int",
+        "lambda_sum",
+    }
+    assert parsed["frequency"].shape == (500,)
+    assert parsed["a2f"].shape == (500,)
+    assert parsed["projected_a2f"].shape == (500, 3)
+    assert parsed["lambda_int"] == pytest.approx(1.9917789)
+    assert parsed["lambda_sum"] == pytest.approx(1.9853134)
+
+
+def test_parse_epw_phdos_proj(files_path: Path):
+    """Parse an existing ``aiida.phdos_proj`` file and validate the projected spectrum payload."""
+    phdos_proj_path = files_path / "tools" / "parsers" / "a2f" / "aiida.phdos_proj"
+    content = phdos_proj_path.read_text()
+
+    parsed = parsers.parse_epw_phdos_proj(content)
+
+    assert set(parsed) == {
+        "frequency",
+        "phdos",
+        "projected_phdos",
+    }
+    assert parsed["frequency"].shape == (500,)
+    assert parsed["phdos"].shape == (500,)
+    assert parsed["projected_phdos"].shape == (500, 3)
+
+
+def test_parse_epw_lambda_fs():
+    """Parse a synthetic ``lambda_FS`` table."""
+    content = """# kx ky kz band Enk lambda
+ 0.0000 0.1000 0.2000 1 0.3000 0.9000
+ 0.5000 0.6000 0.7000 2 0.4000 1.1000
+"""
+
+    parsed = parsers.parse_epw_lambda_fs(content)
+
+    assert parsed["kpoints"].tolist() == [[0.0, 0.1, 0.2], [0.5, 0.6, 0.7]]
+    assert parsed["band"].tolist() == [1.0, 2.0]
+    assert parsed["energy"].tolist() == [0.3, 0.4]
+    assert parsed["lambda"].tolist() == [0.9, 1.1]
+    assert parsed["energy_units"] == "eV"
+
+
+def test_parse_epw_lambda_k_pairs():
+    """Parse a synthetic ``lambda_k_pairs`` table."""
+    content = """# lambda_nk rho
+ 0.1000 1.5000
+ 0.2000 2.5000
+"""
+
+    parsed = parsers.parse_epw_lambda_k_pairs(content)
+
+    assert parsed["energy"].tolist() == [0.1, 0.2]
+    assert parsed["dos"].tolist() == [1.5, 2.5]
+    assert parsed["integrated_dos"] is None
 
 
 def test_parse_epw_imag_iso(files_path: Path, data_regression):
@@ -145,3 +215,46 @@ def test_parse_epw_imag_aniso_gap0(files_path: Path, data_regression):
 
     regression_data = {T: parsed[T].tolist()[:10] for T in sorted(parsed.keys())}
     data_regression.check(regression_data)
+
+
+def test_parser_robust_exception_handling():
+    """Test that robust parsing exception handling throws clear ValueError."""
+    import pytest
+
+    # 1. bands
+    with pytest.raises(ValueError, match="Malformed bands file"):
+        parsers.parse_epw_bands("invalid header content")
+
+    # 2. a2f
+    with pytest.raises(
+        ValueError,
+        match="Malformed .a2f file: Could not parse the number of smearing values",
+    ):
+        parsers.parse_epw_a2f("invalid content")
+
+    with pytest.raises(
+        ValueError, match="Malformed .a2f file: The a2F spectrum table is empty"
+    ):
+        parsers.parse_epw_a2f(
+            " w[meV] a2f and integrated 2*a2f/w for   10 smearing values\n Integrated el-ph coupling"
+        )
+
+    # 3. max_eigenvalue
+    with pytest.raises(
+        ValueError, match="Finish: Solving \\(isotropic\\) linearized Eliashberg"
+    ):
+        parsers.parse_epw_max_eigenvalue("some content")
+
+    # 4. eldos
+    with pytest.raises(ValueError, match="Malformed electronic DOS file"):
+        parsers.parse_epw_dos("not float content")
+
+    # 5. phdos
+    with pytest.raises(ValueError, match="Malformed phonon DOS file"):
+        parsers.parse_epw_phdos("not float content")
+
+    with pytest.raises(
+        ValueError,
+        match="Could not parse the number of smearing values from the header",
+    ):
+        parsers.parse_epw_phdos("w[meV] phdos[states/meV]\n0.1 1.0")

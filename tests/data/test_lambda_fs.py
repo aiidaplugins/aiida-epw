@@ -50,3 +50,21 @@ def test_lambda_fs_validates_shape_contract():
 def test_lambda_fs_entry_point():
     """Test the datatype is registered through ``aiida.data``."""
     assert DataFactory("epw.lambda_fs") is LambdaFSData
+
+
+def test_lambda_fs_serialization_factories():
+    """Test LambdaFSData.from_file and from_string classmethods."""
+    content = """# kx ky kz band Enk lambda
+ 0.0000 0.1000 0.2000 1 0.3000 0.9000
+ 0.5000 0.6000 0.7000 2 0.4000 1.1000
+"""
+    node = LambdaFSData.from_string(content)
+    assert isinstance(node, LambdaFSData)
+    assert node.energy_units == "eV"
+    assert node.get_kpoints().tolist() == [
+        [0.0, 0.1, 0.2],
+        [0.5, 0.6, 0.7],
+    ]
+    assert node.get_bands().tolist() == [1.0, 2.0]
+    assert node.get_energies().tolist() == [0.3, 0.4]
+    assert node.get_lambda().tolist() == [0.9, 1.1]

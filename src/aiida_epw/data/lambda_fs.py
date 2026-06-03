@@ -68,3 +68,27 @@ class LambdaFSData(orm.ArrayData):
     def energy_units(self):
         """Return the energy units."""
         return self.base.attributes.get(self.ATTRIBUTE_ENERGY_UNITS)
+
+    @classmethod
+    def from_string(cls, content, energy_units="eV"):
+        """Instantiate and populate a `LambdaFSData` node directly from `.lambda_FS` string content."""
+        from aiida_epw.tools.parsers import parse_epw_lambda_fs
+
+        parsed = parse_epw_lambda_fs(content)
+        node = cls()
+        node.set_lambda_fs(
+            kpoints=parsed["kpoints"],
+            bands=parsed["band"],
+            energies=parsed["energy"],
+            couplings=parsed["lambda"],
+            energy_units=energy_units,
+        )
+        return node
+
+    @classmethod
+    def from_file(cls, filepath, energy_units="eV"):
+        """Instantiate and populate a `LambdaFSData` node directly from a `.lambda_FS` file."""
+        from pathlib import Path
+
+        content = Path(filepath).read_text(encoding="utf-8")
+        return cls.from_string(content, energy_units=energy_units)

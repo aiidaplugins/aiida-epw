@@ -20,10 +20,12 @@ from aiida_quantumespresso.utils.convert import convert_input_to_namelist_entry
 
 from aiida_epw.data import (
     A2fData,
+    PA2fData,
+    DosData,
+    PDosData,
+    PhDosData,
     GapFunctionData,
     LambdaFSData,
-    LambdaKPairsData,
-    ProjectedSpectrumData,
 )
 
 from aiida_epw.tools.workchain import get_parent_ph_qpoint_ibz_count
@@ -199,19 +201,19 @@ class EpwCalculation(NamelistsCalculation):
         )
         spec.output(
             "dos",
-            valid_type=orm.XyData,
+            valid_type=DosData,
             required=False,
             help="The electron density of states.",
         )
         spec.output(
             "phdos",
-            valid_type=orm.XyData,
+            valid_type=PhDosData,
             required=False,
             help="The phonon density of states.",
         )
         spec.output(
             "phdos_proj",
-            valid_type=ProjectedSpectrumData,
+            valid_type=PDosData,
             required=False,
             help="The phonon density of states projected on the atomic orbitals.",
         )
@@ -229,7 +231,7 @@ class EpwCalculation(NamelistsCalculation):
         )
         spec.output(
             "a2f_proj",
-            valid_type=ProjectedSpectrumData,
+            valid_type=PA2fData,
             required=False,
             help="The contents of the `.a2f_proj` file.",
         )
@@ -241,7 +243,7 @@ class EpwCalculation(NamelistsCalculation):
         )
         spec.output(
             "lambda_k_pairs",
-            valid_type=LambdaKPairsData,
+            valid_type=DosData,
             required=False,
             help="The density of the electron-phonon coupling on the k-points.",
         )
