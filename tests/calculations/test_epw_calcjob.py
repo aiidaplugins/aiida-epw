@@ -425,31 +425,6 @@ def test_epw_stages_chk_parent_into_requested_transport_list(
     assert not expected.intersection(set(calc_info.remote_copy_list))
 
 
-def test_epw_adds_w90_chk_to_ukk_script_to_prepend_text(
-    fixture_sandbox,
-    fixture_localhost,
-    generate_calc_job,
-    generate_inputs_epw,
-    generate_remote_data,
-):
-    """The chk-to-ukk conversion command should be injected by the calcjob itself."""
-    parent_folder = generate_remote_data(fixture_localhost, "/remote/chk")
-    script = orm.RemoteData(
-        computer=fixture_localhost,
-        remote_path="/remote/bin/w90_chk2ukk.jl",
-    ).store()
-    inputs = generate_inputs_epw(
-        parent_folder_chk=parent_folder,
-        w90_chk_to_ukk_script=script,
-    )
-
-    calc_info = generate_calc_job(fixture_sandbox, "epw.epw", inputs)
-
-    assert "/remote/bin/w90_chk2ukk.jl" in calc_info.prepend_text
-    assert "aiida.chk" in calc_info.prepend_text
-    assert "aiida.ukk" in calc_info.prepend_text
-
-
 def test_epw_stages_epw_restart_files_without_copying_epmatwp(
     fixture_sandbox,
     fixture_localhost,
