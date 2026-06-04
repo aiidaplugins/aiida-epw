@@ -80,6 +80,7 @@ max_eigenvalue:
 - - 40.0
   - -0.5319354
 output_parameters:
+  Allen_Dynes_Tc: 10.325787
   allen_dynes: 10.325787
   code_version: '5.7'
   wall_time_seconds: 4.43
