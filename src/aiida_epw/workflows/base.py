@@ -137,6 +137,13 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 )
             )
 
+        spec.input(
+            "w90_chk_to_ukk_script",
+            valid_type=orm.RemoteData,
+            required=False,
+            help="Julia script that converts `prefix.chk` from `wannier90.x` to the `epw.x`-readable `prefix.ukk`.",
+        )
+
         spec.inputs.validator = validate_inputs
 
         spec.outline(
