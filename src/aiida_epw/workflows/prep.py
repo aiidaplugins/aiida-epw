@@ -697,10 +697,13 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                             "stash",
                         ).as_posix()
 
-                    if epw_options is not None and target_basepath is not None:
-                        epw_options.setdefault("stash", {})["target_base"] = (
-                            target_basepath
-                        )
+                    if target_basepath is not None:
+                        if epw_options is None:
+                            epw_options = epw_inputs.setdefault("options", {})
+                        stash = epw_options.setdefault("stash", {})
+                        stash["target_base"] = target_basepath
+                        if stash.get("stash_mode", None) != "copy":
+                            stash["stash_mode"] = "copy"
 
             epw_builder = EpwBaseWorkChain.get_builder_from_protocol(
                 code=codes["epw"],

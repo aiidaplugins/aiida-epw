@@ -341,3 +341,71 @@ class TestWannier90Selection:
         )
 
         assert EpwPrepWorkChain._uses_wannier90_bands_workchain(dummy) is True
+
+
+class TestGetBuilderFromProtocol:
+    """Tests for `EpwPrepWorkChain.get_builder_from_protocol`."""
+
+    def test_stash_mode_copy_is_injected(self, fixture_code, generate_structure):
+        """Test that `stash_mode` = "copy" is injected when target_base is auto-injected."""
+        from unittest.mock import patch
+        from aiida_epw.workflows.prep import EpwPrepWorkChain
+        from aiida_wannier90_workflows.common.types import WannierProjectionType
+        from aiida.plugins import DataFactory
+        import io
+
+        UpfData = DataFactory("pseudo.upf")
+        dummy_upf = UpfData(
+            io.BytesIO(b'element="Si" z_valence="4.0"'), filename="Si.upf"
+        )
+        dummy_upf.store()
+
+        codes = {
+            "epw": fixture_code("epw.epw"),
+            "ph": fixture_code("quantumespresso.ph"),
+            "pw": fixture_code("quantumespresso.pw"),
+            "wannier90": fixture_code("wannier90.wannier90"),
+            "pw2wannier90": fixture_code("wannier90.pw2wannier90"),
+        }
+
+        from aiida_pseudo.groups.family import PseudoDojoFamily
+
+        family = PseudoDojoFamily(label="PseudoDojo/0.5/PBE/SR/standard/upf")
+        family.store()
+        family.add_nodes([dummy_upf])
+
+        structure = generate_structure()
+
+        with (
+            patch(
+                "aiida_wannier90_workflows.utils.pseudo.get_pseudo_and_cutoff"
+            ) as mock_get_pseudo,
+            patch(
+                "aiida_wannier90_workflows.utils.pseudo.get_wannier_number_of_bands"
+            ) as mock_get_bands,
+            patch(
+                "aiida_wannier90_workflows.utils.pseudo.get_number_of_projections"
+            ) as mock_get_projs,
+            patch(
+                "aiida_wannier90_workflows.utils.pseudo.get_pseudo_orbitals"
+            ) as mock_get_orbitals,
+            patch.object(PseudoDojoFamily, "get_recommended_cutoffs") as mock_cutoffs,
+            patch.object(PseudoDojoFamily, "get_pseudos") as mock_pseudos,
+        ):
+            mock_get_pseudo.return_value = ({"Si": dummy_upf}, 30.0, 120.0)
+            mock_get_bands.return_value = 8
+            mock_get_projs.return_value = 4
+            mock_get_orbitals.return_value = {"Si": {"pswfcs": [], "semicores": []}}
+            mock_cutoffs.return_value = (30.0, 120.0)
+            mock_pseudos.return_value = {"Si": dummy_upf}
+            builder = EpwPrepWorkChain.get_builder_from_protocol(
+                codes=codes,
+                structure=structure,
+                wannier_projection_type=WannierProjectionType.ANALYTIC,
+            )
+
+        # Verify that stash options have stash_mode = "copy" and target_basepath set
+        epw_base_options = builder.epw_base.options
+        assert "stash" in epw_base_options
+        assert epw_base_options["stash"]["stash_mode"] == "copy"
+        assert "target_base" in epw_base_options["stash"]
