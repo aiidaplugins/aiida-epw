@@ -790,7 +790,6 @@ class EpwCalculation(NamelistsCalculation):
             f"{self._PREFIX}.ukk",
             f"{self._PREFIX}.mmn",
             f"{self._PREFIX}.bvec",
-            self._OUTPUT_SUBFOLDER,
             self._FOLDER_SAVE,
         ]
         if parameters["INPUTEPW"].get("restart", False):
