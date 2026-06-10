@@ -248,8 +248,15 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 .first()
                 .node
             )
+            structure = parent_epw.inputs.structure
         elif parent_epw.process_label == "EpwBaseWorkChain":
             epw_source = parent_epw
+            try:
+                structure = parent_epw.inputs.structure
+            except AttributeError as exc:
+                raise ValueError(
+                    "The `parent_epw` (EpwBaseWorkChain) does not contain `structure` in its inputs."
+                ) from exc
         else:
             raise ValueError(f"Invalid parent_epw process: {parent_epw.process_label}")
 
@@ -268,7 +275,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
 
             epw_builder = EpwBaseWorkChain.get_builder_from_protocol(
                 code=epw_code,
-                structure=epw_source.inputs.structure,
+                structure=structure,
                 protocol=protocol,
                 overrides=epw_inputs,
             )
@@ -293,7 +300,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
 
         builder.convergence_threshold = orm.Float(inputs["convergence_threshold"])
         builder.always_run_final = orm.Bool(inputs.get("always_run_final", False))
-        builder.structure = parent_epw.inputs.structure
+        builder.structure = structure
         builder.parent_folder_epw = parent_folder_epw
         builder.clean_workdir = orm.Bool(inputs["clean_workdir"])
 
