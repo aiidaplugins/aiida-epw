@@ -42,7 +42,7 @@ def test_supercon_get_builder_from_protocol_prep(
 
     epw_code = fixture_code("epw.epw")
     structure = generate_structure()
-    remote_folder = generate_remote_data(fixture_localhost, "/tmp/remote_folder")
+    remote_stash = generate_remote_data(fixture_localhost, "/tmp/remote_stash")
 
     # Mock the EpwPrepWorkChain parent node
     parent_epw = MagicMock()
@@ -57,7 +57,7 @@ def test_supercon_get_builder_from_protocol_prep(
     epw_source.inputs.kpoints = orm.KpointsData()
     epw_source.inputs.qpoints = orm.KpointsData()
     epw_source.outputs = MagicMock()
-    epw_source.outputs.remote_folder = remote_folder
+    epw_source.outputs.remote_stash = remote_stash
 
     parent_epw.base.links.get_outgoing.return_value.first.return_value.node = epw_source
 
@@ -68,7 +68,7 @@ def test_supercon_get_builder_from_protocol_prep(
     )
 
     assert builder.structure is structure
-    assert builder.parent_folder_epw is remote_folder
+    assert builder.parent_folder_epw is remote_stash
 
 
 def test_supercon_get_builder_from_protocol_base_success(
@@ -89,7 +89,7 @@ def test_supercon_get_builder_from_protocol_base_success(
 
     epw_code = fixture_code("epw.epw")
     structure = generate_structure()
-    remote_folder = generate_remote_data(fixture_localhost, "/tmp/remote_folder")
+    remote_stash = generate_remote_data(fixture_localhost, "/tmp/remote_stash")
 
     # Mock the EpwBaseWorkChain parent node
     parent_epw = MagicMock()
@@ -100,7 +100,7 @@ def test_supercon_get_builder_from_protocol_base_success(
     parent_epw.inputs.kpoints = orm.KpointsData()
     parent_epw.inputs.qpoints = orm.KpointsData()
     parent_epw.outputs = MagicMock()
-    parent_epw.outputs.remote_folder = remote_folder
+    parent_epw.outputs.remote_stash = remote_stash
 
     builder = SuperConWorkChain.get_builder_from_protocol(
         epw_code=epw_code,
@@ -109,7 +109,7 @@ def test_supercon_get_builder_from_protocol_base_success(
     )
 
     assert builder.structure is structure
-    assert builder.parent_folder_epw is remote_folder
+    assert builder.parent_folder_epw is remote_stash
 
 
 def test_supercon_get_builder_from_protocol_base_failure(
@@ -129,7 +129,7 @@ def test_supercon_get_builder_from_protocol_base_failure(
     monkeypatch.setattr(EpwBaseWorkChain, "get_builder_from_protocol", mock_get_builder)
 
     epw_code = fixture_code("epw.epw")
-    remote_folder = generate_remote_data(fixture_localhost, "/tmp/remote_folder")
+    remote_stash = generate_remote_data(fixture_localhost, "/tmp/remote_stash")
 
     # Mock the EpwBaseWorkChain parent node without structure
     parent_epw = MagicMock()
@@ -141,7 +141,7 @@ def test_supercon_get_builder_from_protocol_base_failure(
     parent_epw.inputs.kpoints = orm.KpointsData()
     parent_epw.inputs.qpoints = orm.KpointsData()
     parent_epw.outputs = MagicMock()
-    parent_epw.outputs.remote_folder = remote_folder
+    parent_epw.outputs.remote_stash = remote_stash
 
     with pytest.raises(ValueError, match="does not contain `structure` in its inputs"):
         SuperConWorkChain.get_builder_from_protocol(

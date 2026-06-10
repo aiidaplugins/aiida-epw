@@ -265,7 +265,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 raise ValueError(
                     "The `epw_code` must be configured on the same computer as that where the `parent_epw` was run."
                 )
-            parent_folder_epw = epw_source.outputs.remote_folder
+            parent_folder_epw = epw_source.outputs.remote_stash
         else:
             # TODO: Add check to make sure parent_folder_epw is on same computer as epw_code
             pass
