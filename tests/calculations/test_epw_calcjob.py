@@ -465,6 +465,8 @@ def test_epw_stages_epw_restart_files_without_copying_epmatwp(
     }
     copied_targets = {entry[2] for entry in calc_info.remote_copy_list}
     assert expected_copied.issubset(copied_targets)
+    assert EpwCalculation._OUTPUT_SUBFOLDER not in copied_targets
+    assert Path(EpwCalculation._OUTPUT_SUBFOLDER).as_posix() not in copied_targets
 
 
 def test_epw_stages_ph_stash_folder_by_target_basepath(
