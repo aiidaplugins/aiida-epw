@@ -763,10 +763,12 @@ class EpwCalculation(NamelistsCalculation):
                 )
             )
 
-    def stage_epw_parent(self, parameters, remote_list, remote_symlink_list):
+    def stage_epw_parent(self, folder, parameters, remote_list, remote_symlink_list):
         """Stage restart files from a previous EPW calculation."""
         if "parent_folder_epw" not in self.inputs:
             return
+
+        folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
 
         parent_folder_epw = self.inputs.parent_folder_epw
         epw_path = self.get_parent_folder_path(parent_folder_epw)
@@ -790,7 +792,6 @@ class EpwCalculation(NamelistsCalculation):
             f"{self._PREFIX}.ukk",
             f"{self._PREFIX}.mmn",
             f"{self._PREFIX}.bvec",
-            self._OUTPUT_SUBFOLDER,
             self._FOLDER_SAVE,
         ]
         if parameters["INPUTEPW"].get("restart", False):
@@ -887,7 +888,7 @@ class EpwCalculation(NamelistsCalculation):
         self.stage_nscf_parent(remote_copy_list)
         self.stage_chk_parent(remote_list)
         self.stage_ph_parent(folder, settings, remote_list)
-        self.stage_epw_parent(parameters, remote_list, remote_symlink_list)
+        self.stage_epw_parent(folder, parameters, remote_list, remote_symlink_list)
 
     def _add_parallelization_flags_to_cmdline_params(self, cmdline_params):
         """Return cmdline parameters with validated parallelization flags appended."""
