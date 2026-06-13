@@ -191,3 +191,30 @@ def test_get_parent_ph_pw_calculation_walks_restart_chain():
     )
 
     assert get_parent_ph_pw_calculation(latest_ph_parent) is original_pw
+
+
+def test_get_default_target_basepath():
+    """Test get_default_target_basepath for local and ssh computers."""
+    from aiida_epw.tools.workchain import get_default_target_basepath
+
+    class MockLocalComputer:
+        transport_type = "core.local"
+
+        def get_workdir(self):
+            return "/tmp/workdir"
+
+    class MockSshComputer:
+        transport_type = "core.ssh"
+        label = "mock-ssh"
+
+        def get_workdir(self):
+            return "/remote/{username}"
+
+        def get_configuration(self):
+            return {"username": "testuser"}
+
+    local_computer = MockLocalComputer()
+    assert get_default_target_basepath(local_computer) == "/tmp/workdir/stash"
+
+    ssh_computer = MockSshComputer()
+    assert get_default_target_basepath(ssh_computer) == "/remote/testuser/stash"

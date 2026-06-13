@@ -312,7 +312,7 @@ def format_subprocess_failure(node, process_label=None):
     return message
 
 
-def get_target_basepath(computer):
+def get_default_target_basepath(computer):
     """Set the target basepath for the stash folder."""
     from pathlib import Path
 
