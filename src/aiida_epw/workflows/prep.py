@@ -188,15 +188,6 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                 "For example, a q-mesh [4, 4, 4] with `kpoints_factor_nscf=2` becomes a k-mesh [8, 8, 8]. "
             ),
         )
-        spec.input(
-            "w90_chk_to_ukk_script",
-            valid_type=(orm.RemoteData, orm.SinglefileData),
-            help=(
-                "Julia script that converts `prefix.chk` from `wannier90.x` to the "
-                "`epw.x`-readable `prefix.ukk` (and adapts `prefix.mmn` for EPW >= v6.0). "
-                "Run as a prepend command before launching `epw.x`."
-            ),
-        )
         spec.input("bandplot", valid_type=orm.Int, default=lambda: orm.Int(0))
         if PhononBandsWorkChain is not None:
             spec.expose_inputs(
@@ -493,6 +484,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         workflow_type="mob",
         electronic_type=ElectronicType.METAL,
         bandplot=False,
+        w90_chk_to_ukk_script=None,
         **kwargs,
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -698,6 +690,9 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
                 overrides=epw_inputs,
                 options=epw_options,
                 protocol_filename=base_filename,
+                w90_chk_to_ukk_script=w90_chk_to_ukk_script
+                if namespace == "epw_base"
+                else None,
                 **kwargs,
             )
 
@@ -1157,10 +1152,6 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         # representation. Thus the fine grid is always [1, 1, 1].
         fine_points = orm.KpointsData()
         fine_points.set_kpoints_mesh([1, 1, 1])
-
-        # Pass w90_chk_to_ukk_script to EpwBaseWorkChain if provided
-        if "w90_chk_to_ukk_script" in self.inputs:
-            inputs.w90_chk_to_ukk_script = self.inputs.w90_chk_to_ukk_script
 
         # Resolve quadrupole_dir into quadrupole_file whenever possible. This makes
         # the transfer robust against missing source remote folders and cross-computer
