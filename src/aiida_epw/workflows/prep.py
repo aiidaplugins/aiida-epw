@@ -1,7 +1,6 @@
 """Work chain for doing the coarse-grid calculations."""
 
 import logging
-from pathlib import Path
 
 from aiida import orm
 from aiida.common import AttributeDict
@@ -529,6 +528,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
         builder = cls.get_builder()
         builder.structure = structure
 
+        # Construction of builder for the Wannier90BandsWorkChain or Wannier90OptimizedStructureWorkChain
         w90_bands_inputs = inputs.get("w90_bands", {})
         pseudo_family = inputs.pop("pseudo_family", None)
         manual_wannierization = kwargs.pop("manual_wannierization", None)
@@ -659,6 +659,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
 
         builder.w90_bands = w90_bands
 
+        # Construction of builder for `PhBaseWorkChain`
         if bandplot:
             builder.pop("ph_base", None)
         else:
@@ -670,37 +671,25 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
             ph_base.pop("qpoints_distance")
             builder.ph_base = ph_base
 
+        # Construction of builder for `EPWBaseWorkChain`s
         epw_builder_namespaces = ("epw_base", "epw_bands")
         for namespace in epw_builder_namespaces:
             epw_inputs = inputs.get(namespace, None)
             if epw_inputs is None:
                 continue
 
-            epw_options = epw_inputs.get("options")
-            if epw_options is None:
-                epw_options = epw_inputs.get("metadata", {}).get("options")
+            epw_options = epw_inputs.setdefault("options", {})
 
             if namespace == "epw_base":
-                stash_options = epw_options.get("stash", {}) if epw_options else {}
+                stash_options = epw_options.setdefault("stash", {})
                 if "target_base" not in stash_options:
-                    epw_computer = codes["epw"].computer
-                    target_basepath = None
-                    if epw_computer.transport_type == "core.local":
-                        target_basepath = Path(
-                            epw_computer.get_workdir(), "stash"
-                        ).as_posix()
-                    elif epw_computer.transport_type == "core.ssh":
-                        target_basepath = Path(
-                            epw_computer.get_workdir().format(
-                                username=epw_computer.get_configuration()["username"]
-                            ),
-                            "stash",
-                        ).as_posix()
+                    from aiida_epw.tools.workchain import get_default_target_basepath
 
-                    if epw_options is not None and target_basepath is not None:
-                        epw_options.setdefault("stash", {})["target_base"] = (
-                            target_basepath
-                        )
+                    target_basepath = get_default_target_basepath(codes["epw"].computer)
+                    if target_basepath:
+                        stash_options["target_base"] = target_basepath
+                        if stash_options.get("stash_mode", None) != "copy":
+                            stash_options["stash_mode"] = "copy"
 
             epw_builder = EpwBaseWorkChain.get_builder_from_protocol(
                 code=codes["epw"],
