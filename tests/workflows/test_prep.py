@@ -343,6 +343,105 @@ class TestWannier90Selection:
         assert EpwPrepWorkChain._uses_wannier90_bands_workchain(dummy) is True
 
 
+def test_get_builder_from_protocol_w90_script(
+    fixture_localhost,
+    fixture_code,
+    generate_structure,
+    generate_remote_data,
+    monkeypatch,
+):
+    """Test get_builder_from_protocol explicitly handles and propagates w90_chk_to_ukk_script."""
+    from aiida_epw.workflows.prep import EpwPrepWorkChain, WannierProjectionType
+    from aiida_wannier90_workflows.workflows import (
+        Wannier90OptimizeWorkChain,
+        Wannier90BandsWorkChain,
+    )
+    from aiida_quantumespresso.workflows.ph.base import PhBaseWorkChain
+    from aiida_epw.workflows.base import EpwBaseWorkChain
+
+    from plumpy.ports import Port, PortNamespace
+
+    monkeypatch.setattr(Port, "validate", lambda *a, **k: None)
+    monkeypatch.setattr(PortNamespace, "validate", lambda *a, **k: None)
+
+    # Mock subprocess builders to isolate the test from heavy DB lookups/pseudos
+    class MockBuilder(dict):
+        def __getattr__(self, key):
+            if key == "get_dict":
+                return lambda: {}
+            if key == "get_list":
+                return lambda: []
+            return self.setdefault(key, MockBuilder())
+
+        def __setattr__(self, key, value):
+            self[key] = value
+
+        def __call__(self, *args, **kwargs):
+            return self
+
+        def pop(self, key, default=None):
+            return super().pop(key, default)
+
+    # We need to return an instance that can behave like a dict/builder
+    def mock_get_builder(*args, **kwargs):
+        builder = MockBuilder()
+        if "w90_chk_to_ukk_script" in kwargs:
+            builder.w90_chk_to_ukk_script = kwargs["w90_chk_to_ukk_script"]
+        return builder
+
+    monkeypatch.setattr(
+        Wannier90OptimizeWorkChain, "get_builder_from_protocol", mock_get_builder
+    )
+    monkeypatch.setattr(
+        Wannier90BandsWorkChain, "get_builder_from_protocol", mock_get_builder
+    )
+    monkeypatch.setattr(PhBaseWorkChain, "get_builder_from_protocol", mock_get_builder)
+    monkeypatch.setattr(EpwBaseWorkChain, "get_builder_from_protocol", mock_get_builder)
+    monkeypatch.setattr(
+        "aiida_epw.tools.band_analysis.detect_bandgap_from_bands", lambda *a, **k: None
+    )
+
+    # Set up mock codes
+    pw_code = fixture_code("quantumespresso.pw")
+    epw_code = fixture_code("epw.epw")
+    ph_code = fixture_code("quantumespresso.ph")
+    q2r_code = fixture_code("quantumespresso.q2r")
+    matdyn_code = fixture_code("quantumespresso.matdyn")
+    wannier_code = fixture_code("wannier90.wannier90")
+    pw2wannier_code = fixture_code("quantumespresso.pw2wannier90")
+
+    codes = {
+        "pw": pw_code,
+        "epw": epw_code,
+        "ph": ph_code,
+        "q2r": q2r_code,
+        "matdyn": matdyn_code,
+        "wannier90": wannier_code,
+        "pw2wannier90": pw2wannier_code,
+    }
+
+    structure = generate_structure()
+    w90_script = generate_remote_data(fixture_localhost, "/tmp/w90_script.jl")
+
+    # Mock the reference bands input
+    reference_bands = orm.BandsData()
+    reference_bands.set_kpoints([[0.0, 0.0, 0.0]])
+    reference_bands.set_bands([[0.0]])
+
+    # Call get_builder_from_protocol with w90_chk_to_ukk_script
+    builder = EpwPrepWorkChain.get_builder_from_protocol(
+        structure=structure,
+        codes=codes,
+        protocol="fast",
+        w90_chk_to_ukk_script=w90_script,
+        wannier_projection_type=WannierProjectionType.ATOMIC_PROJECTORS_QE,
+        reference_bands=reference_bands,
+    )
+
+    # Check that it is also propagated to epw_base builder
+    assert builder.epw_base.w90_chk_to_ukk_script == w90_script
+
+
 class TestGetBuilderFromProtocol:
     """Tests for `EpwPrepWorkChain.get_builder_from_protocol`."""
 
