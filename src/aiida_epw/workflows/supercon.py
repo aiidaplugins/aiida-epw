@@ -415,6 +415,12 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
 
     def should_run_final(self):
         """Check if the final EpwBaseWorkChain should be run."""
+        if not self.ctx.epw_interp:
+            self.report(
+                "Allen-Dynes interpolation was not successful, epw_interp list is empty."
+            )
+            return self.exit_codes.ERROR_SUB_PROCESS_EPW_INTERP
+
         if self.ctx.is_converged or self.inputs.always_run_final.value:
             return True
         else:
