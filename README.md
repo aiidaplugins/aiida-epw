@@ -1,7 +1,7 @@
 [![Templated from python-copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/mbercx/python-copier/refs/heads/main/docs/img/badge.json)](https://github.com/mbercx/python-copier)
 
 <p align="center">
-  <img src="aiida-epw-logo.svg" alt="aiida-epw logo" width="420">
+  <img src="aiida-epw-logo.png" alt="aiida-epw logo" width="315">
 </p>
 
 # `aiida-epw`
@@ -26,14 +26,17 @@ Currently, `aiida-epw` supports the following workflows:
 - [`EpwPrepWorkChain`](src/aiida_epw/workflows/prep.py) contains the work chain used to perform EPW coarse grid Fourier transform to real-space
 - [`EpwBaseWorkChain`](src/aiida_epw/workflows/base.py) contains base work chain to define momentum grids, validate inputs etc
 - [`SuperConWorkChain`](src/aiida_epw/workflows/supercon.py) contains a work chain to compute superconductivity properties. See [M. Bercx et al., PRX Energy 4, 033012 (2025)](https://journals.aps.org/prxenergy/abstract/10.1103/sb28-fjc9) for more information.
-- `mobility.py` contains a work chain to compute carrier transport properties - WIP.
+- [`MobilityWorkChain`](src/aiida_epw/workflows/mobility.py) contains a work chain to compute carrier transport properties.
 
 
 ## Acknowledgements
 
-This work was supported by the Belgian Fund for Scientific Research - [FNRS](https://www.frs-fnrs.be/en/).
+This work was supported by the Belgian Fund for Scientific Research - [FNRS](https://www.frs-fnrs.be/en/) and the Swiss National Science Foundation ([SNSF](https://www.snf.ch/en)).
 
-<img src="https://www.frs-fnrs.be/images/FRS-FNRS_ros_vert_transp.png" alt="FNRS logo" width="200">
+<p align="center">
+  <img src="fnrs_logo.png" alt="FNRS logo" height="60">
+  <img src="snsf_logo.png" alt="SNSF logo" height="60">
+</p>
 
 ## License
 
