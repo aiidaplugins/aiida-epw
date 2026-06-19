@@ -19,6 +19,7 @@ from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida.orm.nodes.data.base import to_aiida_type
 
 from aiida_epw.tools.kpoints import check_kpoints_qpoints_compatibility
+from aiida_epw.common import RestartType
 
 EpwCalculation = CalculationFactory("epw.epw")
 
@@ -220,6 +221,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         w90_chk_to_ukk_script=None,
         quadrupole_dir=None,
         protocol_filename="base.yaml",
+        restart_type=None,
         **_,
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -230,6 +232,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         :param options: optional dictionary of options to override the metadata options.
         :param w90_chk_to_ukk_script: a julia script to convert the prefix.chk file.
         :param protocol_filename: Name of the protocol file to use (default: "base.yaml").
+        :param restart_type: the RestartType enum value to use.
         :return: a process builder instance with all inputs defined ready for launch.
         """
         from aiida_quantumespresso.workflows.protocols.utils import recursive_merge
@@ -248,6 +251,33 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         if overrides:
             parameter_overrides = overrides.get("parameters", {})
             parameters = recursive_merge(parameters, parameter_overrides)
+
+        if restart_type is not None:
+            type_check(restart_type, RestartType)
+            inputepw = parameters.setdefault("INPUTEPW", {})
+            if restart_type is RestartType.WANNIERIZE:
+                inputepw["wannierize"] = True
+                inputepw["epwread"] = False
+                inputepw["epwwrite"] = True
+                inputepw["restart"] = False
+                inputepw["ep_coupling"] = True
+                inputepw["elph"] = True
+            elif restart_type is RestartType.EPHWRITE:
+                inputepw["wannierize"] = False
+                inputepw["epwread"] = True
+                inputepw["epwwrite"] = False
+                inputepw["restart"] = False
+                inputepw["ep_coupling"] = True
+                inputepw["elph"] = True
+            elif restart_type is RestartType.EPHREAD:
+                inputepw["wannierize"] = False
+                inputepw["epwread"] = True
+                inputepw["restart"] = False
+                inputepw["ep_coupling"] = False
+                inputepw["elph"] = False
+                inputepw["ephwrite"] = False
+                if inputepw.get("scattering", False):
+                    inputepw["epmatkqread"] = True
 
         if options:
             inputs["options"] = recursive_merge(inputs["options"], options)
