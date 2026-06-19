@@ -2,6 +2,7 @@
 from aiida import orm
 from aiida.common import AttributeDict
 from pathlib import Path
+from aiida_epw.common import EliashbergType
 
 from aiida.engine import (
     BaseRestartWorkChain,
@@ -64,6 +65,14 @@ def validate_inputs(  # pylint: disable=unused-argument,inconsistent-return-stat
 
     if not any([_ in inputs for _ in ["qfpoints", "qfpoints_distance"]]):
         return "Either `qfpoints` or `qfpoints_distance` must be specified."
+
+    if "eliashberg_type" in inputs:
+        try:
+            member = inputs["eliashberg_type"].get_member()
+            if not isinstance(member, EliashbergType):
+                return "Invalid `eliashberg_type`: wrapped enum must be of class `EliashbergType`."
+        except Exception as exc:
+            return f"Invalid `eliashberg_type`: could not retrieve enum member: {exc}."
 
     return None
 
@@ -136,6 +145,13 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 "[80, 80, 80]."
                 )
             )
+
+        spec.input(
+            "eliashberg_type",
+            valid_type=orm.EnumData,
+            required=False,
+            help="The Eliashberg type to run."
+        )
 
         spec.input(
             "w90_chk_to_ukk_script",
@@ -220,6 +236,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         w90_chk_to_ukk_script=None,
         quadrupole_dir=None,
         protocol_filename="base.yaml",
+        eliashberg_type=None,
         **_,
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -281,9 +298,56 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             else:
                 builder.quadrupole_dir = quadrupole_dir
 
+        if eliashberg_type:
+            from aiida.orm import EnumData
+
+            if isinstance(eliashberg_type, EnumData):
+                builder.eliashberg_type = eliashberg_type
+            else:
+                if isinstance(eliashberg_type, str):
+                    eliashberg_type = EliashbergType(eliashberg_type)
+                builder.eliashberg_type = EnumData(eliashberg_type)
+
         # pylint: enable=no-member
 
         return builder
+
+    def get_additional_retrieve_list(self):
+        """Return additional files that should be retrieved for the configured EPW run."""
+        retrieve_list = []
+        parameters = self.ctx.inputs.parameters.get_dict()
+
+        if parameters.get("INPUTEPW", {}).get("band_plot"):
+            retrieve_list += [
+                self._process_class._output_elbands_file,
+                self._process_class._output_phbands_file,
+            ]
+
+        if parameters.get("INPUTEPW", {}).get("eliashberg", False):
+            retrieve_list.append(self._process_class._OUTPUT_A2F_FILE)
+            if not parameters.get("INPUTEPW", {}).get("restart", False):
+                retrieve_list.append(self._process_class._OUTPUT_A2F_PROJ_FILE)
+                retrieve_list.append(self._process_class._OUTPUT_PHDOS_FILE)
+                retrieve_list.append(self._process_class._OUTPUT_PHDOS_PROJ_FILE)
+                retrieve_list.append(
+                    Path(
+                        self._process_class._OUTPUT_SUBFOLDER,
+                        self._process_class._OUTPUT_DOS_FILE,
+                    ).as_posix()
+                )
+
+        if "eliashberg_type" in self.inputs:
+            from aiida_epw.common.types import EliashbergType
+
+            eliashberg_type = self.inputs.eliashberg_type.get_member()
+            if eliashberg_type == EliashbergType.ISOTROPIC:
+                retrieve_list.append("aiida.imag_iso_*")
+            elif eliashberg_type in (EliashbergType.FSR, EliashbergType.FBW):
+                retrieve_list.append(self._process_class._OUTPUT_LAMBDA_FS_FILE)
+                retrieve_list.append(self._process_class._OUTPUT_LAMBDA_K_PAIRS_FILE)
+                retrieve_list.append("aiida.imag_aniso*")
+
+        return retrieve_list
 
     def setup(self):
         """Call the ``setup`` of the ``BaseRestartWorkChain`` and create the inputs dictionary in ``self.ctx.inputs``.
@@ -302,8 +366,6 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
 
         metadata["options"] = self.inputs.options.get_dict()
 
-        ## Didn't find the way to modify `metadata` in EpwCalculation.
-        ## It should be migrated into EpwCalculation in the future.
         if (
             "w90_chk_to_ukk_script" in self.inputs
             and "parent_folder_chk" in self.inputs
@@ -320,6 +382,30 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         # IMPORTANT: I notice that since now EpwCalculation is not encapsulated, the parameters exposed to
         # the EpwBaseWorkChain and the parameters inside EpwCalculation are not the same.
         parameters = self.ctx.inputs.parameters.get_dict()
+
+        if "eliashberg_type" in self.inputs:
+            eliashberg_type = self.inputs.eliashberg_type.get_member()
+            inputepw = parameters.setdefault("INPUTEPW", {})
+            if eliashberg_type == EliashbergType.ISOTROPIC:
+                inputepw["liso"] = True
+                inputepw["laniso"] = False
+                inputepw["tc_linear"] = False
+                inputepw["fbw"] = False
+            elif eliashberg_type == EliashbergType.LINEARIZED:
+                inputepw["liso"] = True
+                inputepw["laniso"] = False
+                inputepw["tc_linear"] = True
+                inputepw["fbw"] = False
+            elif eliashberg_type == EliashbergType.FSR:
+                inputepw["liso"] = False
+                inputepw["laniso"] = True
+                inputepw["tc_linear"] = False
+                inputepw["fbw"] = False
+            elif eliashberg_type == EliashbergType.FBW:
+                inputepw["liso"] = False
+                inputepw["laniso"] = True
+                inputepw["tc_linear"] = False
+                inputepw["fbw"] = True
 
         if "parent_folder_chk" in self.inputs:
             w90_params = (
@@ -348,6 +434,16 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 )
 
         self.ctx.inputs.parameters = orm.Dict(parameters)
+
+        # Retrieve the additional files based on parameters and eliashberg_type
+        additional_retrieve = list(
+            metadata["options"].setdefault("additional_retrieve_list", [])
+        )
+        for item in self.get_additional_retrieve_list():
+            if item not in additional_retrieve:
+                additional_retrieve.append(item)
+        metadata["options"]["additional_retrieve_list"] = additional_retrieve
+        self.ctx.inputs.metadata = metadata
 
     # We should validate the kpoints and qpoints on the fly
     # because they are usually not determined at the creation of the inputs.
