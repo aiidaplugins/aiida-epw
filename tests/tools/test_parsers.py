@@ -270,3 +270,47 @@ def test_parser_robust_exception_handling():
         match="Could not parse the number of smearing values from the header",
     ):
         parsers.parse_epw_phdos("w[meV] phdos[states/meV]\n0.1 1.0")
+
+
+def test_parse_aniso_gap_FS():
+    """Test parse_aniso_gap_FS with synthetic files."""
+    # Columns: kx, ky, kz, band, energy, delta
+    content = """# kx ky kz band energy delta
+  0.0 0.0 0.0 1 0.1 1.5
+  0.1 0.1 0.1 2 0.2 2.5
+"""
+    folder = {
+        "aiida.imag_aniso_gap_FS_003.00": content,
+    }
+    parsed = parsers.parse_aniso_gap_FS(folder, prefix="aiida")
+    assert 3.0 in parsed
+    assert 1 in parsed[3.0]
+    assert 2 in parsed[3.0]
+    numpy.testing.assert_array_equal(parsed[3.0][1]["kpoints"], [[0.0, 0.0, 0.0]])
+    assert parsed[3.0][1]["energy"] == [0.1]
+    assert parsed[3.0][1]["delta"] == [1.5]
+    assert parsed[3.0]["units"] == {
+        "kpoints": "crystal",
+        "energy": "eV",
+        "delta": "meV",
+    }
+
+
+def test_parse_aniso():
+    """Test parse_aniso with synthetic files."""
+    # Columns: w, energy, znorm, delta, shift
+    content = """# w energy znorm delta shift
+  0.1 0.2 1.0 0.3 0.4
+  0.2 0.3 1.1 0.4 0.5
+"""
+    folder = {
+        "aiida.imag_aniso_003.00": content,
+    }
+    parsed = parsers.parse_aniso(folder, prefix="aiida")
+    assert 3.0 in parsed
+    assert 0.1 in parsed[3.0]
+    assert 0.2 in parsed[3.0]
+    assert parsed[3.0][0.1]["energy"] == [0.2]
+    assert parsed[3.0][0.1]["znorm"] == [1.0]
+    assert parsed[3.0][0.1]["delta"] == [0.3]
+    assert parsed[3.0][0.1]["shift"] == [0.4]
