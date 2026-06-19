@@ -195,6 +195,12 @@ def test_parse_epw_imag_iso(files_path: Path, data_regression):
 
     assert parsed, "No temperatures were parsed from imag_iso files."
 
+    # Verify that passing Path directory directly yields identical results
+    parsed_dir = parsers.parse_epw_imag_iso(iso_dir, prefix="aiida")
+    assert parsed_dir.keys() == parsed.keys()
+    for T in parsed:
+        numpy.testing.assert_array_equal(parsed_dir[T], parsed[T])
+
     regression_data = {T: parsed[T].tolist()[:10] for T in sorted(parsed.keys())}
     data_regression.check(regression_data)
 
@@ -212,6 +218,12 @@ def test_parse_epw_imag_aniso_gap0(files_path: Path, data_regression):
     parsed = parsers.parse_epw_imag_aniso_gap0(file_contents, prefix="aiida")
 
     assert parsed, "No temperatures were parsed from imag_aniso_gap0 files."
+
+    # Verify that passing Path directory directly yields identical results
+    parsed_dir = parsers.parse_epw_imag_aniso_gap0(aniso_dir, prefix="aiida")
+    assert parsed_dir.keys() == parsed.keys()
+    for T in parsed:
+        numpy.testing.assert_array_equal(parsed_dir[T], parsed[T])
 
     regression_data = {T: parsed[T].tolist()[:10] for T in sorted(parsed.keys())}
     data_regression.check(regression_data)

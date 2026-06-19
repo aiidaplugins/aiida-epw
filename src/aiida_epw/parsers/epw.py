@@ -140,22 +140,24 @@ class EpwParser(BaseParser):
                 self.parse_lambda_k_pairs(lambda_k_pairs_contents),
             )
 
-        iso_gap_filecontents = self.get_retrieved_contents_matching(
-            re.compile(rf"{EpwCalculation._PREFIX}\.imag_iso_\d+\.\d+$")
-        )
-        if iso_gap_filecontents:
+        iso_gap_pattern = re.compile(rf"^{EpwCalculation._PREFIX}\.imag_iso_\d+\.\d+$")
+        if self.retrieved and any(
+            iso_gap_pattern.match(name) for name in self.retrieved.list_object_names()
+        ):
             self.out(
                 "iso_gap_functions",
-                self.parse_iso_gap_functions(iso_gap_filecontents),
+                self.parse_iso_gap_functions(self.retrieved),
             )
 
-        aniso_gap_filecontents = self.get_retrieved_contents_matching(
-            re.compile(rf"{EpwCalculation._PREFIX}\.imag_aniso_gap0_\d+\.\d+$")
+        aniso_gap_pattern = re.compile(
+            rf"^{EpwCalculation._PREFIX}\.imag_aniso_gap0_\d+\.\d+$"
         )
-        if aniso_gap_filecontents:
+        if self.retrieved and any(
+            aniso_gap_pattern.match(name) for name in self.retrieved.list_object_names()
+        ):
             self.out(
                 "aniso_gap_functions",
-                self.parse_aniso_gap_functions(aniso_gap_filecontents),
+                self.parse_aniso_gap_functions(self.retrieved),
             )
 
         if "max_eigenvalue" in parsed_data:
