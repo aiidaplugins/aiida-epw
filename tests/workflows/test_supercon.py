@@ -206,3 +206,180 @@ def test_supercon_should_run_final():
         epw_interp_list=[object()], is_converged=False, always_run_final=False
     )
     assert SuperConWorkChain.should_run_final(wc4) == "ERROR_ALLEN_DYNES_NOT_CONVERGED"
+
+
+def test_supercon_eliashberg_types(
+    fixture_code,
+    generate_structure,
+    generate_remote_data,
+    fixture_localhost,
+):
+    """Test get_builder_from_protocol for SuperConWorkChain with different EliashbergType values."""
+    from aiida_epw.workflows.supercon import SuperConWorkChain
+    from aiida_epw.common import EliashbergType
+
+    epw_code = fixture_code("epw.epw")
+    structure = generate_structure()
+    remote_stash = generate_remote_data(fixture_localhost, "/tmp/remote_stash")
+
+    # Mock the EpwBaseWorkChain parent node
+    parent_epw = MagicMock()
+    parent_epw.process_label = "EpwBaseWorkChain"
+    parent_epw.inputs = MagicMock()
+    parent_epw.inputs.structure = structure
+    parent_epw.inputs.code = epw_code
+    parent_epw.inputs.kpoints = orm.KpointsData()
+    parent_epw.inputs.qpoints = orm.KpointsData()
+    parent_epw.outputs = MagicMock()
+    parent_epw.outputs.remote_stash = remote_stash
+
+    # 1. ISOTROPIC
+    builder = SuperConWorkChain.get_builder_from_protocol(
+        epw_code=epw_code,
+        parent_epw=parent_epw,
+        protocol="fast",
+        eliashberg_type=EliashbergType.ISOTROPIC,
+    )
+    assert "code" in builder.epw_final_iso
+    assert "code" not in builder.epw_final_aniso
+    assert builder.epw_final_iso.eliashberg_type == EliashbergType.ISOTROPIC
+
+    # 2. LINEARIZED
+    builder = SuperConWorkChain.get_builder_from_protocol(
+        epw_code=epw_code,
+        parent_epw=parent_epw,
+        protocol="fast",
+        eliashberg_type=EliashbergType.LINEARIZED,
+    )
+    assert "code" in builder.epw_final_iso
+    assert "code" not in builder.epw_final_aniso
+    assert builder.epw_final_iso.eliashberg_type == EliashbergType.LINEARIZED
+
+    # 3. FSR
+    builder = SuperConWorkChain.get_builder_from_protocol(
+        epw_code=epw_code,
+        parent_epw=parent_epw,
+        protocol="fast",
+        eliashberg_type=EliashbergType.FSR,
+    )
+    assert "code" not in builder.epw_final_iso
+    assert "code" in builder.epw_final_aniso
+    assert builder.epw_final_aniso.eliashberg_type == EliashbergType.FSR
+
+    # 4. FBW
+    builder = SuperConWorkChain.get_builder_from_protocol(
+        epw_code=epw_code,
+        parent_epw=parent_epw,
+        protocol="fast",
+        eliashberg_type=EliashbergType.FBW,
+    )
+    assert "code" not in builder.epw_final_iso
+    assert "code" in builder.epw_final_aniso
+    assert builder.epw_final_aniso.eliashberg_type == EliashbergType.FBW
+
+
+def test_epw_base_eliashberg_types(fixture_code, generate_structure):
+    """Test that EpwBaseWorkChain correctly resolves eliashberg_type in get_builder_from_protocol and setup."""
+    from aiida_epw.workflows.base import EpwBaseWorkChain
+    from aiida.common import AttributeDict
+    from aiida_epw.common import EliashbergType
+
+    epw_code = fixture_code("epw.epw")
+    structure = generate_structure()
+
+    # 1. Test builder creation
+    builder = EpwBaseWorkChain.get_builder_from_protocol(
+        code=epw_code,
+        structure=structure,
+        protocol="fast",
+        eliashberg_type="fsr",
+    )
+    assert builder.eliashberg_type == EliashbergType.FSR
+
+    # 2. Test setup method logic by executing a mock workchain setup
+    class MockWorkChain(EpwBaseWorkChain):
+        @property
+        def inputs(self):
+            return self._inputs_dict
+
+        @inputs.setter
+        def inputs(self, value):
+            self._inputs_dict = value
+
+        @property
+        def ctx(self):
+            return self._ctx_dict
+
+        @ctx.setter
+        def ctx(self, value):
+            self._ctx_dict = value
+
+        def setup(self):
+            # Call the actual setup logic from EpwBaseWorkChain
+            EpwBaseWorkChain.setup(self)
+
+    # Mock BaseRestartWorkChain.setup which is super().setup()
+    import unittest.mock
+
+    with unittest.mock.patch(
+        "aiida.engine.BaseRestartWorkChain.setup", return_value=None
+    ):
+        # Test isotropic
+        inputs_iso = {
+            "code": epw_code,
+            "structure": structure,
+            "eliashberg_type": orm.EnumData(EliashbergType.ISOTROPIC),
+            "options": orm.Dict(dict={"resources": {"num_machines": 1}}),
+            "parameters": orm.Dict(dict={"INPUTEPW": {}}),
+        }
+        wc_iso = MockWorkChain.__new__(MockWorkChain)
+        wc_iso.inputs = AttributeDict(inputs_iso)
+        wc_iso.ctx = AttributeDict()
+        wc_iso.exposed_inputs = lambda *args, **kwargs: {
+            "parameters": orm.Dict(inputs_iso.get("parameters", {}))
+        }
+        wc_iso.setup()
+
+        params_iso = wc_iso.ctx.inputs.parameters.get_dict()["INPUTEPW"]
+        assert params_iso["liso"] is True
+        assert params_iso["laniso"] is False
+        assert params_iso["tc_linear"] is False
+        assert params_iso["fbw"] is False
+        assert (
+            "aiida.imag_iso_*"
+            in wc_iso.ctx.inputs.metadata["options"]["additional_retrieve_list"]
+        )
+
+        # Test fsr
+        inputs_fsr = {
+            "code": epw_code,
+            "structure": structure,
+            "eliashberg_type": orm.EnumData(EliashbergType.FSR),
+            "options": orm.Dict(dict={"resources": {"num_machines": 1}}),
+            "parameters": orm.Dict(dict={"INPUTEPW": {}}),
+        }
+        wc_fsr = MockWorkChain.__new__(MockWorkChain)
+        wc_fsr.inputs = AttributeDict(inputs_fsr)
+        wc_fsr.ctx = AttributeDict()
+        wc_fsr.exposed_inputs = lambda *args, **kwargs: {
+            "parameters": orm.Dict(inputs_fsr.get("parameters", {}))
+        }
+        wc_fsr.setup()
+
+        params_fsr = wc_fsr.ctx.inputs.parameters.get_dict()["INPUTEPW"]
+        assert params_fsr["liso"] is False
+        assert params_fsr["laniso"] is True
+        assert params_fsr["tc_linear"] is False
+        assert params_fsr["fbw"] is False
+        assert (
+            "aiida.imag_aniso*"
+            in wc_fsr.ctx.inputs.metadata["options"]["additional_retrieve_list"]
+        )
+        assert (
+            "aiida.lambda_FS"
+            in wc_fsr.ctx.inputs.metadata["options"]["additional_retrieve_list"]
+        )
+        assert (
+            "aiida.lambda_k_pairs"
+            in wc_fsr.ctx.inputs.metadata["options"]["additional_retrieve_list"]
+        )

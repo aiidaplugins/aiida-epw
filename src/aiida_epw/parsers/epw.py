@@ -28,6 +28,8 @@ from aiida_epw.tools.parsers import (
     parse_epw_max_eigenvalue,
     parse_epw_phdos,
     parse_epw_phdos_proj,
+    parse_aniso_FS,
+    parse_aniso,
 )
 
 
@@ -157,6 +159,18 @@ class EpwParser(BaseParser):
                 "aniso_gap_functions",
                 self.parse_aniso_gap_functions(aniso_gap_filecontents),
             )
+
+        aniso_gap_fs_contents = self.get_retrieved_content(
+            f"{EpwCalculation._PREFIX}.imag_aniso_gap_FS"
+        )
+        if aniso_gap_fs_contents is not None:
+            self.out("aniso_gap_FS", self.parse_aniso_gap_fs(aniso_gap_fs_contents))
+
+        aniso_gap_imag_contents = self.get_retrieved_content(
+            f"{EpwCalculation._PREFIX}.imag_aniso"
+        )
+        if aniso_gap_imag_contents is not None:
+            self.out("aniso_gap_imag", self.parse_aniso_imag(aniso_gap_imag_contents))
 
         if "max_eigenvalue" in parsed_data:
             self.out("max_eigenvalue", parsed_data.pop("max_eigenvalue"))
@@ -394,6 +408,39 @@ class EpwParser(BaseParser):
         gap_function_data = GapFunctionData()
         gap_function_data.set_gap_functions(gap_functions, kind="aniso")
         return gap_function_data
+
+    @staticmethod
+    def parse_aniso_gap_fs(content):
+        """Parse the imag_aniso_gap_FS file contents into an ArrayData node."""
+        parsed = parse_aniso_FS(content)
+        array_data = orm.ArrayData()
+        bands = [int(k) for k in parsed.keys() if isinstance(k, int)]
+        for band in sorted(bands):
+            band_data = parsed[band]
+            array_data.set_array(f"band_{band}_kpoints", band_data["kpoints"])
+            array_data.set_array(f"band_{band}_energy", band_data["energy"])
+            array_data.set_array(f"band_{band}_delta", band_data["delta"])
+        array_data.base.attributes.set("bands", sorted(bands))
+        if "units" in parsed:
+            array_data.base.attributes.set("units", parsed["units"])
+        return array_data
+
+    @staticmethod
+    def parse_aniso_imag(content):
+        """Parse the imag_aniso file contents into an ArrayData node."""
+        parsed = parse_aniso(content)
+        array_data = orm.ArrayData()
+        frequencies = sorted([float(k) for k in parsed.keys() if isinstance(k, float)])
+        for index, w in enumerate(frequencies):
+            w_data = parsed[w]
+            array_data.set_array(f"freq_{index}_energy", w_data["energy"])
+            array_data.set_array(f"freq_{index}_znorm", w_data["znorm"])
+            array_data.set_array(f"freq_{index}_delta", w_data["delta"])
+            array_data.set_array(f"freq_{index}_shift", w_data["shift"])
+        array_data.base.attributes.set("frequencies", frequencies)
+        if "units" in parsed:
+            array_data.base.attributes.set("units", parsed["units"])
+        return array_data
 
     @staticmethod
     def parse_a2f_proj(content):

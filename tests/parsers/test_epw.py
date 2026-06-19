@@ -251,3 +251,32 @@ def test_parse_aniso_gap_functions_returns_typed_data(files_path):
     assert gap_functions.kind == "aniso"
     assert gap_functions.get_temperatures().tolist() == [3.0, 4.0, 5.0]
     assert gap_functions.get_gap_function(3.0).shape[1] == 5
+
+
+def test_parse_aniso_gap_fs_returns_typed_data():
+    """Test parsing of imag_aniso_gap_FS file."""
+    content = """# kx ky kz band energy delta
+ 0.0 0.0 0.0 1 0.1 0.5
+ 0.0 0.0 0.0 2 0.2 0.6
+"""
+    aniso_gap_fs = EpwParser.parse_aniso_gap_fs(content)
+    assert isinstance(aniso_gap_fs, orm.ArrayData)
+    assert aniso_gap_fs.base.attributes.get("bands") == [1, 2]
+    assert aniso_gap_fs.get_array("band_1_kpoints").tolist() == [[0.0, 0.0, 0.0]]
+    assert aniso_gap_fs.get_array("band_1_energy").tolist() == [0.1]
+    assert aniso_gap_fs.get_array("band_1_delta").tolist() == [0.5]
+
+
+def test_parse_aniso_imag_returns_typed_data():
+    """Test parsing of imag_aniso file."""
+    content = """# w energy znorm delta shift
+ 0.01 0.1 1.0 0.5 0.0
+ 0.02 0.2 1.1 0.6 0.0
+"""
+    aniso_imag = EpwParser.parse_aniso_imag(content)
+    assert isinstance(aniso_imag, orm.ArrayData)
+    assert aniso_imag.base.attributes.get("frequencies") == [0.01, 0.02]
+    assert aniso_imag.get_array("freq_0_energy").tolist() == [0.1]
+    assert aniso_imag.get_array("freq_0_znorm").tolist() == [1.0]
+    assert aniso_imag.get_array("freq_0_delta").tolist() == [0.5]
+    assert aniso_imag.get_array("freq_0_shift").tolist() == [0.0]

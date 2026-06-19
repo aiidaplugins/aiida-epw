@@ -271,6 +271,18 @@ class EpwCalculation(NamelistsCalculation):
             required=False,
             help="The interpolated anisotropic gap function.",
         )
+        spec.output(
+            "aniso_gap_FS",
+            valid_type=orm.ArrayData,
+            required=False,
+            help="The anisotropic gap on the Fermi surface.",
+        )
+        spec.output(
+            "aniso_gap_imag",
+            valid_type=orm.ArrayData,
+            required=False,
+            help="The anisotropic gap on the imaginary axis.",
+        )
 
         spec.exit_code(
             300,
@@ -631,35 +643,6 @@ class EpwCalculation(NamelistsCalculation):
 
         return parameters
 
-    def get_additional_retrieve_list(self, parameters):
-        """Return additional files that should be retrieved for the configured EPW run."""
-        retrieve_list = []
-
-        if parameters["INPUTEPW"].get("band_plot"):
-            retrieve_list += [self._output_elbands_file, self._output_phbands_file]
-
-        if parameters["INPUTEPW"].get("eliashberg", False):
-            retrieve_list.append(self._OUTPUT_A2F_FILE)
-            if not parameters["INPUTEPW"].get("restart", False):
-                retrieve_list.append(self._OUTPUT_A2F_PROJ_FILE)
-                retrieve_list.append(self._OUTPUT_PHDOS_FILE)
-                retrieve_list.append(self._OUTPUT_PHDOS_PROJ_FILE)
-                retrieve_list.append(
-                    Path(self._OUTPUT_SUBFOLDER, self._OUTPUT_DOS_FILE).as_posix()
-                )
-
-        if parameters["INPUTEPW"].get("liso", False) and not parameters["INPUTEPW"].get(
-            "tc_linear", False
-        ):
-            retrieve_list.append("aiida.imag_iso_*")
-
-        if parameters["INPUTEPW"].get("laniso", False):
-            retrieve_list.append(self._OUTPUT_LAMBDA_FS_FILE)
-            retrieve_list.append(self._OUTPUT_LAMBDA_K_PAIRS_FILE)
-            retrieve_list.append("aiida.imag_aniso_gap*")
-
-        return retrieve_list
-
     @staticmethod
     def get_parent_folder_path(parent_folder):
         """Return the filesystem path for a remote or stashed parent folder."""
@@ -839,6 +822,7 @@ class EpwCalculation(NamelistsCalculation):
                         ).as_posix(),
                     )
                 )
+                file_list.append(f"{self._PREFIX}.a2f")
 
         for filename in file_list:
             remote_list.append(
@@ -1015,7 +999,7 @@ class EpwCalculation(NamelistsCalculation):
             folder, parameters, settings, remote_copy_list, remote_symlink_list
         )
 
-        retrieve_list = self.get_additional_retrieve_list(parameters)
+        retrieve_list = []
         self.write_input_file(folder, parameters, settings)
 
         # Stage quadrupole files if present
