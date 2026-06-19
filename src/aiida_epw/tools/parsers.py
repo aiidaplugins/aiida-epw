@@ -478,7 +478,6 @@ def parse_aniso_gap_FS(folder, prefix="aiida"):
                 }
 
             temp_data["units"] = {
-                "kpoints": "crystal",
                 "energy": "eV",
                 "delta": "meV",
             }

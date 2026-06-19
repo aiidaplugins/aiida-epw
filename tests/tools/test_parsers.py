@@ -290,7 +290,6 @@ def test_parse_aniso_gap_FS():
     assert parsed[3.0][1]["energy"] == [0.1]
     assert parsed[3.0][1]["delta"] == [1.5]
     assert parsed[3.0]["units"] == {
-        "kpoints": "crystal",
         "energy": "eV",
         "delta": "meV",
     }
