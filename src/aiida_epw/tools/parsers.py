@@ -515,9 +515,9 @@ def parse_aniso(folder, prefix="aiida"):
                     f"Failed to parse imag_aniso file {filename}: {exc}"
                 ) from exc
 
-            if data.shape[1] < 5:
+            if data.shape[1] < 4:
                 raise ValueError(
-                    f"Malformed imag_aniso file {filename}: Expected at least 5 columns, got {data.shape[1]}."
+                    f"Malformed imag_aniso file {filename}: Expected at least 4 columns, got {data.shape[1]}."
                 )
 
             temp_data = {}
@@ -531,7 +531,6 @@ def parse_aniso(folder, prefix="aiida"):
                     "energy": subset[:, 1],
                     "znorm": subset[:, 2],
                     "delta": subset[:, 3],
-                    "shift": subset[:, 4],
                 }
 
             temp_data["units"] = {
@@ -539,7 +538,6 @@ def parse_aniso(folder, prefix="aiida"):
                 "energy": "eV",
                 "znorm": "",
                 "delta": "eV",
-                "shift": "eV",
             }
             parsed_data[temperature] = temp_data
 

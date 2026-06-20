@@ -472,9 +472,6 @@ class EpwParser(BaseParser):
                 array_data.set_array(
                     f"temp_{temp_str}_freq_{index}_delta", w_data["delta"]
                 )
-                array_data.set_array(
-                    f"temp_{temp_str}_freq_{index}_shift", w_data["shift"]
-                )
             array_data.base.attributes.set(f"temp_{temp_str}_frequencies", frequencies)
             if "units" in parsed:
                 array_data.base.attributes.set(

@@ -274,9 +274,9 @@ def test_parse_aniso_gap_fs_returns_typed_data():
 
 def test_parse_aniso_imag_returns_typed_data():
     """Test parsing of imag_aniso file."""
-    content = """# w energy znorm delta shift
- 0.01 0.1 1.0 0.5 0.0
- 0.02 0.2 1.1 0.6 0.0
+    content = """# w energy znorm delta
+ 0.01 0.1 1.0 0.5
+ 0.02 0.2 1.1 0.6
 """
     aniso_imag = EpwParser.parse_aniso_imag({"aiida.imag_aniso_003.00": content})
     assert isinstance(aniso_imag, orm.ArrayData)
@@ -285,4 +285,3 @@ def test_parse_aniso_imag_returns_typed_data():
     assert aniso_imag.get_array("temp_3_00_freq_0_energy").tolist() == [0.1]
     assert aniso_imag.get_array("temp_3_00_freq_0_znorm").tolist() == [1.0]
     assert aniso_imag.get_array("temp_3_00_freq_0_delta").tolist() == [0.5]
-    assert aniso_imag.get_array("temp_3_00_freq_0_shift").tolist() == [0.0]

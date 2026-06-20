@@ -297,10 +297,10 @@ def test_parse_aniso_gap_FS():
 
 def test_parse_aniso():
     """Test parse_aniso with synthetic files."""
-    # Columns: w, energy, znorm, delta, shift
-    content = """# w energy znorm delta shift
-  0.1 0.2 1.0 0.3 0.4
-  0.2 0.3 1.1 0.4 0.5
+    # Columns: w, energy, znorm, delta
+    content = """# w energy znorm delta
+  0.1 0.2 1.0 0.3
+  0.2 0.3 1.1 0.4
 """
     folder = {
         "aiida.imag_aniso_003.00": content,
@@ -312,4 +312,3 @@ def test_parse_aniso():
     assert parsed[3.0][0.1]["energy"] == [0.2]
     assert parsed[3.0][0.1]["znorm"] == [1.0]
     assert parsed[3.0][0.1]["delta"] == [0.3]
-    assert parsed[3.0][0.1]["shift"] == [0.4]
