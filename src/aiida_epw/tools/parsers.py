@@ -490,15 +490,18 @@ def parse_aniso_gap_FS(folder, prefix="aiida"):
     return parsed_data
 
 
-def parse_aniso(folder, prefix="aiida"):
+def parse_aniso(folder, prefix="aiida", restriction="fsr"):
     """Parse the anisotropic gap functions from a folder mapping.
 
     :param folder: pathlib.Path, orm.FolderData, or dict containing the output files.
     :param prefix: prefix of the files.
+    :param restriction: "fsr" (at least 4 columns) or "fbw" (at least 5 columns).
     :returns: dictionary containing the parsed data keyed by temperature.
     """
     if not folder:
         raise ValueError("No folder or dict provided.")
+    if restriction not in ("fsr", "fbw"):
+        raise ValueError(f"Invalid restriction: {restriction}. Must be 'fsr' or 'fbw'.")
     parsed_data = {}
     pattern = re.compile(rf"^{prefix}\.imag_aniso_(\d{{3}}\.\d{{2}})$")
 
@@ -515,9 +518,10 @@ def parse_aniso(folder, prefix="aiida"):
                     f"Failed to parse imag_aniso file {filename}: {exc}"
                 ) from exc
 
-            if data.shape[1] < 4:
+            min_cols = 5 if restriction == "fbw" else 4
+            if data.shape[1] < min_cols:
                 raise ValueError(
-                    f"Malformed imag_aniso file {filename}: Expected at least 4 columns, got {data.shape[1]}."
+                    f"Malformed imag_aniso file {filename}: Expected at least {min_cols} columns, got {data.shape[1]}."
                 )
 
             temp_data = {}
@@ -527,18 +531,24 @@ def parse_aniso(folder, prefix="aiida"):
             for w in unique_frequencies:
                 mask = frequencies == w
                 subset = data[mask]
-                temp_data[float(w)] = {
+                w_data = {
                     "energy": subset[:, 1],
                     "znorm": subset[:, 2],
                     "delta": subset[:, 3],
                 }
+                if restriction == "fbw":
+                    w_data["shift"] = subset[:, 4]
+                temp_data[float(w)] = w_data
 
-            temp_data["units"] = {
+            units = {
                 "frequency": "eV",
                 "energy": "eV",
                 "znorm": "",
                 "delta": "eV",
             }
+            if restriction == "fbw":
+                units["shift"] = "eV"
+            temp_data["units"] = units
             parsed_data[temperature] = temp_data
 
     if not parsed_data:

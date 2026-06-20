@@ -312,3 +312,23 @@ def test_parse_aniso():
     assert parsed[3.0][0.1]["energy"] == [0.2]
     assert parsed[3.0][0.1]["znorm"] == [1.0]
     assert parsed[3.0][0.1]["delta"] == [0.3]
+
+
+def test_parse_aniso_fbw():
+    """Test parse_aniso with restriction='fbw' using synthetic files."""
+    # Columns: w, energy, znorm, delta, shift
+    content = """# w energy znorm delta shift
+  0.1 0.2 1.0 0.3 0.4
+  0.2 0.3 1.1 0.4 0.5
+"""
+    folder = {
+        "aiida.imag_aniso_003.00": content,
+    }
+    parsed = parsers.parse_aniso(folder, prefix="aiida", restriction="fbw")
+    assert 3.0 in parsed
+    assert 0.1 in parsed[3.0]
+    assert 0.2 in parsed[3.0]
+    assert parsed[3.0][0.1]["energy"] == [0.2]
+    assert parsed[3.0][0.1]["znorm"] == [1.0]
+    assert parsed[3.0][0.1]["delta"] == [0.3]
+    assert parsed[3.0][0.1]["shift"] == [0.4]

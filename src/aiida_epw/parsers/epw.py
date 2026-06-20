@@ -178,7 +178,15 @@ class EpwParser(BaseParser):
             aniso_imag_pattern.match(name)
             for name in self.retrieved.list_object_names()
         ):
-            self.out("aniso_gap_imag", self.parse_aniso_imag(self.retrieved))
+            fbw_enabled = False
+            if "parameters" in self.node.inputs:
+                params_dict = self.node.inputs.parameters.get_dict()
+                fbw_enabled = params_dict.get("INPUTEPW", {}).get("fbw", False)
+            restriction = "fbw" if fbw_enabled else "fsr"
+            self.out(
+                "aniso_gap_imag",
+                self.parse_aniso_imag(self.retrieved, restriction=restriction),
+            )
 
         if "max_eigenvalue" in parsed_data:
             self.out("max_eigenvalue", parsed_data.pop("max_eigenvalue"))
@@ -448,9 +456,11 @@ class EpwParser(BaseParser):
         return array_data
 
     @staticmethod
-    def parse_aniso_imag(folder):
+    def parse_aniso_imag(folder, restriction="fsr"):
         """Parse the imag_aniso files into an ArrayData node."""
-        parsed_by_temp = parse_aniso(folder, prefix=EpwCalculation._PREFIX)
+        parsed_by_temp = parse_aniso(
+            folder, prefix=EpwCalculation._PREFIX, restriction=restriction
+        )
         array_data = orm.ArrayData()
         temperatures = sorted(parsed_by_temp.keys())
         array_data.base.attributes.set("temperatures", temperatures)
@@ -472,6 +482,10 @@ class EpwParser(BaseParser):
                 array_data.set_array(
                     f"temp_{temp_str}_freq_{index}_delta", w_data["delta"]
                 )
+                if restriction == "fbw":
+                    array_data.set_array(
+                        f"temp_{temp_str}_freq_{index}_shift", w_data["shift"]
+                    )
             array_data.base.attributes.set(f"temp_{temp_str}_frequencies", frequencies)
             if "units" in parsed:
                 array_data.base.attributes.set(
