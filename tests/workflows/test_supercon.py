@@ -208,13 +208,13 @@ def test_supercon_should_run_final():
     assert SuperConWorkChain.should_run_final(wc4) == "ERROR_ALLEN_DYNES_NOT_CONVERGED"
 
 
-def test_supercon_eliashberg_types(
+def test_supercon_get_builder_from_protocol_default(
     fixture_code,
     generate_structure,
     generate_remote_data,
     fixture_localhost,
 ):
-    """Test get_builder_from_protocol for SuperConWorkChain with different EliashbergType values."""
+    """Test get_builder_from_protocol for SuperConWorkChain builds all namespaces with hardcoded defaults."""
     from aiida_epw.workflows.supercon import SuperConWorkChain
     from aiida_epw.common import EliashbergType
 
@@ -233,49 +233,16 @@ def test_supercon_eliashberg_types(
     parent_epw.outputs = MagicMock()
     parent_epw.outputs.remote_stash = remote_stash
 
-    # 1. ISOTROPIC
     builder = SuperConWorkChain.get_builder_from_protocol(
         epw_code=epw_code,
         parent_epw=parent_epw,
         protocol="fast",
-        eliashberg_type=EliashbergType.ISOTROPIC,
     )
+    assert "code" in builder.epw_interp
     assert "code" in builder.epw_final_iso
-    assert "code" not in builder.epw_final_aniso
-    assert builder.epw_final_iso.eliashberg_type == EliashbergType.ISOTROPIC
-
-    # 2. LINEARIZED
-    builder = SuperConWorkChain.get_builder_from_protocol(
-        epw_code=epw_code,
-        parent_epw=parent_epw,
-        protocol="fast",
-        eliashberg_type=EliashbergType.LINEARIZED,
-    )
-    assert "code" in builder.epw_final_iso
-    assert "code" not in builder.epw_final_aniso
+    assert "code" in builder.epw_final_aniso
     assert builder.epw_final_iso.eliashberg_type == EliashbergType.LINEARIZED
-
-    # 3. FSR
-    builder = SuperConWorkChain.get_builder_from_protocol(
-        epw_code=epw_code,
-        parent_epw=parent_epw,
-        protocol="fast",
-        eliashberg_type=EliashbergType.FSR,
-    )
-    assert "code" not in builder.epw_final_iso
-    assert "code" in builder.epw_final_aniso
     assert builder.epw_final_aniso.eliashberg_type == EliashbergType.FSR
-
-    # 4. FBW
-    builder = SuperConWorkChain.get_builder_from_protocol(
-        epw_code=epw_code,
-        parent_epw=parent_epw,
-        protocol="fast",
-        eliashberg_type=EliashbergType.FBW,
-    )
-    assert "code" not in builder.epw_final_iso
-    assert "code" in builder.epw_final_aniso
-    assert builder.epw_final_aniso.eliashberg_type == EliashbergType.FBW
 
 
 def test_epw_base_eliashberg_types(fixture_code, generate_structure):
