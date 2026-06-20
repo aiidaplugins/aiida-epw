@@ -9,7 +9,6 @@ from aiida.engine import WorkChain, while_, if_, append_
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
 from aiida_epw.workflows.base import EpwBaseWorkChain
-from aiida_epw.common import EliashbergType
 from aiida_epw.data import GapFunctionData
 
 from aiida.engine import calcfunction
@@ -270,15 +269,12 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         overrides=None,
         scon_epw_code=None,
         parent_folder_epw=None,
-        eliashberg_type=None,
         **kwargs,
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
 
         :TODO:
         """
-        from aiida.common.lang import type_check
-
         inputs = cls.get_protocol_inputs(protocol, overrides)
 
         builder = cls.get_builder()
@@ -311,31 +307,16 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             # TODO: Add check to make sure parent_folder_epw is on same computer as epw_code
             pass
 
-        if eliashberg_type is None:
-            namespaces = ("epw_interp", "epw_final_iso", "epw_final_aniso")
-        else:
-            type_check(eliashberg_type, (EliashbergType, str))
-            if isinstance(eliashberg_type, EliashbergType):
-                eliashberg_type_str = eliashberg_type.value
-            else:
-                eliashberg_type_str = eliashberg_type
-
-            if eliashberg_type_str in ("isotropic", "linearized"):
-                namespaces = ("epw_interp", "epw_final_iso")
-            elif eliashberg_type_str in ("fsr", "fbw"):
-                namespaces = ("epw_interp", "epw_final_aniso")
-            else:
-                raise ValueError(f"Invalid eliashberg_type: {eliashberg_type}")
+        namespaces = ("epw_interp", "epw_final_iso", "epw_final_aniso")
 
         for epw_namespace in namespaces:
             epw_inputs = inputs.get(epw_namespace, None)
 
             ns_eliashberg_type = None
-            if (
-                epw_namespace in ("epw_final_iso", "epw_final_aniso")
-                and eliashberg_type is not None
-            ):
-                ns_eliashberg_type = eliashberg_type_str
+            if epw_namespace == "epw_final_iso":
+                ns_eliashberg_type = "linearized"
+            elif epw_namespace == "epw_final_aniso":
+                ns_eliashberg_type = "fsr"
 
             epw_builder = EpwBaseWorkChain.get_builder_from_protocol(
                 code=epw_code,
