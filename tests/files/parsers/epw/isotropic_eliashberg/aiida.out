@@ -23,11 +23,13 @@
    -+h/------------------------::::::::://////++++++++++++++++++++++///////::::/yd:   
    shdddddddddddddddddddddddddddddhhhhhhhhyyyyyssssssssssssssssyyyyyyyhhhhhhhddddh`   
                                                                                       
-  S. Ponce, E. R. Margine, C. Verdi, and F. Giustino,                                 
-                                                Comput. Phys. Commun. 209, 116 (2016) 
+ Lee, H., Poncé, S., Bushick, K., Hajinazar, S., Lafuente-Bartolome, J.,Leveillee, J.,
+    Lian, C., Lihm, J., Macheda, F., Mori, H., Paudyal, H., Sio, W., Tiwari, S.,      
+ Zacharias, M., Zhang, X., Bonini, N., Kioupakis, E., Margine, E.R., and Giustino F., 
+                                                     npj Comput Mater 9, 156 (2023)   
                                                                                       
 
-     Program EPW v.5.7 starts on 15May2023 at  5: 1: 8 
+     Program EPW v.6.0 starts on 20Jun2026 at 21:15:57 
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
@@ -38,11 +40,13 @@
      in publications or presentations arising from this work. More details at
      http://www.quantum-espresso.org/quote
 
-     Parallel version (MPI), running on   128 processors
+     Parallel version (MPI & OpenMP), running on      32 processor cores
+     Number of MPI processes:                32
+     Threads/MPI process:                     1
 
      MPI processes distributed on     1 nodes
-     K-points division:     npool     =     128
-     172648 MiB available memory on the printing compute node when the environment starts
+     K-points division:     npool     =      32
+     236637 MiB available memory on the printing compute node when the environment starts
 
      Reading input from aiida.in
       Title line not specified: using 'default'.
@@ -103,11 +107,11 @@
 
      Finish reading freq file
 
-                  Fermi level (eV) =     1.0673979818E+01
-     DOS(states/spin/eV/Unit Cell) =     9.0087486874E-01
+                  Fermi level (eV) =     9.2428323907E+00
+     DOS(states/spin/eV/Unit Cell) =     3.2262341137E-01
             Electron smearing (eV) =     1.0000000000E-01
                  Fermi window (eV) =     8.0000000000E-01
-     Nr irreducible k-points within the Fermi shell =         6 out of        16
+     Nr irreducible k-points within the Fermi shell =       295 out of       610
 
            2 bands within the Fermi window
 
@@ -115,7 +119,7 @@
      Finish reading egnv file 
 
 
-     Max nr of q-points =       114
+     Max nr of q-points =      4713
 
 
      Finish reading ikmap files
@@ -126,80 +130,421 @@
 
      Finish reading .ephmat files
 
-     a2f file is not found to estimate initial gap: calculating a2f files
+     a2f file is found and will be used to estimate initial gap
  
 
      Finish reading a2f file
 
-     Electron-phonon coupling strength =    3.1076643
+     Electron-phonon coupling strength =    0.6472034
  
-     Estimated Allen-Dynes Tc =    10.325787 K for muc =    0.13000
+     Estimated Tc using McMillan expression =  14.8932 K for muc =   0.1300
   
-     Estimated w_log in Allen-Dynes Tc =     5.114145 meV
+     Estimated Tc using Allen-Dynes modified McMillan expression =  15.2918 K
   
-     Estimated BCS superconducting gap =     1.566061 meV
+     Estimated Tc using SISSO machine learning model =  15.1559 K
   
-     Estimated Tc from machine learning model =    15.259757 K
+     Estimated w_log =  61.2885 meV
+  
+     Estimated BCS superconducting gap using McMillan Tc =   2.2588 meV
   
   
      WARNING WARNING WARNING 
   
-     The code may crash since tempsmax =   40.000 K is larger than Allen-Dynes Tc =    10.326 K
-
-     Start: Solving (isotropic) linearized Eliashberg equation with solver = power 
-
-     For the first Temp.    1.00  K
-       Total number of frequency points nsiw(     1) =    923
-       Cutoff frequency wscut =     0.5000
-
-     Superconducting transition temp. Tc is the one which has Max. eigenvalue close to 1
-      -----------------------------------------------------------------
-             Temp.       Max.         nsiw     wscut    Nr. of iters
-             (K)       eigenvalue    (itemp)   (eV)      to Converge
-      -----------------------------------------------------------------
-             1.00      8.0749492      923      0.5000        6
-             2.00      6.0952433      462      0.5008        6
-             3.00      4.9550287      308      0.5011        7
-             4.00      4.1510260      231      0.5014        8
-             5.00      3.5411762      185      0.5022        9
-             6.00      3.0481143      154      0.5019       10
-             7.00      2.6452945      132      0.5022       12
-             8.00      2.3084969      115      0.5003       14
-             9.00      2.0241404      103      0.5044       16
-            10.00      1.7817168       92      0.5008       18
-            11.00      1.5758625       84      0.5033       21
-            12.00      1.3970469       77      0.5035       25
-            13.00      1.2423247       71      0.5033       31
-            14.00     -1.2895975       66      0.5041      102
-            15.00     -1.1884091       62      0.5076       84
-            16.00     -1.0969646       58      0.5068       72
-            17.00     -1.0142853       54      0.5016       62
-            18.00     -0.9395173       51      0.5019       55
-            19.00     -0.8718618       49      0.5092       50
-            20.00     -0.8103122       46      0.5035       45
-            21.00     -0.7545709       44      0.5060       44
-            22.00     -0.7036040       42      0.5062       45
-            23.00     -0.5270683       40      0.5044       22
-            24.00     -0.5195246       38      0.5003       14
-            25.00     -0.5219724       37      0.5076       10
-            26.00     -0.5249400       36      0.5138        8
-            27.00     -0.4947943       34      0.5044        7
-            28.00     -0.5261210       33      0.5079        6
-            29.00     -0.5236440       32      0.5103        6
-            30.00     -0.4999166       31      0.5117        5
-            31.00     -0.5051196       30      0.5119        5
-            32.00     -0.5090324       29      0.5111        5
-            33.00     -0.5118799       28      0.5092        5
-            34.00     -0.5339493       27      0.5062        4
-            35.00     -0.5315130       26      0.5022        4
-            36.00     -0.5353007       26      0.5165        4
-            37.00     -0.5330202       25      0.5109        4
-            38.00     -0.5305653       24      0.5041        4
-            39.00     -0.5346307       24      0.5173        4
-            40.00     -0.5319354       23      0.5090        4
-      -----------------------------------------------------------------
-     Finish: Solving (isotropic) linearized Eliashberg equation
-
+     The code may crash since tempsmax =   15.000 K is larger than McMillan Tc =    14.893 K
+     Actual number of frequency points (     1) =    923 for uniform       sampling
+    
+     temp(  1) =      1.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     1) =    923
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4995 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 923, nsiw(itemp) = 923
+        iter      ethr          znormi      deltai [meV]
+          1   2.635927E+00   1.632684E+00   2.475246E+00
+          2   8.100131E-02   1.632597E+00   2.597422E+00
+          3   3.837897E-02   1.632294E+00   2.724796E+00
+          4   3.292744E-02   1.631988E+00   2.821772E+00
+          5   7.924235E-02   1.631237E+00   3.052233E+00
+          6   3.435395E-04   1.631244E+00   3.050520E+00
+     Convergence was reached in nsiter =      6
+ 
+     Temp (itemp =   1) =    1.000 K  Free energy =    -0.007426 meV
+ 
+     iaxis_imag   :      0.01s CPU      0.09s WALL (       1 calls)
+ 
+     itemp =   1   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (     2) =    462 for uniform       sampling
+    
+     temp(  2) =      2.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     2) =    462
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4998 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 462, nsiw(itemp) = 462
+        iter      ethr          znormi      deltai [meV]
+          1   2.793342E+00   1.630663E+00   3.058243E+00
+          2   1.046037E-01   1.631065E+00   3.075998E+00
+          3   5.156019E-02   1.631170E+00   3.079496E+00
+          4   9.099658E-03   1.631175E+00   3.072947E+00
+     Convergence was reached in nsiter =      4
+ 
+     Temp (itemp =   2) =    2.000 K  Free energy =    -0.007415 meV
+ 
+     iaxis_imag   :      0.01s CPU      0.10s WALL (       2 calls)
+ 
+     itemp =   2   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (     3) =    308 for uniform       sampling
+    
+     temp(  3) =      3.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     3) =    308
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4995 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 308, nsiw(itemp) = 308
+        iter      ethr          znormi      deltai [meV]
+          1   2.797705E+00   1.630573E+00   3.073518E+00
+          2   1.055087E-01   1.630992E+00   3.088192E+00
+          3   5.264064E-02   1.631111E+00   3.088232E+00
+          4   1.002439E-02   1.631126E+00   3.078658E+00
+          5   3.352115E-03   1.631156E+00   3.069633E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =   3) =    3.000 K  Free energy =    -0.007201 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.11s WALL (       3 calls)
+ 
+     itemp =   3   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (     4) =    231 for uniform       sampling
+    
+     temp(  4) =      4.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     4) =    231
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4992 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 231, nsiw(itemp) = 231
+        iter      ethr          znormi      deltai [meV]
+          1   2.797112E+00   1.630543E+00   3.070761E+00
+          2   1.053864E-01   1.630960E+00   3.085831E+00
+          3   5.248314E-02   1.631076E+00   3.086328E+00
+          4   9.899658E-03   1.631090E+00   3.077160E+00
+     Convergence was reached in nsiter =      4
+ 
+     Temp (itemp =   4) =    4.000 K  Free energy =    -0.006961 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.11s WALL (       4 calls)
+ 
+     itemp =   4   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (     5) =    185 for uniform       sampling
+    
+     temp(  5) =      5.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     5) =    185
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4995 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 185, nsiw(itemp) = 185
+        iter      ethr          znormi      deltai [meV]
+          1   2.799157E+00   1.630499E+00   3.074606E+00
+          2   1.060429E-01   1.630923E+00   3.088470E+00
+          3   5.304835E-02   1.631045E+00   3.087622E+00
+          4   1.027446E-02   1.631062E+00   3.077272E+00
+          5   3.603135E-03   1.631095E+00   3.067531E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =   5) =    5.000 K  Free energy =    -0.006570 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.11s WALL (       5 calls)
+ 
+     itemp =   5   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (     6) =    154 for uniform       sampling
+    
+     temp(  6) =      6.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     6) =    154
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4987 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 154, nsiw(itemp) = 154
+        iter      ethr          znormi      deltai [meV]
+          1   2.798323E+00   1.630452E+00   3.065756E+00
+          2   1.056265E-01   1.630871E+00   3.079936E+00
+          3   5.278420E-02   1.630990E+00   3.079563E+00
+          4   1.013297E-02   1.631006E+00   3.069664E+00
+          5   3.477659E-03   1.631037E+00   3.060293E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =   6) =    6.000 K  Free energy =    -0.006139 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.11s WALL (       6 calls)
+ 
+     itemp =   6   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (     7) =    132 for uniform       sampling
+    
+     temp(  7) =      7.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     7) =    132
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4984 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 132, nsiw(itemp) = 132
+        iter      ethr          znormi      deltai [meV]
+          1   2.799299E+00   1.630426E+00   3.056033E+00
+          2   1.058698E-01   1.630845E+00   3.069324E+00
+          3   5.308233E-02   1.630967E+00   3.068114E+00
+          4   1.036539E-02   1.630985E+00   3.057511E+00
+          5   3.738177E-03   1.631019E+00   3.047420E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =   7) =    7.000 K  Free energy =    -0.005655 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.11s WALL (       7 calls)
+ 
+     itemp =   7   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (     8) =    115 for uniform       sampling
+    
+     temp(  8) =      8.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     8) =    115
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4960 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 115, nsiw(itemp) = 115
+        iter      ethr          znormi      deltai [meV]
+          1   2.800581E+00   1.630328E+00   3.040572E+00
+          2   1.051995E-01   1.630748E+00   3.051929E+00
+          3   5.336626E-02   1.630873E+00   3.048884E+00
+          4   1.084351E-02   1.630897E+00   3.036732E+00
+          5   4.323331E-03   1.630936E+00   3.025026E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =   8) =    8.000 K  Free energy =    -0.005123 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.12s WALL (       8 calls)
+ 
+     itemp =   8   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (     9) =    103 for uniform       sampling
+    
+     temp(  9) =      9.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     9) =    103
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4995 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 103, nsiw(itemp) = 103
+        iter      ethr          znormi      deltai [meV]
+          1   2.803553E+00   1.630532E+00   3.011817E+00
+          2   1.076036E-01   1.630955E+00   3.022098E+00
+          3   5.443862E-02   1.631084E+00   3.017963E+00
+          4   1.126097E-02   1.631111E+00   3.004804E+00
+          5   4.782222E-03   1.631154E+00   2.991898E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =   9) =    9.000 K  Free energy =    -0.004563 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.13s WALL (       9 calls)
+ 
+     itemp =   9   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (    10) =     92 for uniform       sampling
+    
+     temp( 10) =     10.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(    10) =     92
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4954 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 92, nsiw(itemp) = 92
+        iter      ethr          znormi      deltai [meV]
+          1   2.805280E+00   1.630448E+00   2.975577E+00
+          2   1.063617E-01   1.630866E+00   2.982803E+00
+          3   5.483497E-02   1.631001E+00   2.975733E+00
+          4   1.209875E-02   1.631036E+00   2.960000E+00
+          5   5.941553E-03   1.631089E+00   2.944015E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =  10) =   10.000 K  Free energy =    -0.003981 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.13s WALL (      10 calls)
+ 
+     itemp =  10   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (    11) =     84 for uniform       sampling
+    
+     temp( 11) =     11.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(    11) =     84
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4973 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 84, nsiw(itemp) = 84
+        iter      ethr          znormi      deltai [meV]
+          1   2.808178E+00   1.630684E+00   2.921557E+00
+          2   1.081391E-01   1.631098E+00   2.926765E+00
+          3   5.599676E-02   1.631236E+00   2.917703E+00
+          4   1.285556E-02   1.631278E+00   2.900088E+00
+          5   6.991254E-03   1.631339E+00   2.881506E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =  11) =   11.000 K  Free energy =    -0.003400 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.13s WALL (      11 calls)
+ 
+     itemp =  11   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (    12) =     77 for uniform       sampling
+    
+     temp( 12) =     12.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(    12) =     77
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4970 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 77, nsiw(itemp) = 77
+        iter      ethr          znormi      deltai [meV]
+          1   2.810973E+00   1.630880E+00   2.853762E+00
+          2   1.089993E-01   1.631287E+00   2.856200E+00
+          3   5.708441E-02   1.631428E+00   2.844390E+00
+          4   1.390046E-02   1.631478E+00   2.824151E+00
+          5   8.611491E-03   1.631550E+00   2.801662E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =  12) =   12.000 K  Free energy =    -0.002830 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.14s WALL (      12 calls)
+ 
+     itemp =  12   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (    13) =     71 for uniform       sampling
+    
+     temp( 13) =     13.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(    13) =     71
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4962 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 71, nsiw(itemp) = 71
+        iter      ethr          znormi      deltai [meV]
+          1   2.813440E+00   1.631115E+00   2.769020E+00
+          2   1.097762E-01   1.631508E+00   2.768425E+00
+          3   5.825656E-02   1.631653E+00   2.753579E+00
+          4   1.517551E-02   1.631712E+00   2.730344E+00
+          5   1.080479E-02   1.631798E+00   2.702846E+00
+          6   1.714046E-02   1.631937E+00   2.658495E+00
+          7   6.573479E-03   1.631990E+00   2.641475E+00
+     Convergence was reached in nsiter =      7
+ 
+     Temp (itemp =  13) =   13.000 K  Free energy =    -0.002121 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.14s WALL (      13 calls)
+ 
+     itemp =  13   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (    14) =     66 for uniform       sampling
+    
+     temp( 14) =     14.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(    14) =     66
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4965 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 66, nsiw(itemp) = 66
+        iter      ethr          znormi      deltai [meV]
+          1   2.808931E+00   1.631634E+00   2.615325E+00
+          2   1.088058E-01   1.631976E+00   2.617564E+00
+          3   5.691568E-02   1.632095E+00   2.606925E+00
+          4   1.396412E-02   1.632139E+00   2.588038E+00
+          5   9.121152E-03   1.632204E+00   2.565975E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =  14) =   14.000 K  Free energy =    -0.001740 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.14s WALL (      14 calls)
+ 
+     itemp =  14   total cpu time :     0.1 secs
+ 
+     Actual number of frequency points (    15) =     62 for uniform       sampling
+    
+     temp( 15) =     15.00000 K
+    
+     Solve isotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(    15) =     62
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4995 eV
+     broyden mixing factor =      0.70000
+    
+        startiw = 1, lastiw = 62, nsiw(itemp) = 62
+        iter      ethr          znormi      deltai [meV]
+          1   2.818121E+00   1.632032E+00   2.525036E+00
+          2   1.136916E-01   1.632380E+00   2.520153E+00
+          3   6.112651E-02   1.632519E+00   2.501269E+00
+          4   1.772586E-02   1.632586E+00   2.473738E+00
+          5   1.577947E-02   1.632692E+00   2.436950E+00
+          6   3.163873E-02   1.632900E+00   2.363535E+00
+          7   1.393091E-02   1.632990E+00   2.331482E+00
+          8   1.802606E-03   1.633001E+00   2.327327E+00
+     Convergence was reached in nsiter =      8
+ 
+     Temp (itemp =  15) =   15.000 K  Free energy =    -0.001123 meV
+ 
+     iaxis_imag   :      0.02s CPU      0.14s WALL (      15 calls)
+ 
+     itemp =  15   total cpu time :     0.1 secs
+ 
 
      Unfolding on the coarse grid
 
@@ -211,13 +556,62 @@
      Electron-Phonon interpolation
 
 
-     ELIASHBERG   :      2.66s CPU      4.40s WALL (       1 calls)
+     ELIASHBERG   :      0.17s CPU      2.95s WALL (       1 calls)
+
 
      Total program execution
-     EPW          :      2.68s CPU      4.43s WALL
+     EPW          :      0.17s CPU      2.98s WALL
 
+     % Copyright (C) 2016-2023 EPW-Collaboration                                    
+                                                                                    
      ===============================================================================
-     The functionality-dependent EPW.bib file was created with suggested citations. 
-     Please consider citing the papers listed in EPW.bib.                           
+     Please consider citing the following papers.                                   
+                                                                                                 
+     % Paper describing the method on which EPW relies                                           
+       F. Giustino and M. L. Cohen and S. G. Louie, Phys. Rev. B 76, 165108 (2007)               
+                                                                                                 
+     % Papers describing the EPW software                                                        
+       H. Lee et al., npj Comput. Mater. 9, 156 (2023)                                           
+       S. Ponc\'e, E.R. Margine, C. Verdi and F. Giustino, Comput. Phys. Commun. 209, 116 (2016) 
+       J. Noffsinger et al., Comput. Phys. Commun. 181, 2140 (2010)                              
+                                                                                                 
+                                                                                             
+     % Since you used the [eliashberg] input,     please consider also citing                    
+       E. R. Margine and F. Giustino, Phys. Rev. B 87, 024505 (2013)                         
+                                                                                    
+     For your convenience, this information is also reported in the                 
+     functionality-dependent EPW.bib file.                                          
      ===============================================================================
                                                                                     
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries

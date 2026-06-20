@@ -1,85 +1,482 @@
-max_eigenvalue:
-- - 1.0
-  - 8.0749492
-- - 2.0
-  - 6.0952433
-- - 3.0
-  - 4.9550287
-- - 4.0
-  - 4.151026
-- - 5.0
-  - 3.5411762
-- - 6.0
-  - 3.0481143
-- - 7.0
-  - 2.6452945
-- - 8.0
-  - 2.3084969
-- - 9.0
-  - 2.0241404
-- - 10.0
-  - 1.7817168
-- - 11.0
-  - 1.5758625
-- - 12.0
-  - 1.3970469
-- - 13.0
-  - 1.2423247
-- - 14.0
-  - -1.2895975
-- - 15.0
-  - -1.1884091
-- - 16.0
-  - -1.0969646
-- - 17.0
-  - -1.0142853
-- - 18.0
-  - -0.9395173
-- - 19.0
-  - -0.8718618
-- - 20.0
-  - -0.8103122
-- - 21.0
-  - -0.7545709
-- - 22.0
-  - -0.703604
-- - 23.0
-  - -0.5270683
-- - 24.0
-  - -0.5195246
-- - 25.0
-  - -0.5219724
-- - 26.0
-  - -0.52494
-- - 27.0
-  - -0.4947943
-- - 28.0
-  - -0.526121
-- - 29.0
-  - -0.523644
-- - 30.0
-  - -0.4999166
-- - 31.0
-  - -0.5051196
-- - 32.0
-  - -0.5090324
-- - 33.0
-  - -0.5118799
-- - 34.0
-  - -0.5339493
-- - 35.0
-  - -0.531513
-- - 36.0
-  - -0.5353007
-- - 37.0
-  - -0.5330202
-- - 38.0
-  - -0.5305653
-- - 39.0
-  - -0.5346307
-- - 40.0
-  - -0.5319354
 output_parameters:
-  allen_dynes: 10.325787
-  code_version: '5.7'
-  wall_time_seconds: 4.43
+  Allen_Dynes_Tc: 15.2918
+  BCS_gap: 2.2588
+  DOS: 3.2262341137
+  McMillan_Tc: 14.8932
+  SISSO_Tc: 15.1559
+  allen_dynes: 15.2918
+  code_version: '6.0'
+  electron_smearing: 1.0
+  fermi_level: 9.2428323907
+  fermi_window: 8.0
+  isotropic_eliashberg:
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.007426
+    iterations:
+    - deltai: 2.475246
+      ethr: 2.635927
+      iter: 1
+      znormi: 1.632684
+    - deltai: 2.597422
+      ethr: 0.08100131
+      iter: 2
+      znormi: 1.632597
+    - deltai: 2.724796
+      ethr: 0.03837897
+      iter: 3
+      znormi: 1.632294
+    - deltai: 2.821772
+      ethr: 0.03292744
+      iter: 4
+      znormi: 1.631988
+    - deltai: 3.052233
+      ethr: 0.07924235
+      iter: 5
+      znormi: 1.631237
+    - deltai: 3.05052
+      ethr: 0.0003435395
+      iter: 6
+      znormi: 1.631244
+    lastiw: 923
+    nsiter: 6
+    nsiw: 923
+    nsiw_itemp: 923
+    startiw: 1
+    temp: 1.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.007415
+    iterations:
+    - deltai: 3.058243
+      ethr: 2.793342
+      iter: 1
+      znormi: 1.630663
+    - deltai: 3.075998
+      ethr: 0.1046037
+      iter: 2
+      znormi: 1.631065
+    - deltai: 3.079496
+      ethr: 0.05156019
+      iter: 3
+      znormi: 1.63117
+    - deltai: 3.072947
+      ethr: 0.009099658
+      iter: 4
+      znormi: 1.631175
+    lastiw: 462
+    nsiter: 4
+    nsiw: 462
+    nsiw_itemp: 462
+    startiw: 1
+    temp: 2.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.007201
+    iterations:
+    - deltai: 3.073518
+      ethr: 2.797705
+      iter: 1
+      znormi: 1.630573
+    - deltai: 3.088192
+      ethr: 0.1055087
+      iter: 2
+      znormi: 1.630992
+    - deltai: 3.088232
+      ethr: 0.05264064
+      iter: 3
+      znormi: 1.631111
+    - deltai: 3.078658
+      ethr: 0.01002439
+      iter: 4
+      znormi: 1.631126
+    - deltai: 3.069633
+      ethr: 0.003352115
+      iter: 5
+      znormi: 1.631156
+    lastiw: 308
+    nsiter: 5
+    nsiw: 308
+    nsiw_itemp: 308
+    startiw: 1
+    temp: 3.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.006961
+    iterations:
+    - deltai: 3.070761
+      ethr: 2.797112
+      iter: 1
+      znormi: 1.630543
+    - deltai: 3.085831
+      ethr: 0.1053864
+      iter: 2
+      znormi: 1.63096
+    - deltai: 3.086328
+      ethr: 0.05248314
+      iter: 3
+      znormi: 1.631076
+    - deltai: 3.07716
+      ethr: 0.009899658
+      iter: 4
+      znormi: 1.63109
+    lastiw: 231
+    nsiter: 4
+    nsiw: 231
+    nsiw_itemp: 231
+    startiw: 1
+    temp: 4.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.00657
+    iterations:
+    - deltai: 3.074606
+      ethr: 2.799157
+      iter: 1
+      znormi: 1.630499
+    - deltai: 3.08847
+      ethr: 0.1060429
+      iter: 2
+      znormi: 1.630923
+    - deltai: 3.087622
+      ethr: 0.05304835
+      iter: 3
+      znormi: 1.631045
+    - deltai: 3.077272
+      ethr: 0.01027446
+      iter: 4
+      znormi: 1.631062
+    - deltai: 3.067531
+      ethr: 0.003603135
+      iter: 5
+      znormi: 1.631095
+    lastiw: 185
+    nsiter: 5
+    nsiw: 185
+    nsiw_itemp: 185
+    startiw: 1
+    temp: 5.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.006139
+    iterations:
+    - deltai: 3.065756
+      ethr: 2.798323
+      iter: 1
+      znormi: 1.630452
+    - deltai: 3.079936
+      ethr: 0.1056265
+      iter: 2
+      znormi: 1.630871
+    - deltai: 3.079563
+      ethr: 0.0527842
+      iter: 3
+      znormi: 1.63099
+    - deltai: 3.069664
+      ethr: 0.01013297
+      iter: 4
+      znormi: 1.631006
+    - deltai: 3.060293
+      ethr: 0.003477659
+      iter: 5
+      znormi: 1.631037
+    lastiw: 154
+    nsiter: 5
+    nsiw: 154
+    nsiw_itemp: 154
+    startiw: 1
+    temp: 6.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.005655
+    iterations:
+    - deltai: 3.056033
+      ethr: 2.799299
+      iter: 1
+      znormi: 1.630426
+    - deltai: 3.069324
+      ethr: 0.1058698
+      iter: 2
+      znormi: 1.630845
+    - deltai: 3.068114
+      ethr: 0.05308233
+      iter: 3
+      znormi: 1.630967
+    - deltai: 3.057511
+      ethr: 0.01036539
+      iter: 4
+      znormi: 1.630985
+    - deltai: 3.04742
+      ethr: 0.003738177
+      iter: 5
+      znormi: 1.631019
+    lastiw: 132
+    nsiter: 5
+    nsiw: 132
+    nsiw_itemp: 132
+    startiw: 1
+    temp: 7.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.005123
+    iterations:
+    - deltai: 3.040572
+      ethr: 2.800581
+      iter: 1
+      znormi: 1.630328
+    - deltai: 3.051929
+      ethr: 0.1051995
+      iter: 2
+      znormi: 1.630748
+    - deltai: 3.048884
+      ethr: 0.05336626
+      iter: 3
+      znormi: 1.630873
+    - deltai: 3.036732
+      ethr: 0.01084351
+      iter: 4
+      znormi: 1.630897
+    - deltai: 3.025026
+      ethr: 0.004323331
+      iter: 5
+      znormi: 1.630936
+    lastiw: 115
+    nsiter: 5
+    nsiw: 115
+    nsiw_itemp: 115
+    startiw: 1
+    temp: 8.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.004563
+    iterations:
+    - deltai: 3.011817
+      ethr: 2.803553
+      iter: 1
+      znormi: 1.630532
+    - deltai: 3.022098
+      ethr: 0.1076036
+      iter: 2
+      znormi: 1.630955
+    - deltai: 3.017963
+      ethr: 0.05443862
+      iter: 3
+      znormi: 1.631084
+    - deltai: 3.004804
+      ethr: 0.01126097
+      iter: 4
+      znormi: 1.631111
+    - deltai: 2.991898
+      ethr: 0.004782222
+      iter: 5
+      znormi: 1.631154
+    lastiw: 103
+    nsiter: 5
+    nsiw: 103
+    nsiw_itemp: 103
+    startiw: 1
+    temp: 9.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.003981
+    iterations:
+    - deltai: 2.975577
+      ethr: 2.80528
+      iter: 1
+      znormi: 1.630448
+    - deltai: 2.982803
+      ethr: 0.1063617
+      iter: 2
+      znormi: 1.630866
+    - deltai: 2.975733
+      ethr: 0.05483497
+      iter: 3
+      znormi: 1.631001
+    - deltai: 2.96
+      ethr: 0.01209875
+      iter: 4
+      znormi: 1.631036
+    - deltai: 2.944015
+      ethr: 0.005941553
+      iter: 5
+      znormi: 1.631089
+    lastiw: 92
+    nsiter: 5
+    nsiw: 92
+    nsiw_itemp: 92
+    startiw: 1
+    temp: 10.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.0034
+    iterations:
+    - deltai: 2.921557
+      ethr: 2.808178
+      iter: 1
+      znormi: 1.630684
+    - deltai: 2.926765
+      ethr: 0.1081391
+      iter: 2
+      znormi: 1.631098
+    - deltai: 2.917703
+      ethr: 0.05599676
+      iter: 3
+      znormi: 1.631236
+    - deltai: 2.900088
+      ethr: 0.01285556
+      iter: 4
+      znormi: 1.631278
+    - deltai: 2.881506
+      ethr: 0.006991254
+      iter: 5
+      znormi: 1.631339
+    lastiw: 84
+    nsiter: 5
+    nsiw: 84
+    nsiw_itemp: 84
+    startiw: 1
+    temp: 11.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.00283
+    iterations:
+    - deltai: 2.853762
+      ethr: 2.810973
+      iter: 1
+      znormi: 1.63088
+    - deltai: 2.8562
+      ethr: 0.1089993
+      iter: 2
+      znormi: 1.631287
+    - deltai: 2.84439
+      ethr: 0.05708441
+      iter: 3
+      znormi: 1.631428
+    - deltai: 2.824151
+      ethr: 0.01390046
+      iter: 4
+      znormi: 1.631478
+    - deltai: 2.801662
+      ethr: 0.008611491
+      iter: 5
+      znormi: 1.63155
+    lastiw: 77
+    nsiter: 5
+    nsiw: 77
+    nsiw_itemp: 77
+    startiw: 1
+    temp: 12.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.002121
+    iterations:
+    - deltai: 2.76902
+      ethr: 2.81344
+      iter: 1
+      znormi: 1.631115
+    - deltai: 2.768425
+      ethr: 0.1097762
+      iter: 2
+      znormi: 1.631508
+    - deltai: 2.753579
+      ethr: 0.05825656
+      iter: 3
+      znormi: 1.631653
+    - deltai: 2.730344
+      ethr: 0.01517551
+      iter: 4
+      znormi: 1.631712
+    - deltai: 2.702846
+      ethr: 0.01080479
+      iter: 5
+      znormi: 1.631798
+    - deltai: 2.658495
+      ethr: 0.01714046
+      iter: 6
+      znormi: 1.631937
+    - deltai: 2.641475
+      ethr: 0.006573479
+      iter: 7
+      znormi: 1.63199
+    lastiw: 71
+    nsiter: 7
+    nsiw: 71
+    nsiw_itemp: 71
+    startiw: 1
+    temp: 13.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.00174
+    iterations:
+    - deltai: 2.615325
+      ethr: 2.808931
+      iter: 1
+      znormi: 1.631634
+    - deltai: 2.617564
+      ethr: 0.1088058
+      iter: 2
+      znormi: 1.631976
+    - deltai: 2.606925
+      ethr: 0.05691568
+      iter: 3
+      znormi: 1.632095
+    - deltai: 2.588038
+      ethr: 0.01396412
+      iter: 4
+      znormi: 1.632139
+    - deltai: 2.565975
+      ethr: 0.009121152
+      iter: 5
+      znormi: 1.632204
+    lastiw: 66
+    nsiter: 5
+    nsiw: 66
+    nsiw_itemp: 66
+    startiw: 1
+    temp: 14.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.001123
+    iterations:
+    - deltai: 2.525036
+      ethr: 2.818121
+      iter: 1
+      znormi: 1.632032
+    - deltai: 2.520153
+      ethr: 0.1136916
+      iter: 2
+      znormi: 1.63238
+    - deltai: 2.501269
+      ethr: 0.06112651
+      iter: 3
+      znormi: 1.632519
+    - deltai: 2.473738
+      ethr: 0.01772586
+      iter: 4
+      znormi: 1.632586
+    - deltai: 2.43695
+      ethr: 0.01577947
+      iter: 5
+      znormi: 1.632692
+    - deltai: 2.363535
+      ethr: 0.03163873
+      iter: 6
+      znormi: 1.6329
+    - deltai: 2.331482
+      ethr: 0.01393091
+      iter: 7
+      znormi: 1.63299
+    - deltai: 2.327327
+      ethr: 0.001802606
+      iter: 8
+      znormi: 1.633001
+    lastiw: 62
+    nsiter: 8
+    nsiw: 62
+    nsiw_itemp: 62
+    startiw: 1
+    temp: 15.0
+    wscut: 0.5
+  lambda: 0.6472034
+  muc: 0.13
+  w_log: 61.2885
+  wall_time_seconds: 2.98

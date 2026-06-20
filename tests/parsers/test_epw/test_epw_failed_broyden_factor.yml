@@ -1,5 +1,591 @@
 output_parameters:
+  Allen_Dynes_Tc: 0.005139
   allen_dynes: 0.005139
   code_version: '5.7'
   fermi_energy_coarse: 9.290638
+  isotropic_eliashberg:
+  - broyden_mixing_factor: 0.7
+    iterations:
+    - deltai: 0.0001908106
+      ethr: 2.886803
+      iter: 1
+      znormi: 1.258757
+    - deltai: 0.0001772925
+      ethr: 0.2425753
+      iter: 2
+      znormi: 1.258757
+    - deltai: 0.0001260037
+      ethr: 2.227153
+      iter: 3
+      znormi: 1.258757
+    - deltai: 2.223717e-05
+      ethr: 5.184461
+      iter: 4
+      znormi: 1.258757
+    - deltai: 1.079017e-05
+      ethr: 1.269486
+      iter: 5
+      znormi: 1.258757
+    - deltai: 1.559422e-07
+      ethr: 69.99557
+      iter: 6
+      znormi: 1.258757
+    - deltai: 2.135104e-09
+      ethr: 72.14935
+      iter: 7
+      znormi: 1.258757
+    - deltai: 5.060679e-10
+      ethr: 3.219896
+      iter: 8
+      znormi: 1.258757
+    - deltai: 5.594755e-12
+      ethr: 89.44305
+      iter: 9
+      znormi: 1.258757
+    - deltai: 5.674194e-14
+      ethr: 97.5576
+      iter: 10
+      znormi: 1.258757
+    - deltai: 1.238524e-14
+      ethr: 3.580568
+      iter: 11
+      znormi: 1.258757
+    - deltai: 7.61889e-17
+      ethr: 161.3788
+      iter: 12
+      znormi: 1.258757
+    - deltai: 1.33074e-18
+      ethr: 55.68658
+      iter: 13
+      znormi: 1.258757
+    - deltai: 2.278398e-20
+      ethr: 53.81003
+      iter: 14
+      znormi: 1.258757
+    - deltai: -1.325017e-20
+      ethr: 2.802597
+      iter: 15
+      znormi: 1.258757
+    - deltai: 1.196258e-21
+      ethr: 11.88854
+      iter: 16
+      znormi: 1.258757
+    - deltai: -3.132231e-23
+      ethr: 50.38084
+      iter: 17
+      znormi: 1.258757
+    - deltai: -2.949251e-24
+      ethr: 7.228711
+      iter: 18
+      znormi: 1.258757
+    - deltai: 2.684475e-26
+      ethr: 95.88754
+      iter: 19
+      znormi: 1.258757
+    - deltai: -9.025203e-27
+      ethr: 4.673581
+      iter: 20
+      znormi: 1.258757
+    - deltai: -6.50527e-28
+      ethr: 11.88609
+      iter: 21
+      znormi: 1.258757
+    - deltai: 4.090218e-29
+      ethr: 16.8848
+      iter: 22
+      znormi: 1.258757
+    - deltai: -9.287024e-30
+      ethr: 5.394803
+      iter: 23
+      znormi: 1.258757
+    - deltai: 2.137468e-32
+      ethr: 149.4853
+      iter: 24
+      znormi: 1.258757
+    - deltai: -8.190849e-32
+      ethr: 1.89062
+      iter: 25
+      znormi: 1.258757
+    - deltai: -2.095939e-33
+      ethr: 16.07986
+      iter: 26
+      znormi: 1.258757
+    - deltai: -9.148638e-33
+      ethr: 0.5737814
+      iter: 27
+      znormi: 1.258757
+    - deltai: -3.512063e-33
+      ethr: 1.719608
+      iter: 28
+      znormi: 1.258757
+    - deltai: 5.03873e-35
+      ethr: 60.73497
+      iter: 29
+      znormi: 1.258757
+    - deltai: -2.148233e-35
+      ethr: 3.424922
+      iter: 30
+      znormi: 1.258757
+    - deltai: 6.158844e-37
+      ethr: 34.51729
+      iter: 31
+      znormi: 1.258757
+    - deltai: -4.063305e-38
+      ethr: 19.68096
+      iter: 32
+      znormi: 1.258757
+    - deltai: -2.986663e-39
+      ethr: 10.38605
+      iter: 33
+      znormi: 1.258757
+    - deltai: 8.093076e-40
+      ethr: 4.685807
+      iter: 34
+      znormi: 1.258757
+    - deltai: -1.123923e-40
+      ethr: 8.156461
+      iter: 35
+      znormi: 1.258757
+    - deltai: 2.722844e-41
+      ethr: 5.236419
+      iter: 36
+      znormi: 1.258757
+    - deltai: -3.450833e-42
+      ethr: 8.82333
+      iter: 37
+      znormi: 1.258757
+    - deltai: 2.786198e-43
+      ethr: 12.67716
+      iter: 38
+      znormi: 1.258757
+    - deltai: -3.833445e-44
+      ethr: 7.881707
+      iter: 39
+      znormi: 1.258757
+    - deltai: 1.184695e-44
+      ethr: 5.068344
+      iter: 40
+      znormi: 1.258757
+    - deltai: 3.567794e-47
+      ethr: 225.7126
+      iter: 41
+      znormi: 1.258757
+    - deltai: -5.223165e-48
+      ethr: 6.600054
+      iter: 42
+      znormi: 1.258757
+    - deltai: 7.469068e-48
+      ethr: 2.263466
+      iter: 43
+      znormi: 1.258757
+    - deltai: -5.973217e-50
+      ethr: 111.0215
+      iter: 44
+      znormi: 1.258757
+    - deltai: 2.631526e-50
+      ethr: 3.281935
+      iter: 45
+      znormi: 1.258757
+    - deltai: -8.349424e-51
+      ethr: 4.156747
+      iter: 46
+      znormi: 1.258757
+    - deltai: -3.007205e-52
+      ethr: 32.91798
+      iter: 47
+      znormi: 1.258757
+    - deltai: 1.98012e-53
+      ethr: 12.52655
+      iter: 48
+      znormi: 1.258757
+    - deltai: -1.108191e-53
+      ethr: 3.001978
+      iter: 49
+      znormi: 1.258757
+    - deltai: -1.040284e-54
+      ethr: 13.45353
+      iter: 50
+      znormi: 1.258757
+    - deltai: -6.160432e-55
+      ethr: 0.3680232
+      iter: 51
+      znormi: 1.258757
+    - deltai: 1.346555e-56
+      ethr: 42.2972
+      iter: 52
+      znormi: 1.258757
+    - deltai: -5.006079e-57
+      ethr: 3.593915
+      iter: 53
+      znormi: 1.258757
+    - deltai: -1.513435e-59
+      ethr: 299.5803
+      iter: 54
+      znormi: 1.258757
+    - deltai: 9.067335e-60
+      ethr: 2.870145
+      iter: 55
+      znormi: 1.258757
+    - deltai: -1.251429e-61
+      ethr: 68.33116
+      iter: 56
+      znormi: 1.258757
+    - deltai: 7.902439e-63
+      ethr: 17.29033
+      iter: 57
+      znormi: 1.258757
+    - deltai: -3.914791e-64
+      ethr: 15.08412
+      iter: 58
+      znormi: 1.258757
+    - deltai: 5.509112e-64
+      ethr: 2.062208
+      iter: 59
+      znormi: 1.258757
+    - deltai: -6.11487e-65
+      ethr: 10.11357
+      iter: 60
+      znormi: 1.258757
+    - deltai: -4.924679e-66
+      ethr: 15.56276
+      iter: 61
+      znormi: 1.258757
+    - deltai: -2.477559e-66
+      ethr: 0.700589
+      iter: 62
+      znormi: 1.258757
+    - deltai: -4.376491e-68
+      ethr: 47.97401
+      iter: 63
+      znormi: 1.258757
+    - deltai: 4.92524e-70
+      ethr: 72.6054
+      iter: 64
+      znormi: 1.258757
+    - deltai: -2.907867e-70
+      ethr: 2.78231
+      iter: 65
+      znormi: 1.258757
+    - deltai: 3.165105e-71
+      ethr: 9.239794
+      iter: 66
+      znormi: 1.258757
+    - deltai: 2.122495e-73
+      ethr: 172.7453
+      iter: 67
+      znormi: 1.258757
+    - deltai: -9.049283e-74
+      ethr: 2.849928
+      iter: 68
+      znormi: 1.258757
+    - deltai: 3.280586e-74
+      ethr: 3.758286
+      iter: 69
+      znormi: 1.258757
+    - deltai: -1.339783e-75
+      ethr: 22.05045
+      iter: 70
+      znormi: 1.258757
+    - deltai: 1.514289e-76
+      ethr: 10.79779
+      iter: 71
+      znormi: 1.258757
+    - deltai: 2.76575e-77
+      ethr: 7.236917
+      iter: 72
+      znormi: 1.258757
+    - deltai: 2.795563e-77
+      ethr: 0.3150571
+      iter: 73
+      znormi: 1.258757
+    - deltai: -2.781384e-78
+      ethr: 9.886227
+      iter: 74
+      znormi: 1.258757
+    - deltai: 8.614266e-81
+      ethr: 512.0398
+      iter: 75
+      znormi: 1.258757
+    - deltai: 3.910301e-81
+      ethr: 0.8705853
+      iter: 76
+      znormi: 1.258757
+    - deltai: -1.787843e-83
+      ethr: 228.6224
+      iter: 77
+      znormi: 1.258757
+    - deltai: 7.522945e-85
+      ethr: 21.65309
+      iter: 78
+      znormi: 1.258757
+    - deltai: -4.737969e-85
+      ethr: 2.749244
+      iter: 79
+      znormi: 1.258757
+    - deltai: 8.612983e-87
+      ethr: 63.01824
+      iter: 80
+      znormi: 1.258757
+    - deltai: 2.964107e-88
+      ethr: 28.67112
+      iter: 81
+      znormi: 1.258757
+    - deltai: -4.213117e-89
+      ethr: 7.266324
+      iter: 82
+      znormi: 1.258757
+    - deltai: 1.829774e-89
+      ethr: 3.326818
+      iter: 83
+      znormi: 1.258757
+    - deltai: -1.467633e-90
+      ethr: 12.10351
+      iter: 84
+      znormi: 1.258757
+    - deltai: -2.360443e-91
+      ethr: 6.729211
+      iter: 85
+      znormi: 1.258757
+    - deltai: -4.031889e-93
+      ethr: 54.59978
+      iter: 86
+      znormi: 1.258757
+    - deltai: -5.4946e-95
+      ethr: 125.8625
+      iter: 87
+      znormi: 1.258757
+    - deltai: -1.708702e-95
+      ethr: 2.010902
+      iter: 88
+      znormi: 1.258757
+    - deltai: -3.304804e-96
+      ethr: 3.770412
+      iter: 89
+      znormi: 1.258757
+    - deltai: 1.121518e-96
+      ethr: 3.809216
+      iter: 90
+      znormi: 1.258757
+    - deltai: -2.896694e-98
+      ethr: 43.57634
+      iter: 91
+      znormi: 1.258757
+    - deltai: 3.997473e-99
+      ethr: 7.536333
+      iter: 92
+      znormi: 1.258757
+    - deltai: -2.532984e-100
+      ethr: 18.30963
+      iter: 93
+      znormi: 1.258757
+    - deltai: -4.989211e-102
+      ethr: 51.3194
+      iter: 94
+      znormi: 1.258757
+    - deltai: 1.836375e-102
+      ethr: 3.526379
+      iter: 95
+      znormi: 1.258757
+    - deltai: -3.028339e-103
+      ethr: 6.828565
+      iter: 96
+      znormi: 1.258757
+    - deltai: 2.85215e-104
+      ethr: 10.83878
+      iter: 97
+      znormi: 1.258757
+    - deltai: -3.139555e-105
+      ethr: 10.71164
+      iter: 98
+      znormi: 1.258757
+    - deltai: 1.273125e-106
+      ethr: 26.08476
+      iter: 99
+      znormi: 1.258757
+    - deltai: -5.223107e-107
+      ethr: 3.436462
+      iter: 100
+      znormi: 1.258757
+    - deltai: -2.460535e-109
+      ethr: 245.9551
+      iter: 101
+      znormi: 1.258757
+    - deltai: 1.034333e-110
+      ethr: 21.91621
+      iter: 102
+      znormi: 1.258757
+    - deltai: 6.30579e-112
+      ethr: 17.80048
+      iter: 103
+      znormi: 1.258757
+    - deltai: 4.97558e-113
+      ethr: 11.46439
+      iter: 104
+      znormi: 1.258757
+    - deltai: 4.572321e-115
+      ethr: 178.0547
+      iter: 105
+      znormi: 1.258757
+    - deltai: 4.238783e-115
+      ethr: 0.4646337
+      iter: 106
+      znormi: 1.258757
+    - deltai: 1.108078e-116
+      ethr: 45.34632
+      iter: 107
+      znormi: 1.258757
+    - deltai: -5.417658e-118
+      ethr: 19.04889
+      iter: 108
+      znormi: 1.258757
+    - deltai: 4.070126e-119
+      ethr: 13.06543
+      iter: 109
+      znormi: 1.258757
+    - deltai: -9.116096e-120
+      ethr: 5.391335
+      iter: 110
+      znormi: 1.258757
+    - deltai: -5.668285e-122
+      ethr: 199.62
+      iter: 111
+      znormi: 1.258757
+    - deltai: -7.680683e-123
+      ethr: 5.14987
+      iter: 112
+      znormi: 1.258757
+    - deltai: -2.300539e-124
+      ethr: 37.1777
+      iter: 113
+      znormi: 1.258757
+    - deltai: 5.026987e-126
+      ethr: 43.99962
+      iter: 114
+      znormi: 1.258757
+    - deltai: -6.854331e-127
+      ethr: 7.483533
+      iter: 115
+      znormi: 1.258757
+    - deltai: 6.922144e-128
+      ethr: 12.16934
+      iter: 116
+      znormi: 1.258757
+    - deltai: -2.710386e-130
+      ethr: 248.2217
+      iter: 117
+      znormi: 1.258757
+    - deltai: 6.68083e-131
+      ethr: 4.87881
+      iter: 118
+      znormi: 1.258757
+    - deltai: 1.425748e-132
+      ethr: 72.67734
+      iter: 119
+      znormi: 1.258757
+    - deltai: -9.478174e-134
+      ethr: 11.767
+      iter: 120
+      znormi: 1.258757
+    - deltai: 1.212898e-134
+      ethr: 8.136627
+      iter: 121
+      znormi: 1.258757
+    - deltai: -3.148477e-135
+      ethr: 4.677628
+      iter: 122
+      znormi: 1.258757
+    - deltai: -4.140337e-137
+      ethr: 88.94779
+      iter: 123
+      znormi: 1.258757
+    - deltai: -4.195109e-139
+      ethr: 68.11788
+      iter: 124
+      znormi: 1.258757
+    - deltai: 3.442118e-139
+      ethr: 2.577217
+      iter: 125
+      znormi: 1.258757
+    - deltai: 9.386668e-141
+      ethr: 39.16735
+      iter: 126
+      znormi: 1.258757
+    - deltai: 2.71977e-142
+      ethr: 35.62833
+      iter: 127
+      znormi: 1.258757
+    - deltai: 6.385672e-143
+      ethr: 2.58798
+      iter: 128
+      znormi: 1.258757
+    - deltai: 1.769003e-144
+      ethr: 42.32453
+      iter: 129
+      znormi: 1.258757
+    - deltai: -1.547743e-145
+      ethr: 12.20699
+      iter: 130
+      znormi: 1.258757
+    - deltai: -4.011362e-147
+      ethr: 28.14981
+      iter: 131
+      znormi: 1.258757
+    - deltai: 2.887153e-147
+      ethr: 2.547864
+      iter: 132
+      znormi: 1.258757
+    - deltai: 4.741267e-149
+      ethr: 66.336
+      iter: 133
+      znormi: 1.258757
+    - deltai: -1.589971e-150
+      ethr: 28.15555
+      iter: 134
+      znormi: 1.258757
+    - deltai: 8.14351e-152
+      ethr: 15.82984
+      iter: 135
+      znormi: 1.258757
+    - deltai: -4.036496e-152
+      ethr: 3.942098
+      iter: 136
+      znormi: 1.258757
+    - deltai: -8.636535e-154
+      ethr: 47.72267
+      iter: 137
+      znormi: 1.258757
+    - deltai: -1.25445e-154
+      ethr: 5.024749
+      iter: 138
+      znormi: 1.258757
+    - deltai: -4.467942e-156
+      ethr: 33.4731
+      iter: 139
+      znormi: 1.258757
+    - deltai: 7.649777e-157
+      ethr: 6.49236
+      iter: 140
+      znormi: 1.258757
+    - deltai: -8.204212e-158
+      ethr: 9.747234
+      iter: 141
+      znormi: 1.258757
+    - deltai: 8.243308e-159
+      ethr: 9.674446
+      iter: 142
+      znormi: 1.258757
+    - deltai: -1.237433e-160
+      ethr: 75.20306
+      iter: 143
+      znormi: 1.258757
+    - deltai: 5.426451e-162
+      ethr: 22.66115
+      iter: 144
+      znormi: 1.258757
+    - deltai: 7.999522e-164
+      ethr: 100.7425
+      iter: 145
+      znormi: 1.258757
+    nsiw: 92
+    temp: 10.0
   wall_time_seconds: 0.03
