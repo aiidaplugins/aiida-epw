@@ -28,6 +28,8 @@ from aiida_epw.tools.parsers import (
     parse_epw_max_eigenvalue,
     parse_epw_phdos,
     parse_epw_phdos_proj,
+    parse_aniso_gap_FS,
+    parse_aniso,
 )
 
 
@@ -140,22 +142,50 @@ class EpwParser(BaseParser):
                 self.parse_lambda_k_pairs(lambda_k_pairs_contents),
             )
 
-        iso_gap_filecontents = self.get_retrieved_contents_matching(
-            re.compile(rf"{EpwCalculation._PREFIX}\.imag_iso_\d+\.\d+$")
-        )
-        if iso_gap_filecontents:
+        iso_gap_pattern = re.compile(rf"^{EpwCalculation._PREFIX}\.imag_iso_\d+\.\d+$")
+        if self.retrieved and any(
+            iso_gap_pattern.match(name) for name in self.retrieved.list_object_names()
+        ):
             self.out(
                 "iso_gap_functions",
-                self.parse_iso_gap_functions(iso_gap_filecontents),
+                self.parse_iso_gap_functions(self.retrieved),
             )
 
-        aniso_gap_filecontents = self.get_retrieved_contents_matching(
-            re.compile(rf"{EpwCalculation._PREFIX}\.imag_aniso_gap0_\d+\.\d+$")
+        aniso_gap_pattern = re.compile(
+            rf"^{EpwCalculation._PREFIX}\.imag_aniso_gap0_\d+\.\d+$"
         )
-        if aniso_gap_filecontents:
+        if self.retrieved and any(
+            aniso_gap_pattern.match(name) for name in self.retrieved.list_object_names()
+        ):
             self.out(
                 "aniso_gap_functions",
-                self.parse_aniso_gap_functions(aniso_gap_filecontents),
+                self.parse_aniso_gap_functions(self.retrieved),
+            )
+
+        aniso_gap_fs_pattern = re.compile(
+            rf"^{EpwCalculation._PREFIX}\.imag_aniso_gap_FS_\d+\.\d+$"
+        )
+        if self.retrieved and any(
+            aniso_gap_fs_pattern.match(name)
+            for name in self.retrieved.list_object_names()
+        ):
+            self.out("aniso_gap_FS", self.parse_aniso_gap_fs(self.retrieved))
+
+        aniso_imag_pattern = re.compile(
+            rf"^{EpwCalculation._PREFIX}\.imag_aniso_\d+\.\d+$"
+        )
+        if self.retrieved and any(
+            aniso_imag_pattern.match(name)
+            for name in self.retrieved.list_object_names()
+        ):
+            fbw_enabled = False
+            if "parameters" in self.node.inputs:
+                params_dict = self.node.inputs.parameters.get_dict()
+                fbw_enabled = params_dict.get("INPUTEPW", {}).get("fbw", False)
+            restriction = "fbw" if fbw_enabled else "fsr"
+            self.out(
+                "aniso_gap_imag",
+                self.parse_aniso_imag(self.retrieved, restriction=restriction),
             )
 
         if "max_eigenvalue" in parsed_data:
@@ -394,6 +424,74 @@ class EpwParser(BaseParser):
         gap_function_data = GapFunctionData()
         gap_function_data.set_gap_functions(gap_functions, kind="aniso")
         return gap_function_data
+
+    @staticmethod
+    def parse_aniso_gap_fs(folder):
+        """Parse the imag_aniso_gap_FS files into an ArrayData node."""
+        parsed_by_temp = parse_aniso_gap_FS(folder, prefix=EpwCalculation._PREFIX)
+        array_data = orm.ArrayData()
+        temperatures = sorted(parsed_by_temp.keys())
+        array_data.base.attributes.set("temperatures", temperatures)
+
+        for temp in temperatures:
+            parsed = parsed_by_temp[temp]
+            temp_str = f"{temp:.2f}".replace(".", "_")
+            bands = [int(k) for k in parsed.keys() if isinstance(k, int)]
+            for band in sorted(bands):
+                band_data = parsed[band]
+                array_data.set_array(
+                    f"temp_{temp_str}_band_{band}_kpoints", band_data["kpoints"]
+                )
+                array_data.set_array(
+                    f"temp_{temp_str}_band_{band}_energy", band_data["energy"]
+                )
+                array_data.set_array(
+                    f"temp_{temp_str}_band_{band}_delta", band_data["delta"]
+                )
+            array_data.base.attributes.set(f"temp_{temp_str}_bands", sorted(bands))
+            if "units" in parsed:
+                array_data.base.attributes.set(
+                    f"temp_{temp_str}_units", parsed["units"]
+                )
+        return array_data
+
+    @staticmethod
+    def parse_aniso_imag(folder, restriction="fsr"):
+        """Parse the imag_aniso files into an ArrayData node."""
+        parsed_by_temp = parse_aniso(
+            folder, prefix=EpwCalculation._PREFIX, restriction=restriction
+        )
+        array_data = orm.ArrayData()
+        temperatures = sorted(parsed_by_temp.keys())
+        array_data.base.attributes.set("temperatures", temperatures)
+
+        for temp in temperatures:
+            parsed = parsed_by_temp[temp]
+            temp_str = f"{temp:.2f}".replace(".", "_")
+            frequencies = sorted(
+                [float(k) for k in parsed.keys() if isinstance(k, float)]
+            )
+            for index, w in enumerate(frequencies):
+                w_data = parsed[w]
+                array_data.set_array(
+                    f"temp_{temp_str}_freq_{index}_energy", w_data["energy"]
+                )
+                array_data.set_array(
+                    f"temp_{temp_str}_freq_{index}_znorm", w_data["znorm"]
+                )
+                array_data.set_array(
+                    f"temp_{temp_str}_freq_{index}_delta", w_data["delta"]
+                )
+                if restriction == "fbw":
+                    array_data.set_array(
+                        f"temp_{temp_str}_freq_{index}_shift", w_data["shift"]
+                    )
+            array_data.base.attributes.set(f"temp_{temp_str}_frequencies", frequencies)
+            if "units" in parsed:
+                array_data.base.attributes.set(
+                    f"temp_{temp_str}_units", parsed["units"]
+                )
+        return array_data
 
     @staticmethod
     def parse_a2f_proj(content):
