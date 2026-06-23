@@ -2,7 +2,7 @@
 from aiida import orm
 from aiida.common import AttributeDict
 from pathlib import Path
-from aiida_epw.common import EliashbergType
+
 
 from aiida.engine import (
     BaseRestartWorkChain,
@@ -66,13 +66,52 @@ def validate_inputs(  # pylint: disable=unused-argument,inconsistent-return-stat
     if not any([_ in inputs for _ in ["qfpoints", "qfpoints_distance"]]):
         return "Either `qfpoints` or `qfpoints_distance` must be specified."
 
-    if "eliashberg_type" in inputs:
-        try:
-            member = inputs["eliashberg_type"].get_member()
-            if not isinstance(member, EliashbergType):
-                return "Invalid `eliashberg_type`: wrapped enum must be of class `EliashbergType`."
-        except Exception as exc:
-            return f"Invalid `eliashberg_type`: could not retrieve enum member: {exc}."
+    # Validation for new Eliashberg parameters
+    momentum_dependence = inputs.get("momentum_dependence", None)
+    full_bandwidth = inputs.get("full_bandwidth", None)
+    real_axis = inputs.get("real_axis", None)
+    analytical_continuation = inputs.get("analytical_continuation", None)
+
+    # 1. Validate analytical_continuation value
+    if analytical_continuation is not None:
+        ac_val = analytical_continuation.value
+        if ac_val.lower() not in ("pade", "acon"):
+            return f"Invalid `analytical_continuation`: '{ac_val}' is not supported. Must be 'pade' or 'acon'."
+
+    # 2. Extract tc_linear from parameters
+    parameters = inputs.get("parameters", {})
+    if isinstance(parameters, orm.Dict):
+        parameters = parameters.get_dict()
+    inputepw = parameters.get("INPUTEPW", {})
+    tc_linear = inputepw.get("tc_linear", False)
+
+    # 3. Compatibility checks matching EPW's Fortran source code:
+    # - tc_linear cannot be used with lreal (real_axis=True) or laniso (momentum_dependence=True)
+    if tc_linear:
+        if real_axis is not None and real_axis.value:
+            return "Linearized Eliashberg (tc_linear=True) cannot be used with real_axis=True."
+        if momentum_dependence is not None and momentum_dependence.value:
+            return "Linearized Eliashberg (tc_linear=True) cannot be used with momentum_dependence=True (anisotropic)."
+        if full_bandwidth is not None and full_bandwidth.value:
+            return "Linearized Eliashberg (tc_linear=True) cannot be used with full_bandwidth=True."
+
+    # - lreal (real_axis=True) is implemented only for the isotropic case
+    if real_axis is not None and real_axis.value:
+        if momentum_dependence is not None and momentum_dependence.value:
+            return "Real axis solver (real_axis=True) is only implemented for the isotropic case (momentum_dependence=False)."
+
+    # - lpade (analytical_continuation) requires limag true (so real_axis must be False)
+    if real_axis is not None and real_axis.value:
+        if analytical_continuation is not None:
+            return "Analytical continuation (analytical_continuation) cannot be used when solving on the real axis (real_axis=True)."
+
+    # - fbw (full_bandwidth=True) cannot be used with lacon (analytical_continuation="acon")
+    if full_bandwidth is not None and full_bandwidth.value:
+        if (
+            analytical_continuation is not None
+            and analytical_continuation.value.lower() == "acon"
+        ):
+            return "Analytic continuation method 'acon' is not implemented when full_bandwidth is True."
 
     return None
 
@@ -146,12 +185,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 )
             )
 
-        spec.input(
-            "eliashberg_type",
-            valid_type=orm.EnumData,
-            required=False,
-            help="The Eliashberg type to run."
-        )
+
 
         spec.input(
             "w90_chk_to_ukk_script",
@@ -236,7 +270,10 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         w90_chk_to_ukk_script=None,
         quadrupole_dir=None,
         protocol_filename="base.yaml",
-        eliashberg_type=None,
+        momentum_dependence=None,
+        full_bandwidth=None,
+        real_axis=None,
+        analytical_continuation=None,
         **_,
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -298,15 +335,14 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             else:
                 builder.quadrupole_dir = quadrupole_dir
 
-        if eliashberg_type:
-            from aiida.orm import EnumData
-
-            if isinstance(eliashberg_type, EnumData):
-                builder.eliashberg_type = eliashberg_type
-            else:
-                if isinstance(eliashberg_type, str):
-                    eliashberg_type = EliashbergType(eliashberg_type)
-                builder.eliashberg_type = EnumData(eliashberg_type)
+        if momentum_dependence is not None:
+            builder.momentum_dependence = to_aiida_type(momentum_dependence)
+        if full_bandwidth is not None:
+            builder.full_bandwidth = to_aiida_type(full_bandwidth)
+        if real_axis is not None:
+            builder.real_axis = to_aiida_type(real_axis)
+        if analytical_continuation is not None:
+            builder.analytical_continuation = to_aiida_type(analytical_continuation)
 
         # pylint: enable=no-member
 
@@ -336,16 +372,35 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                     ).as_posix()
                 )
 
-        if "eliashberg_type" in self.inputs:
-            from aiida_epw.common.types import EliashbergType
+        # Determine whether anisotropic or isotropic files are produced
+        momentum_dependence = None
+        if "momentum_dependence" in self.inputs:
+            momentum_dependence = self.inputs.momentum_dependence.value
+        else:
+            momentum_dependence = parameters.get("INPUTEPW", {}).get("laniso", False)
 
-            eliashberg_type = self.inputs.eliashberg_type.get_member()
-            if eliashberg_type == EliashbergType.ISOTROPIC:
-                retrieve_list.append("aiida.imag_iso_*")
-            elif eliashberg_type in (EliashbergType.FSR, EliashbergType.FBW):
+        # Retrieve files if Eliashberg calculations are enabled
+        eliashberg_enabled = False
+        if any(
+            f in self.inputs
+            for f in (
+                "momentum_dependence",
+                "full_bandwidth",
+                "real_axis",
+                "analytical_continuation",
+            )
+        ):
+            eliashberg_enabled = True
+        else:
+            eliashberg_enabled = parameters.get("INPUTEPW", {}).get("eliashberg", False)
+
+        if eliashberg_enabled:
+            if momentum_dependence:
                 retrieve_list.append(self._process_class._OUTPUT_LAMBDA_FS_FILE)
                 retrieve_list.append(self._process_class._OUTPUT_LAMBDA_K_PAIRS_FILE)
                 retrieve_list.append("aiida.imag_aniso*")
+            else:
+                retrieve_list.append("aiida.imag_iso_*")
 
         return retrieve_list
 
@@ -382,30 +437,6 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         # IMPORTANT: I notice that since now EpwCalculation is not encapsulated, the parameters exposed to
         # the EpwBaseWorkChain and the parameters inside EpwCalculation are not the same.
         parameters = self.ctx.inputs.parameters.get_dict()
-
-        if "eliashberg_type" in self.inputs:
-            eliashberg_type = self.inputs.eliashberg_type.get_member()
-            inputepw = parameters.setdefault("INPUTEPW", {})
-            if eliashberg_type == EliashbergType.ISOTROPIC:
-                inputepw["liso"] = True
-                inputepw["laniso"] = False
-                inputepw["tc_linear"] = False
-                inputepw["fbw"] = False
-            elif eliashberg_type == EliashbergType.LINEARIZED:
-                inputepw["liso"] = True
-                inputepw["laniso"] = False
-                inputepw["tc_linear"] = True
-                inputepw["fbw"] = False
-            elif eliashberg_type == EliashbergType.FSR:
-                inputepw["liso"] = False
-                inputepw["laniso"] = True
-                inputepw["tc_linear"] = False
-                inputepw["fbw"] = False
-            elif eliashberg_type == EliashbergType.FBW:
-                inputepw["liso"] = False
-                inputepw["laniso"] = True
-                inputepw["tc_linear"] = False
-                inputepw["fbw"] = True
 
         if "parent_folder_chk" in self.inputs:
             w90_params = (

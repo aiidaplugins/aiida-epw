@@ -337,7 +337,9 @@ def parse_epw_imag_iso(file_contents, prefix="aiida"):
     if not file_contents:
         raise ValueError("No gap-function file contents provided.")
     parsed_data = {}
-    pattern_iso = re.compile(rf"^{prefix}\.imag_iso_(\d{{3}}\.\d{{2}})$")
+    pattern_iso = re.compile(
+        rf"^{prefix}\.(?:imag|real|pade|acon)_iso_(\d{{3}}\.\d{{2}})$"
+    )
 
     for filename, file_content in file_contents.items():
         match = pattern_iso.match(filename)
@@ -355,7 +357,7 @@ def parse_epw_imag_iso(file_contents, prefix="aiida"):
 
     if not parsed_data:
         raise ValueError(
-            f"No files matching the template '{prefix}.imag_iso_XXX.XX' were parsed successfully."
+            f"No files matching the template '{prefix}.imag_iso_XXX.XX' or '{prefix}.real_iso_XXX.XX' were parsed successfully."
         )
     return parsed_data
 
@@ -370,7 +372,9 @@ def parse_epw_imag_aniso_gap0(file_contents, prefix="aiida"):
     if not file_contents:
         raise ValueError("No gap-function file contents provided.")
     parsed_data = {}
-    pattern_aniso_gap0 = re.compile(rf"^{prefix}\.imag_aniso_gap0_(\d{{3}}\.\d{{2}})$")
+    pattern_aniso_gap0 = re.compile(
+        rf"^{prefix}\.(?:imag|real|pade|acon)_aniso_gap0_(\d{{3}}\.\d{{2}})$"
+    )
 
     for filename, file_content in file_contents.items():
         match = pattern_aniso_gap0.match(filename)
@@ -388,7 +392,7 @@ def parse_epw_imag_aniso_gap0(file_contents, prefix="aiida"):
 
     if not parsed_data:
         raise ValueError(
-            f"No files matching the template '{prefix}.imag_aniso_gap0_XXX.XX' were parsed successfully."
+            f"No files matching the template '{prefix}.imag_aniso_gap0_XXX.XX' or '{prefix}.real_aniso_gap0_XXX.XX' were parsed successfully."
         )
     return parsed_data
 

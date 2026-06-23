@@ -1,3 +1,1 @@
-from .types import EliashbergType
-
-__all__ = ("EliashbergType",)
+# -*- coding: utf-8 -*-
