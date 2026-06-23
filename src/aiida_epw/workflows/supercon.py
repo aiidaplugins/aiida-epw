@@ -312,18 +312,31 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         for epw_namespace in namespaces:
             epw_inputs = inputs.get(epw_namespace, None)
 
-            ns_eliashberg_type = None
+            # We replace eliashberg_type with individual flags
+            momentum_dependence = None
+            full_bandwidth = None
+            real_axis = None
             if epw_namespace == "epw_final_iso":
-                ns_eliashberg_type = "linearized"
+                momentum_dependence = False
+                real_axis = False
+                # Ensure tc_linear is True in parameters override
+                epw_inputs = epw_inputs or {}
+                params = epw_inputs.setdefault("parameters", {})
+                inputepw = params.setdefault("INPUTEPW", {})
+                inputepw["tc_linear"] = True
             elif epw_namespace == "epw_final_aniso":
-                ns_eliashberg_type = "fsr"
+                momentum_dependence = True
+                full_bandwidth = False
+                real_axis = False
 
             epw_builder = EpwBaseWorkChain.get_builder_from_protocol(
                 code=epw_code,
                 structure=structure,
                 protocol=protocol,
                 overrides=epw_inputs,
-                eliashberg_type=ns_eliashberg_type,
+                momentum_dependence=momentum_dependence,
+                full_bandwidth=full_bandwidth,
+                real_axis=real_axis,
             )
 
             if epw_namespace == "epw_interp" and scon_epw_code is not None:

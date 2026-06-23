@@ -509,7 +509,8 @@ def test_epw_stages_a2f_when_ephwrite_disabled(
     """Test that EpwCalculation stages prefix.a2f when eliashberg is True and ephwrite is False."""
     parent_folder = generate_remote_data(fixture_localhost, "/remote/epw")
     inputs = generate_inputs_epw(
-        parameters={"INPUTEPW": {"eliashberg": True, "ephwrite": False}},
+        parameters={"INPUTEPW": {"ephwrite": False}},
+        momentum_dependence=orm.Bool(False),
         parent_folder_epw=parent_folder,
     )
 
@@ -517,3 +518,26 @@ def test_epw_stages_a2f_when_ephwrite_disabled(
 
     copied_targets = {entry[2] for entry in calc_info.remote_copy_list}
     assert "aiida.a2f" in copied_targets
+
+
+def test_epw_eliashberg_parameters(
+    fixture_sandbox, generate_calc_job, generate_inputs_epw
+):
+    """Test that Eliashberg parameters are correctly written to the EPW input file."""
+    inputs = generate_inputs_epw(
+        momentum_dependence=orm.Bool(True),
+        full_bandwidth=orm.Bool(False),
+        real_axis=orm.Bool(False),
+        analytical_continuation=orm.Str("pade"),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "eliashberg = .true." in input_contents
+    assert "laniso = .true." in input_contents
+    assert "liso = .false." in input_contents
+    assert "fbw = .false." in input_contents
+    assert "lreal = .false." in input_contents
+    assert "limag = .true." in input_contents
+    assert "lpade = .true." in input_contents
+    assert "lacon = .false." in input_contents

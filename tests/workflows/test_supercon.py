@@ -216,7 +216,6 @@ def test_supercon_get_builder_from_protocol_default(
 ):
     """Test get_builder_from_protocol for SuperConWorkChain builds all namespaces with hardcoded defaults."""
     from aiida_epw.workflows.supercon import SuperConWorkChain
-    from aiida_epw.common import EliashbergType
 
     epw_code = fixture_code("epw.epw")
     structure = generate_structure()
@@ -241,29 +240,110 @@ def test_supercon_get_builder_from_protocol_default(
     assert "code" in builder.epw_interp
     assert "code" in builder.epw_final_iso
     assert "code" in builder.epw_final_aniso
-    assert builder.epw_final_iso.eliashberg_type == EliashbergType.LINEARIZED
-    assert builder.epw_final_aniso.eliashberg_type == EliashbergType.FSR
+    assert not builder.epw_final_iso.momentum_dependence.value
+    assert not builder.epw_final_iso.real_axis.value
+    assert builder.epw_final_iso.parameters.get_dict()["INPUTEPW"]["tc_linear"] is True
+    assert builder.epw_final_aniso.momentum_dependence.value
+    assert not builder.epw_final_aniso.full_bandwidth.value
+    assert not builder.epw_final_aniso.real_axis.value
 
 
-def test_epw_base_eliashberg_types(fixture_code, generate_structure):
-    """Test that EpwBaseWorkChain correctly resolves eliashberg_type in get_builder_from_protocol and setup."""
+def test_epw_base_eliashberg_params(fixture_code, generate_structure):
+    """Test that EpwBaseWorkChain correctly resolves Eliashberg parameters in get_builder_from_protocol, setup, and validate_inputs."""
     from aiida_epw.workflows.base import EpwBaseWorkChain
     from aiida.common import AttributeDict
-    from aiida_epw.common import EliashbergType
 
     epw_code = fixture_code("epw.epw")
     structure = generate_structure()
 
-    # 1. Test builder creation
+    # 1. Test builder creation with new flags
     builder = EpwBaseWorkChain.get_builder_from_protocol(
         code=epw_code,
         structure=structure,
         protocol="fast",
-        eliashberg_type="fsr",
+        momentum_dependence=True,
+        full_bandwidth=False,
+        real_axis=False,
+        analytical_continuation="pade",
     )
-    assert builder.eliashberg_type == EliashbergType.FSR
+    assert builder.momentum_dependence.value
+    assert not builder.full_bandwidth.value
+    assert not builder.real_axis.value
+    assert builder.analytical_continuation.value == "pade"
 
-    # 2. Test setup method logic by executing a mock workchain setup
+    # 2. Test input validation checks
+    # - validate incorrect analytical_continuation value
+    inputs_invalid_ac = {
+        "kfpoints_factor": orm.Int(2),
+        "qfpoints_distance": orm.Float(0.1),
+        "analytical_continuation": orm.Str("invalid_method"),
+    }
+    assert (
+        "Invalid `analytical_continuation`"
+        in EpwBaseWorkChain.spec().inputs.validator(inputs_invalid_ac)
+    )
+
+    # - validate linearized Eliashberg constraints (tc_linear=True with real_axis=True)
+    inputs_tc_real = {
+        "kfpoints_factor": orm.Int(2),
+        "qfpoints_distance": orm.Float(0.1),
+        "real_axis": orm.Bool(True),
+        "parameters": orm.Dict(dict={"INPUTEPW": {"tc_linear": True}}),
+    }
+    assert (
+        "Linearized Eliashberg (tc_linear=True) cannot be used with real_axis=True"
+        in EpwBaseWorkChain.spec().inputs.validator(inputs_tc_real)
+    )
+
+    # - validate linearized Eliashberg constraints (tc_linear=True with momentum_dependence=True)
+    inputs_tc_aniso = {
+        "kfpoints_factor": orm.Int(2),
+        "qfpoints_distance": orm.Float(0.1),
+        "momentum_dependence": orm.Bool(True),
+        "parameters": orm.Dict(dict={"INPUTEPW": {"tc_linear": True}}),
+    }
+    assert (
+        "Linearized Eliashberg (tc_linear=True) cannot be used with momentum_dependence=True"
+        in EpwBaseWorkChain.spec().inputs.validator(inputs_tc_aniso)
+    )
+
+    # - validate real_axis anisotropic solver constraint (real_axis=True with momentum_dependence=True)
+    inputs_real_aniso = {
+        "kfpoints_factor": orm.Int(2),
+        "qfpoints_distance": orm.Float(0.1),
+        "real_axis": orm.Bool(True),
+        "momentum_dependence": orm.Bool(True),
+    }
+    assert (
+        "Real axis solver (real_axis=True) is only implemented for the isotropic case"
+        in EpwBaseWorkChain.spec().inputs.validator(inputs_real_aniso)
+    )
+
+    # - validate continuation and real_axis mutual exclusivity
+    inputs_real_ac = {
+        "kfpoints_factor": orm.Int(2),
+        "qfpoints_distance": orm.Float(0.1),
+        "real_axis": orm.Bool(True),
+        "analytical_continuation": orm.Str("pade"),
+    }
+    assert (
+        "Analytical continuation (analytical_continuation) cannot be used when solving on the real axis"
+        in EpwBaseWorkChain.spec().inputs.validator(inputs_real_ac)
+    )
+
+    # - validate full_bandwidth and ACON mutual exclusivity
+    inputs_fbw_acon = {
+        "kfpoints_factor": orm.Int(2),
+        "qfpoints_distance": orm.Float(0.1),
+        "full_bandwidth": orm.Bool(True),
+        "analytical_continuation": orm.Str("acon"),
+    }
+    assert (
+        "Analytic continuation method 'acon' is not implemented when full_bandwidth is True"
+        in EpwBaseWorkChain.spec().inputs.validator(inputs_fbw_acon)
+    )
+
+    # 3. Test setup method logic by executing a mock workchain setup
     class MockWorkChain(EpwBaseWorkChain):
         @property
         def inputs(self):
@@ -291,53 +371,49 @@ def test_epw_base_eliashberg_types(fixture_code, generate_structure):
     with unittest.mock.patch(
         "aiida.engine.BaseRestartWorkChain.setup", return_value=None
     ):
-        # Test isotropic
+        # Test isotropic imaginary axis with Pade continuation
         inputs_iso = {
             "code": epw_code,
             "structure": structure,
-            "eliashberg_type": orm.EnumData(EliashbergType.ISOTROPIC),
+            "momentum_dependence": orm.Bool(False),
+            "real_axis": orm.Bool(False),
+            "analytical_continuation": orm.Str("pade"),
             "options": orm.Dict(dict={"resources": {"num_machines": 1}}),
             "parameters": orm.Dict(dict={"INPUTEPW": {}}),
         }
         wc_iso = MockWorkChain.__new__(MockWorkChain)
         wc_iso.inputs = AttributeDict(inputs_iso)
         wc_iso.ctx = AttributeDict()
-        wc_iso.exposed_inputs = lambda *args, **kwargs: {
-            "parameters": orm.Dict(inputs_iso.get("parameters", {}))
-        }
+        wc_iso.exposed_inputs = lambda *args, **kwargs: AttributeDict(inputs_iso)
         wc_iso.setup()
 
-        params_iso = wc_iso.ctx.inputs.parameters.get_dict()["INPUTEPW"]
-        assert params_iso["liso"] is True
-        assert params_iso["laniso"] is False
-        assert params_iso["tc_linear"] is False
-        assert params_iso["fbw"] is False
+        assert not wc_iso.ctx.inputs.momentum_dependence.value
+        assert not wc_iso.ctx.inputs.real_axis.value
+        assert wc_iso.ctx.inputs.analytical_continuation.value == "pade"
         assert (
             "aiida.imag_iso_*"
             in wc_iso.ctx.inputs.metadata["options"]["additional_retrieve_list"]
         )
 
-        # Test fsr
+        # Test anisotropic imaginary axis (FSR-like)
         inputs_fsr = {
             "code": epw_code,
             "structure": structure,
-            "eliashberg_type": orm.EnumData(EliashbergType.FSR),
+            "momentum_dependence": orm.Bool(True),
+            "full_bandwidth": orm.Bool(False),
+            "real_axis": orm.Bool(False),
             "options": orm.Dict(dict={"resources": {"num_machines": 1}}),
             "parameters": orm.Dict(dict={"INPUTEPW": {}}),
         }
         wc_fsr = MockWorkChain.__new__(MockWorkChain)
         wc_fsr.inputs = AttributeDict(inputs_fsr)
         wc_fsr.ctx = AttributeDict()
-        wc_fsr.exposed_inputs = lambda *args, **kwargs: {
-            "parameters": orm.Dict(inputs_fsr.get("parameters", {}))
-        }
+        wc_fsr.exposed_inputs = lambda *args, **kwargs: AttributeDict(inputs_fsr)
         wc_fsr.setup()
 
-        params_fsr = wc_fsr.ctx.inputs.parameters.get_dict()["INPUTEPW"]
-        assert params_fsr["liso"] is False
-        assert params_fsr["laniso"] is True
-        assert params_fsr["tc_linear"] is False
-        assert params_fsr["fbw"] is False
+        assert wc_fsr.ctx.inputs.momentum_dependence.value
+        assert not wc_fsr.ctx.inputs.full_bandwidth.value
+        assert not wc_fsr.ctx.inputs.real_axis.value
         assert (
             "aiida.imag_aniso*"
             in wc_fsr.ctx.inputs.metadata["options"]["additional_retrieve_list"]
