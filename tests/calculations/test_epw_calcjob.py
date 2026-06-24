@@ -10,6 +10,7 @@ from aiida_quantumespresso.calculations.ph import PhCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
 from aiida_epw.calculations.epw import EpwCalculation
+from aiida_epw.common import RestartType
 
 
 def generate_kpoints_mesh(mesh):
@@ -103,6 +104,14 @@ def test_epw_writes_explicit_fine_point_files(
     [
         ("outdir", "./custom-out"),
         ("nk1", 8),
+        ("wannierize", True),
+        ("epwread", True),
+        ("epwwrite", True),
+        ("restart", True),
+        ("ep_coupling", True),
+        ("elph", True),
+        ("ephwrite", True),
+        ("epmatkqread", True),
     ],
 )
 def test_epw_rejects_plugin_managed_keywords(
@@ -194,7 +203,8 @@ def test_epw_accepts_manual_proj_for_wannierize(
 ):
     """Direct EPW Wannierization should accept manual `proj` lists."""
     inputs = generate_inputs_epw(
-        parameters={"INPUTEPW": {"wannierize": True, "proj": ["Si:s", "Si:p"]}},
+        restart_type=RestartType.WANNIERIZE,
+        parameters={"INPUTEPW": {"proj": ["Si:s", "Si:p"]}},
         parent_folder_nscf=generate_remote_data(fixture_localhost, "/remote/nscf"),
     )
 
@@ -211,7 +221,7 @@ def test_epw_requires_nscf_parent_for_wannierize(
 ):
     """Direct EPW Wannierization should always stage an NSCF parent."""
     inputs = generate_inputs_epw(
-        parameters={"INPUTEPW": {"wannierize": True, "proj": ["Si:s"]}}
+        restart_type="wannierize", parameters={"INPUTEPW": {"proj": ["Si:s"]}}
     )
 
     with pytest.raises(ValueError, match="parent_folder_nscf"):
@@ -227,9 +237,8 @@ def test_epw_rejects_auto_projections_for_wannierize(
 ):
     """Only manual `proj` entries are supported for EPW Wannierization."""
     inputs = generate_inputs_epw(
-        parameters={
-            "INPUTEPW": {"wannierize": True, "auto_projections": True, "proj": ["Si:s"]}
-        },
+        restart_type="wannierize",
+        parameters={"INPUTEPW": {"auto_projections": True, "proj": ["Si:s"]}},
         parent_folder_nscf=generate_remote_data(fixture_localhost, "/remote/nscf"),
     )
 
@@ -246,7 +255,7 @@ def test_epw_requires_manual_proj_for_wannierize(
 ):
     """Direct EPW Wannierization should require explicit manual projections."""
     inputs = generate_inputs_epw(
-        parameters={"INPUTEPW": {"wannierize": True}},
+        restart_type="wannierize",
         parent_folder_nscf=generate_remote_data(fixture_localhost, "/remote/nscf"),
     )
 
@@ -435,7 +444,7 @@ def test_epw_stages_epw_restart_files_without_copying_epmatwp(
     """Test that EPW restart staging links the large `epmatwp` file and copies metadata files."""
     parent_folder = generate_remote_data(fixture_localhost, "/remote/epw")
     inputs = generate_inputs_epw(
-        parameters={"INPUTEPW": {"epwread": True, "elph": True}},
+        restart_type="ephwrite",
         parent_folder_epw=parent_folder,
     )
 
@@ -497,3 +506,72 @@ def test_epw_stages_ph_stash_folder_by_target_basepath(
         ).as_posix(),
         "save",
     ) in calc_info.remote_copy_list
+
+
+def test_epw_restart_type_parameter(
+    fixture_sandbox,
+    fixture_localhost,
+    generate_calc_job,
+    generate_inputs_epw,
+    generate_remote_data,
+):
+    """Test that specifying `restart_type` updates the namelist correctly in the input file."""
+    # 1. WANNIERIZE
+    inputs_wann = generate_inputs_epw(
+        restart_type=RestartType.WANNIERIZE,
+        parameters={"INPUTEPW": {"proj": ["Si:s"]}},
+        parent_folder_nscf=generate_remote_data(fixture_localhost, "/remote/nscf"),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs_wann)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "wannierize = .true." in input_contents
+    assert "epwread = .false." in input_contents
+    assert "epwwrite = .true." in input_contents
+    assert "restart = .false." in input_contents
+    assert "ep_coupling = .true." in input_contents
+    assert "elph = .true." in input_contents
+
+    # 2. EPHWRITE
+    inputs_write = generate_inputs_epw(
+        restart_type=RestartType.EPHWRITE,
+        parent_folder_epw=generate_remote_data(fixture_localhost, "/remote/epw"),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs_write)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "wannierize = .false." in input_contents
+    assert "epwread = .true." in input_contents
+    assert "epwwrite = .false." in input_contents
+    assert "restart = .false." in input_contents
+    assert "ep_coupling = .true." in input_contents
+    assert "elph = .true." in input_contents
+
+    # 3. EPHREAD (without scattering)
+    inputs_read1 = generate_inputs_epw(
+        restart_type=RestartType.EPHREAD,
+        parent_folder_epw=generate_remote_data(fixture_localhost, "/remote/epw"),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs_read1)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "wannierize = .false." in input_contents
+    assert "epwread = .true." in input_contents
+    assert "restart = .false." in input_contents
+    assert "ep_coupling = .false." in input_contents
+    assert "elph = .false." in input_contents
+    assert "ephwrite = .false." in input_contents
+    assert "epmatkqread" not in input_contents
+
+    # 4. EPHREAD (with scattering)
+    inputs_read2 = generate_inputs_epw(
+        restart_type=RestartType.EPHREAD,
+        parameters={"INPUTEPW": {"scattering": True}},
+        parent_folder_epw=generate_remote_data(fixture_localhost, "/remote/epw"),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs_read2)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "wannierize = .false." in input_contents
+    assert "epwread = .true." in input_contents
+    assert "restart = .false." in input_contents
+    assert "ep_coupling = .false." in input_contents
+    assert "elph = .false." in input_contents
+    assert "ephwrite = .false." in input_contents
+    assert "epmatkqread = .true." in input_contents

@@ -209,56 +209,19 @@ def test_supercon_should_run_final():
 
 
 def test_epw_base_restart_types(fixture_code, generate_structure):
-    """Test get_builder_from_protocol for EpwBaseWorkChain with different RestartType values."""
+    """Test that EpwBaseWorkChain exposes restart_type from EpwCalculation."""
     from aiida_epw.workflows.base import EpwBaseWorkChain
     from aiida_epw.common import RestartType
 
     epw_code = fixture_code("epw.epw")
     structure = generate_structure()
 
-    # 1. WANNIERIZE
     builder = EpwBaseWorkChain.get_builder_from_protocol(
         code=epw_code,
         structure=structure,
         protocol="fast",
-        restart_type=RestartType.WANNIERIZE,
     )
-    params = builder.parameters.get_dict()["INPUTEPW"]
-    assert params["wannierize"] is True
-    assert params["epwread"] is False
-    assert params["epwwrite"] is True
-    assert params["restart"] is False
-    assert params["ep_coupling"] is True
-    assert params["elph"] is True
 
-    # 2. EPHWRITE
-    builder = EpwBaseWorkChain.get_builder_from_protocol(
-        code=epw_code,
-        structure=structure,
-        protocol="fast",
-        restart_type=RestartType.EPHWRITE,
-    )
-    params = builder.parameters.get_dict()["INPUTEPW"]
-    assert params["wannierize"] is False
-    assert params["epwread"] is True
-    assert params["epwwrite"] is False
-    assert params["restart"] is False
-    assert params["ep_coupling"] is True
-    assert params["elph"] is True
-
-    # 3. EPHREAD
-    builder = EpwBaseWorkChain.get_builder_from_protocol(
-        code=epw_code,
-        structure=structure,
-        protocol="fast",
-        overrides={"parameters": {"INPUTEPW": {"scattering": True}}},
-        restart_type=RestartType.EPHREAD,
-    )
-    params = builder.parameters.get_dict()["INPUTEPW"]
-    assert params["wannierize"] is False
-    assert params["epwread"] is True
-    assert params["restart"] is False
-    assert params["ep_coupling"] is False
-    assert params["elph"] is False
-    assert params["ephwrite"] is False
-    assert params["epmatkqread"] is True
+    # We should be able to set and access restart_type on the builder
+    builder.restart_type = RestartType.WANNIERIZE
+    assert builder.restart_type == RestartType.WANNIERIZE
