@@ -544,6 +544,7 @@ def test_epw_restart_type_parameter(
     assert "restart = .false." in input_contents
     assert "ep_coupling = .true." in input_contents
     assert "elph = .true." in input_contents
+    assert "ephwrite = .true." in input_contents
 
     # 3. EPHREAD (without scattering)
     inputs_read1 = generate_inputs_epw(

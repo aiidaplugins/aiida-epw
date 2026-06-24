@@ -681,6 +681,7 @@ class EpwCalculation(NamelistsCalculation):
                 inputepw_parameters["restart"] = False
                 inputepw_parameters["ep_coupling"] = True
                 inputepw_parameters["elph"] = True
+                inputepw_parameters["ephwrite"] = True
             elif restart_val is RestartType.EPHREAD:
                 inputepw_parameters["wannierize"] = False
                 inputepw_parameters["epwread"] = True
