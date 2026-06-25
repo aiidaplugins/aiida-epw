@@ -19,6 +19,9 @@ from aiida_epw.parsers.epw import EpwParser
     "test_name",
     (
         "default",
+        "isotropic_eliashberg",
+        "anisotropic_eliashberg_fsr",
+        "anisotropic_eliashberg_fbw",
         "bands",
     ),
 )
@@ -39,7 +42,11 @@ def test_epw(parse_from_files, data_regression, test_name):
         data_regression_dict["degaussq"] = results["a2f"].get_array("degaussq").tolist()
         assert results["a2f"].get_spectrum().shape[1] == 10
         assert results["a2f"].get_cumulative_lambda().shape[1] == 10
-
+    if test_name == "isotropic_eliashberg":
+        if "max_eigenvalue" in results:
+            data_regression_dict["max_eigenvalue"] = (
+                results["max_eigenvalue"].get_array("max_eigenvalue").tolist()
+            )
     if test_name == "bands":
         data_regression_dict["kpoints"] = (
             results["el_band_structure"].get_kpoints().tolist()
@@ -55,6 +62,22 @@ def test_epw(parse_from_files, data_regression, test_name):
         )
 
     data_regression.check(data_regression_dict)
+
+
+def test_epw_failed_broyden_factor(parse_from_files, data_regression):
+    """Test a `epw.x` that failed due to an error in routine `mix_broyden`."""
+    results, calcfunction = parse_from_files(EpwParser, "failed_broyden_factor")
+    expected_exit_status = (
+        EpwCalculation.exit_codes.ERROR_OUTPUT_STDOUT_INCOMPLETE.status
+    )
+
+    assert calcfunction.is_failed
+    assert calcfunction.exit_status == expected_exit_status
+    data_regression.check(
+        {
+            "output_parameters": results["output_parameters"].get_dict(),
+        }
+    )
 
 
 def test_epw_reads_dos_from_output_subfolder(aiida_localhost, files_path):
