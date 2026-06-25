@@ -491,3 +491,95 @@ def _is_numeric_table_row(line):
         return False
 
     return True
+
+
+def parse_transport_matrices(block):
+    """Parse transport tensor matrices from a text block."""
+    parsed = {}
+
+    def extract_matrix_pair(header_pattern, text):
+        start_match = re.search(header_pattern, text)
+        if not start_match:
+            return None, None
+
+        lines_start = start_match.end()
+        lines = text[lines_start:].strip().split("\n")
+        # Take up to 3 lines
+        lines = lines[:3]
+
+        m1 = []
+        m2 = []
+        try:
+            for line in lines:
+                # Format " val1 val2 val3 | val4 val5 val6 " (approx)
+                parts = line.split("|")
+                if len(parts) < 2:
+                    continue
+
+                # Handle Fortran D notation
+                row1 = [
+                    float(x.replace("D", "E").replace("d", "e"))
+                    for x in parts[0].split()
+                ]
+                row2 = [
+                    float(x.replace("D", "E").replace("d", "e"))
+                    for x in parts[1].split()
+                ]
+
+                if len(row1) == 3 and len(row2) == 3:
+                    m1.append(row1)
+                    m2.append(row2)
+        except ValueError:
+            pass
+
+        if len(m1) == 3 and len(m2) == 3:
+            return m1, m2
+        return None, None
+
+    def extract_single_matrix(header_pattern, text):
+        start_match = re.search(header_pattern, text)
+        if not start_match:
+            return None
+
+        lines_start = start_match.end()
+        lines = text[lines_start:].strip().split("\n")[:3]
+        m = []
+        try:
+            for line in lines:
+                # Just one set of 3 values
+                row = [
+                    float(x.replace("D", "E").replace("d", "e")) for x in line.split()
+                ]
+                if len(row) == 3:
+                    m.append(row)
+        except ValueError:
+            pass
+
+        if len(m) == 3:
+            return m
+        return None
+
+    # 1. Conductivity
+    cond, cond_B = extract_matrix_pair(
+        r"Conductivity tensor without magnetic field\s*\|\s*with magnetic field \[Siemens/m\]",
+        block,
+    )
+    if cond:
+        parsed["conductivity"] = cond
+        parsed["conductivity_with_B"] = cond_B
+
+    # 2. Mobility
+    mob, hall_mob = extract_matrix_pair(
+        r"Mobility tensor without magnetic field\s*\|\s*(?:Hall mobility|with magnetic field) \[cm\^2/Vs\]",
+        block,
+    )
+    if mob:
+        parsed["mobility"] = mob
+        parsed["hall_mobility"] = hall_mob
+
+    # 3. Hall Factor
+    hall_fac = extract_single_matrix(r"Hall factor", block)
+    if hall_fac:
+        parsed["hall_factor"] = hall_fac
+
+    return parsed
