@@ -222,6 +222,7 @@ lambda:
 - 0.2642835
 - 0.2642907
 output_parameters:
+  Allen_Dynes_Tc: 13.93963
   allen_dynes: 13.93963
   code_version: '5.7'
   degaussw: 0.1
