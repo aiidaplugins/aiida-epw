@@ -82,6 +82,20 @@ def test_epw_failed_broyden_factor(parse_from_files, data_regression):
     )
 
 
+def test_epw_failed_pade_approximation(parse_from_files, data_regression):
+    """Test a `epw.x` that failed due to NaN in Pade approximation."""
+    results, calcfunction = parse_from_files(EpwParser, "failed_pade_approximation")
+    expected_exit_status = EpwCalculation.exit_codes.ERROR_PADE_APPROXIMANTS.status
+
+    assert calcfunction.is_failed
+    assert calcfunction.exit_status == expected_exit_status
+    data_regression.check(
+        {
+            "output_parameters": results["output_parameters"].get_dict(),
+        }
+    )
+
+
 def test_epw_reads_dos_from_output_subfolder(aiida_localhost, files_path):
     """Test that DOS data is parsed even when retrieved inside the EPW output folder."""
     parser_entry_point = get_entry_point_string_from_class(

@@ -210,6 +210,9 @@ class EpwParser(BaseParser):
             if exit_code in logs.error:
                 return self.exit(self.exit_codes.get(exit_code), logs)
 
+        if "ERROR_PADE_APPROXIMANTS" in logs.error:
+            return self.exit(self.exit_codes.get("ERROR_PADE_APPROXIMANTS"), logs)
+
         if "ERROR_OUTPUT_STDOUT_INCOMPLETE" in logs.error:
             return self.exit(
                 self.exit_codes.get("ERROR_OUTPUT_STDOUT_INCOMPLETE"), logs
@@ -309,6 +312,19 @@ class EpwParser(BaseParser):
         from aiida_epw.tools.parsers import parse_stdout_eliashberg
 
         parsed_data.update(parse_stdout_eliashberg(stdout))
+
+        # Check for Pade approximation failure (NaN values under the pade table header)
+        pade_header_match = re.search(
+            r"pade\s+Re\[znorm\]\s+Re\[delta\]\s+\[meV\]\s+Re\[shift\]\s+\[meV\]",
+            stdout,
+        )
+        if pade_header_match:
+            start_idx = pade_header_match.end()
+            remaining = stdout[start_idx:].lstrip()
+            if remaining:
+                first_line = remaining.split("\n", 1)[0]
+                if "nan" in first_line.lower():
+                    logs.error.append("ERROR_PADE_APPROXIMANTS")
 
         return parsed_data, logs
 

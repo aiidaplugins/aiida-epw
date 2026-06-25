@@ -1,0 +1,19 @@
+output_parameters:
+  code_version: '6.0'
+  isotropic_eliashberg:
+  - broyden_mixing_factor: 0.7
+    free_energy: -0.004309
+    lastiw: 923
+    nsiter: 5
+    nsiw: 923
+    nsiw_itemp: 923
+    startiw: 1
+    temp: 1.0
+    wscut: 0.5
+  - broyden_mixing_factor: 0.7
+    lastiw: 462
+    nsiw: 462
+    nsiw_itemp: 462
+    startiw: 1
+    temp: 2.0
+    wscut: 0.5
