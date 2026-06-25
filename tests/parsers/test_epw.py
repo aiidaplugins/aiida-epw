@@ -251,3 +251,137 @@ def test_parse_aniso_gap_functions_returns_typed_data(files_path):
     assert gap_functions.kind == "aniso"
     assert gap_functions.get_temperatures().tolist() == [3.0, 4.0, 5.0]
     assert gap_functions.get_gap_function(3.0).shape[1] == 5
+
+
+def test_parse_aniso_gap_fs_returns_typed_data():
+    """Test parsing of imag_aniso_gap_FS file."""
+    content = """# kx ky kz band energy delta
+ 0.0 0.0 0.0 1 0.1 0.5
+ 0.0 0.0 0.0 2 0.2 0.6
+"""
+    aniso_gap_fs = EpwParser.parse_aniso_gap_fs(content)
+    assert isinstance(aniso_gap_fs, orm.ArrayData)
+    assert aniso_gap_fs.base.attributes.get("bands") == [1, 2]
+    assert aniso_gap_fs.get_array("band_1_kpoints").tolist() == [[0.0, 0.0, 0.0]]
+    assert aniso_gap_fs.get_array("band_1_energy").tolist() == [0.1]
+    assert aniso_gap_fs.get_array("band_1_delta").tolist() == [0.5]
+
+
+def test_parse_aniso_imag_returns_typed_data():
+    """Test parsing of imag_aniso file."""
+    content = """# w energy znorm delta shift
+ 0.01 0.1 1.0 0.5 0.0
+ 0.02 0.2 1.1 0.6 0.0
+"""
+    aniso_imag = EpwParser.parse_aniso_imag(content)
+    assert isinstance(aniso_imag, orm.ArrayData)
+    assert aniso_imag.base.attributes.get("frequencies") == [0.01, 0.02]
+    assert aniso_imag.get_array("freq_0_energy").tolist() == [0.1]
+    assert aniso_imag.get_array("freq_0_znorm").tolist() == [1.0]
+    assert aniso_imag.get_array("freq_0_delta").tolist() == [0.5]
+    assert aniso_imag.get_array("freq_0_shift").tolist() == [0.0]
+
+
+def test_epw_parser_selective_real_axis(aiida_localhost):
+    """Test that EpwParser selectively searches and parses based on calculation settings (e.g. real_axis)."""
+    import io
+
+    # Set up mock node with real_axis=True
+    node = orm.CalcJobNode(
+        computer=aiida_localhost, process_type="aiida.calculations:epw.epw"
+    )
+    node.base.attributes.set("output_filename", "aiida.out")
+
+    real_axis_node = orm.Bool(True).store()
+    node.base.links.add_incoming(
+        real_axis_node, link_type=LinkType.INPUT_CALC, link_label="real_axis"
+    )
+
+    mom_dep_node = orm.Bool(False).store()
+    node.base.links.add_incoming(
+        mom_dep_node, link_type=LinkType.INPUT_CALC, link_label="momentum_dependence"
+    )
+
+    node.store()
+
+    # Retrieve folder with both real_iso and imag_iso files
+    retrieved = orm.FolderData()
+    retrieved.base.repository.put_object_from_filelike(
+        io.BytesIO(b"w znorm delta\n0.1 1.0 0.5\n0.15 1.0 0.6\n"),
+        "aiida.real_iso_001.00",
+    )
+    retrieved.base.repository.put_object_from_filelike(
+        io.BytesIO(b"w znorm delta\n0.2 2.0 1.0\n0.25 2.0 1.1\n"),
+        "aiida.imag_iso_001.00",
+    )
+    retrieved.base.repository.put_object_from_filelike(
+        io.BytesIO(b"EPW.bib\n"), "aiida.out"
+    )
+    retrieved.base.links.add_incoming(
+        node, link_type=LinkType.CREATE, link_label="retrieved"
+    )
+    retrieved.store()
+
+    results, calcfunction = EpwParser.parse_from_node(node, store_provenance=False)
+    assert calcfunction.is_finished_ok, calcfunction.exit_message
+    assert "iso_gap_functions" in results
+
+    # Since real_axis=True, only real_iso should be matched and parsed
+    assert results["iso_gap_functions"].get_temperatures().tolist() == [1.0]
+    gap_val = results["iso_gap_functions"].get_gap_function(1.0)
+    assert gap_val[0][0] == 0.1
+
+
+def test_epw_parser_selective_continuation(aiida_localhost):
+    """Test that EpwParser selectively searches and parses based on calculation settings (e.g. analytical_continuation)."""
+    import io
+
+    # Set up mock node with analytical_continuation='pade' and real_axis=False
+    node = orm.CalcJobNode(
+        computer=aiida_localhost, process_type="aiida.calculations:epw.epw"
+    )
+    node.base.attributes.set("output_filename", "aiida.out")
+
+    real_axis_node = orm.Bool(False).store()
+    node.base.links.add_incoming(
+        real_axis_node, link_type=LinkType.INPUT_CALC, link_label="real_axis"
+    )
+
+    mom_dep_node = orm.Bool(False).store()
+    node.base.links.add_incoming(
+        mom_dep_node, link_type=LinkType.INPUT_CALC, link_label="momentum_dependence"
+    )
+
+    ac_node = orm.Str("pade").store()
+    node.base.links.add_incoming(
+        ac_node, link_type=LinkType.INPUT_CALC, link_label="analytical_continuation"
+    )
+
+    node.store()
+
+    # Retrieve folder with both pade_iso and real_iso files
+    retrieved = orm.FolderData()
+    retrieved.base.repository.put_object_from_filelike(
+        io.BytesIO(b"w znorm delta\n0.1 1.0 0.5\n0.15 1.0 0.6\n"),
+        "aiida.pade_iso_001.00",
+    )
+    retrieved.base.repository.put_object_from_filelike(
+        io.BytesIO(b"w znorm delta\n0.2 2.0 1.0\n0.25 2.0 1.1\n"),
+        "aiida.real_iso_001.00",
+    )
+    retrieved.base.repository.put_object_from_filelike(
+        io.BytesIO(b"EPW.bib\n"), "aiida.out"
+    )
+    retrieved.base.links.add_incoming(
+        node, link_type=LinkType.CREATE, link_label="retrieved"
+    )
+    retrieved.store()
+
+    results, calcfunction = EpwParser.parse_from_node(node, store_provenance=False)
+    assert calcfunction.is_finished_ok, calcfunction.exit_message
+    assert "iso_gap_functions" in results
+
+    # Since real_axis=False and analytical_continuation='pade', only imag/pade/acon_iso should be matched and parsed (not real_iso)
+    assert results["iso_gap_functions"].get_temperatures().tolist() == [1.0]
+    gap_val = results["iso_gap_functions"].get_gap_function(1.0)
+    assert gap_val[0][0] == 0.1

@@ -7,6 +7,7 @@ from pathlib import Path
 from aiida import orm
 from aiida.common import datastructures, exceptions
 from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.orm.nodes.data.base import to_aiida_type
 from aiida_quantumespresso.calculations import (
     BasePwCpInputGenerator,
     _pop_parser_options,
@@ -55,6 +56,14 @@ class EpwCalculation(NamelistsCalculation):
         ("INPUTEPW", "nkf1"),
         ("INPUTEPW", "nkf2"),
         ("INPUTEPW", "nkf3"),
+        ("INPUTEPW", "eliashberg"),
+        ("INPUTEPW", "liso"),
+        ("INPUTEPW", "laniso"),
+        ("INPUTEPW", "fbw"),
+        ("INPUTEPW", "lreal"),
+        ("INPUTEPW", "limag"),
+        ("INPUTEPW", "lpade"),
+        ("INPUTEPW", "lacon"),
     ]
 
     _use_kpoints = True
@@ -101,6 +110,34 @@ class EpwCalculation(NamelistsCalculation):
             "parameters",
             valid_type=orm.Dict,
             help="Parameters for the `epw.x` input file.",
+        )
+        spec.input(
+            "momentum_dependence",
+            valid_type=orm.Bool,
+            required=False,
+            serializer=to_aiida_type,
+            help="Isotropic (False) or anisotropic (True) Eliashberg calculation.",
+        )
+        spec.input(
+            "full_bandwidth",
+            valid_type=orm.Bool,
+            required=False,
+            serializer=to_aiida_type,
+            help="Solve full bandwidth (True) or restrict to Fermi surface (False).",
+        )
+        spec.input(
+            "real_axis",
+            valid_type=orm.Bool,
+            required=False,
+            serializer=to_aiida_type,
+            help="Solve the Eliashberg equations on the real axis (True) or imaginary axis (False).",
+        )
+        spec.input(
+            "analytical_continuation",
+            valid_type=orm.Str,
+            required=False,
+            serializer=to_aiida_type,
+            help="Analytical continuation method: 'pade' or 'acon'.",
         )
         spec.input(
             "kpoints",
@@ -271,6 +308,18 @@ class EpwCalculation(NamelistsCalculation):
             required=False,
             help="The interpolated anisotropic gap function.",
         )
+        spec.output(
+            "aniso_gap_FS",
+            valid_type=orm.ArrayData,
+            required=False,
+            help="The anisotropic gap on the Fermi surface.",
+        )
+        spec.output(
+            "aniso_gap_imag",
+            valid_type=orm.ArrayData,
+            required=False,
+            help="The anisotropic gap on the imaginary axis.",
+        )
 
         spec.exit_code(
             300,
@@ -409,6 +458,57 @@ class EpwCalculation(NamelistsCalculation):
                 raise exceptions.InputValidationError(
                     "Manual `proj` entries must be provided when "
                     "`parameters.INPUTEPW.wannierize` is true."
+                )
+
+        # Validate Eliashberg parameters
+        momentum_dependence = inputs.get("momentum_dependence", None)
+        full_bandwidth = inputs.get("full_bandwidth", None)
+        real_axis = inputs.get("real_axis", None)
+        analytical_continuation = inputs.get("analytical_continuation", None)
+
+        if analytical_continuation is not None:
+            ac_val = analytical_continuation.value
+            if ac_val.lower() not in ("pade", "acon", "none"):
+                raise exceptions.InputValidationError(
+                    f"Invalid `analytical_continuation`: '{ac_val}' is not supported. Must be 'pade', 'acon', or 'none'."
+                )
+
+        tc_linear = inputepw.get("tc_linear", False)
+
+        if tc_linear:
+            if real_axis is not None and real_axis.value:
+                raise exceptions.InputValidationError(
+                    "Linearized Eliashberg (tc_linear=True) cannot be used with real_axis=True."
+                )
+            if momentum_dependence is not None and momentum_dependence.value:
+                raise exceptions.InputValidationError(
+                    "Linearized Eliashberg (tc_linear=True) cannot be used with momentum_dependence=True (anisotropic)."
+                )
+            if full_bandwidth is not None and full_bandwidth.value:
+                raise exceptions.InputValidationError(
+                    "Linearized Eliashberg (tc_linear=True) cannot be used with full_bandwidth=True."
+                )
+
+        if real_axis is not None and real_axis.value:
+            if momentum_dependence is not None and momentum_dependence.value:
+                raise exceptions.InputValidationError(
+                    "Real axis solver (real_axis=True) is only implemented for the isotropic case (momentum_dependence=False)."
+                )
+            if (
+                analytical_continuation is not None
+                and analytical_continuation.value.lower() != "none"
+            ):
+                raise exceptions.InputValidationError(
+                    "Analytical continuation (analytical_continuation) cannot be used when solving on the real axis (real_axis=True)."
+                )
+
+        if full_bandwidth is not None and full_bandwidth.value:
+            if (
+                analytical_continuation is not None
+                and analytical_continuation.value.lower() == "acon"
+            ):
+                raise exceptions.InputValidationError(
+                    "Analytic continuation method 'acon' is not implemented when full_bandwidth is True."
                 )
 
     @classmethod
@@ -573,6 +673,48 @@ class EpwCalculation(NamelistsCalculation):
 
         self.cap_nstemp(inputepw_parameters)
 
+        # Override Eliashberg settings in parameters if inputs are specified
+        eliashberg_any = any(
+            f in self.inputs
+            for f in (
+                "momentum_dependence",
+                "full_bandwidth",
+                "real_axis",
+                "analytical_continuation",
+            )
+        )
+        if eliashberg_any:
+            inputepw_parameters["eliashberg"] = True
+
+            if "momentum_dependence" in self.inputs:
+                momentum_dependence = self.inputs.momentum_dependence.value
+                inputepw_parameters["laniso"] = momentum_dependence
+                inputepw_parameters["liso"] = not momentum_dependence
+
+            if "full_bandwidth" in self.inputs:
+                inputepw_parameters["fbw"] = self.inputs.full_bandwidth.value
+
+            if "real_axis" in self.inputs:
+                real_axis = self.inputs.real_axis.value
+                inputepw_parameters["lreal"] = real_axis
+                inputepw_parameters["limag"] = not real_axis
+
+            if "analytical_continuation" in self.inputs:
+                ac_method = self.inputs.analytical_continuation.value.lower()
+                if ac_method == "pade":
+                    inputepw_parameters["lpade"] = True
+                    inputepw_parameters["lacon"] = False
+                    inputepw_parameters["limag"] = True
+                    inputepw_parameters["lreal"] = False
+                elif ac_method == "acon":
+                    inputepw_parameters["lpade"] = True
+                    inputepw_parameters["lacon"] = True
+                    inputepw_parameters["limag"] = True
+                    inputepw_parameters["lreal"] = False
+                elif ac_method == "none":
+                    inputepw_parameters["lpade"] = False
+                    inputepw_parameters["lacon"] = False
+
         inputepw_parameters["outdir"] = self._OUTPUT_SUBFOLDER
         inputepw_parameters["dvscf_dir"] = self._FOLDER_SAVE
         inputepw_parameters["prefix"] = self._PREFIX
@@ -630,35 +772,6 @@ class EpwCalculation(NamelistsCalculation):
             )
 
         return parameters
-
-    def get_additional_retrieve_list(self, parameters):
-        """Return additional files that should be retrieved for the configured EPW run."""
-        retrieve_list = []
-
-        if parameters["INPUTEPW"].get("band_plot"):
-            retrieve_list += [self._output_elbands_file, self._output_phbands_file]
-
-        if parameters["INPUTEPW"].get("eliashberg", False):
-            retrieve_list.append(self._OUTPUT_A2F_FILE)
-            if not parameters["INPUTEPW"].get("restart", False):
-                retrieve_list.append(self._OUTPUT_A2F_PROJ_FILE)
-                retrieve_list.append(self._OUTPUT_PHDOS_FILE)
-                retrieve_list.append(self._OUTPUT_PHDOS_PROJ_FILE)
-                retrieve_list.append(
-                    Path(self._OUTPUT_SUBFOLDER, self._OUTPUT_DOS_FILE).as_posix()
-                )
-
-        if parameters["INPUTEPW"].get("liso", False) and not parameters["INPUTEPW"].get(
-            "tc_linear", False
-        ):
-            retrieve_list.append("aiida.imag_iso_*")
-
-        if parameters["INPUTEPW"].get("laniso", False):
-            retrieve_list.append(self._OUTPUT_LAMBDA_FS_FILE)
-            retrieve_list.append(self._OUTPUT_LAMBDA_K_PAIRS_FILE)
-            retrieve_list.append("aiida.imag_aniso_gap*")
-
-        return retrieve_list
 
     @staticmethod
     def get_parent_folder_path(parent_folder):
@@ -839,6 +952,7 @@ class EpwCalculation(NamelistsCalculation):
                         ).as_posix(),
                     )
                 )
+                file_list.append(f"{self._PREFIX}.a2f")
 
         for filename in file_list:
             remote_list.append(
@@ -1015,7 +1129,7 @@ class EpwCalculation(NamelistsCalculation):
             folder, parameters, settings, remote_copy_list, remote_symlink_list
         )
 
-        retrieve_list = self.get_additional_retrieve_list(parameters)
+        retrieve_list = []
         self.write_input_file(folder, parameters, settings)
 
         # Stage quadrupole files if present
