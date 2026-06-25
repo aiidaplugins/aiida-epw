@@ -305,6 +305,11 @@ class EpwParser(BaseParser):
                     numpy.trace(numpy.array(ibte_data["mobility"])) / 3.0
                 )
 
+        # Parse Eliashberg temperature blocks
+        from aiida_epw.tools.parsers import parse_stdout_eliashberg
+
+        parsed_data.update(parse_stdout_eliashberg(stdout))
+
         return parsed_data, logs
 
     @staticmethod
