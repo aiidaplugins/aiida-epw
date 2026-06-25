@@ -75,8 +75,8 @@ def validate_inputs(  # pylint: disable=unused-argument,inconsistent-return-stat
     # 1. Validate analytical_continuation value
     if analytical_continuation is not None:
         ac_val = analytical_continuation.value
-        if ac_val.lower() not in ("pade", "acon"):
-            return f"Invalid `analytical_continuation`: '{ac_val}' is not supported. Must be 'pade' or 'acon'."
+        if ac_val.lower() not in ("pade", "acon", "none"):
+            return f"Invalid `analytical_continuation`: '{ac_val}' is not supported. Must be 'pade', 'acon', or 'none'."
 
     # 2. Extract tc_linear from parameters
     parameters = inputs.get("parameters", {})
@@ -102,7 +102,10 @@ def validate_inputs(  # pylint: disable=unused-argument,inconsistent-return-stat
 
     # - lpade (analytical_continuation) requires limag true (so real_axis must be False)
     if real_axis is not None and real_axis.value:
-        if analytical_continuation is not None:
+        if (
+            analytical_continuation is not None
+            and analytical_continuation.value.lower() != "none"
+        ):
             return "Analytical continuation (analytical_continuation) cannot be used when solving on the real axis (real_axis=True)."
 
     # - fbw (full_bandwidth=True) cannot be used with lacon (analytical_continuation="acon")

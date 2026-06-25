@@ -468,9 +468,9 @@ class EpwCalculation(NamelistsCalculation):
 
         if analytical_continuation is not None:
             ac_val = analytical_continuation.value
-            if ac_val.lower() not in ("pade", "acon"):
+            if ac_val.lower() not in ("pade", "acon", "none"):
                 raise exceptions.InputValidationError(
-                    f"Invalid `analytical_continuation`: '{ac_val}' is not supported. Must be 'pade' or 'acon'."
+                    f"Invalid `analytical_continuation`: '{ac_val}' is not supported. Must be 'pade', 'acon', or 'none'."
                 )
 
         tc_linear = inputepw.get("tc_linear", False)
@@ -494,7 +494,10 @@ class EpwCalculation(NamelistsCalculation):
                 raise exceptions.InputValidationError(
                     "Real axis solver (real_axis=True) is only implemented for the isotropic case (momentum_dependence=False)."
                 )
-            if analytical_continuation is not None:
+            if (
+                analytical_continuation is not None
+                and analytical_continuation.value.lower() != "none"
+            ):
                 raise exceptions.InputValidationError(
                     "Analytical continuation (analytical_continuation) cannot be used when solving on the real axis (real_axis=True)."
                 )
@@ -701,11 +704,16 @@ class EpwCalculation(NamelistsCalculation):
                 if ac_method == "pade":
                     inputepw_parameters["lpade"] = True
                     inputepw_parameters["lacon"] = False
+                    inputepw_parameters["limag"] = True
+                    inputepw_parameters["lreal"] = False
                 elif ac_method == "acon":
                     inputepw_parameters["lpade"] = True
                     inputepw_parameters["lacon"] = True
-                inputepw_parameters["limag"] = True
-                inputepw_parameters["lreal"] = False
+                    inputepw_parameters["limag"] = True
+                    inputepw_parameters["lreal"] = False
+                elif ac_method == "none":
+                    inputepw_parameters["lpade"] = False
+                    inputepw_parameters["lacon"] = False
 
         inputepw_parameters["outdir"] = self._OUTPUT_SUBFOLDER
         inputepw_parameters["dvscf_dir"] = self._FOLDER_SAVE

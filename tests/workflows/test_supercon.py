@@ -331,6 +331,15 @@ def test_epw_base_eliashberg_params(fixture_code, generate_structure):
         in EpwBaseWorkChain.spec().inputs.validator(inputs_real_ac)
     )
 
+    # - validate that 'none' continuation and real_axis are allowed together
+    inputs_real_ac_none = {
+        "kfpoints_factor": orm.Int(2),
+        "qfpoints_distance": orm.Float(0.1),
+        "real_axis": orm.Bool(True),
+        "analytical_continuation": orm.Str("none"),
+    }
+    assert EpwBaseWorkChain.spec().inputs.validator(inputs_real_ac_none) is None
+
     # - validate full_bandwidth and ACON mutual exclusivity
     inputs_fbw_acon = {
         "kfpoints_factor": orm.Int(2),
