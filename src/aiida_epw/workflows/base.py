@@ -71,6 +71,9 @@ def validate_inputs(  # pylint: disable=unused-argument,inconsistent-return-stat
 class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
     """BaseWorkchain to run a epw.x calculation."""
 
+    _nsiw_max_threshold = 200
+    _nsiw_min_threshold = 20
+
     _process_class = EpwCalculation
 
     @classmethod
@@ -597,3 +600,132 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         return ProcessHandlerReport(
             True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
         )
+
+    @process_handler(
+        priority=400,
+        exit_codes=[EpwCalculation.exit_codes.ERROR_PADE_APPROXIMANTS],
+    )
+    def handle_pade_approximants(self, calculation):
+        """Handle exit code 322 (Pade NaN failure) by reducing nsiw and popping successful temperatures."""
+
+        outputs = calculation.outputs.output_parameters.get_dict()
+        eliashberg_data = (
+            outputs.get("isotropic_eliashberg")
+            or outputs.get("anisotropic_eliashberg")
+            or {}
+        )
+
+        succeeded_temps = []
+        for temp_str, data in eliashberg_data.items():
+            temp = float(temp_str)
+            has_failed = False
+
+            iterations = data.get("iterations", {})
+            if iterations:
+                if not iterations.get("ethr") or any(
+                    v is None for v in iterations.get("ethr", [])
+                ):
+                    has_failed = True
+                elif any(v is None for v in iterations.get("znormi", [])) or any(
+                    v is None for v in iterations.get("deltai", [])
+                ):
+                    has_failed = True
+
+            pade = data.get("pade", {})
+            if pade:
+                if any(
+                    pade.get(k) is None
+                    for k in ("delta", "znorm", "shift")
+                    if k in pade
+                ):
+                    has_failed = True
+
+            if not iterations and not pade:
+                has_failed = True
+
+            if not has_failed:
+                succeeded_temps.append(temp)
+
+        input_params = self.ctx.inputs.parameters.get_dict()
+        input_epw = input_params.get("INPUTEPW", {})
+
+        all_temps = []
+        if "temps" in input_epw:
+            all_temps = [float(t) for t in input_epw["temps"]]
+        elif (
+            "tempsmin" in input_epw
+            and "tempsmax" in input_epw
+            and "nstemp" in input_epw
+        ):
+            t_min = float(input_epw["tempsmin"])
+            t_max = float(input_epw["tempsmax"])
+            n_temp = int(input_epw["nstemp"])
+            if n_temp > 1:
+                all_temps = [
+                    t_min + i * (t_max - t_min) / (n_temp - 1) for i in range(n_temp)
+                ]
+            else:
+                all_temps = [t_min]
+        else:
+            all_temps = [float(k) for k in eliashberg_data.keys()]
+
+        remaining_temps = [t for t in all_temps if t not in succeeded_temps]
+        remaining_temps = [t for t in all_temps if t in remaining_temps]
+
+        current_nsiw = None
+        for t in remaining_temps:
+            for k, data in eliashberg_data.items():
+                if abs(float(k) - t) < 1e-4:
+                    current_nsiw = data.get("nsiw")
+                    break
+            if current_nsiw is not None:
+                break
+
+        if current_nsiw is None:
+            current_nsiw = input_epw.get("nsiw")
+
+        target_nsiw = None
+        if current_nsiw is not None:
+            if current_nsiw > self._nsiw_max_threshold:
+                target_nsiw = self._nsiw_max_threshold
+            else:
+                target_nsiw = max(self._nsiw_min_threshold, int(current_nsiw * 0.5))
+
+        action_taken = ""
+        parameters = self.ctx.inputs.parameters.get_dict()
+        input_epw_new = parameters.setdefault("INPUTEPW", {})
+
+        input_epw_new["temps"] = remaining_temps
+        input_epw_new["nstemp"] = len(remaining_temps)
+        input_epw_new.pop("tempsmin", None)
+        input_epw_new.pop("tempsmax", None)
+
+        if target_nsiw is not None and target_nsiw != current_nsiw:
+            input_epw_new["nsiw"] = target_nsiw
+            action_taken += f"Reduced nsiw from {current_nsiw} to {target_nsiw}. "
+
+        if len(remaining_temps) < len(all_temps):
+            action_taken += (
+                f"Removed successfully calculated temperatures: {succeeded_temps}. "
+            )
+
+        if not action_taken:
+            self.report_error_handled(
+                calculation, "Cannot reduce nsiw further or pop temperatures. Aborting."
+            )
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+            )
+
+        try:
+            from aiida_epw.common.types import RestartType
+
+            self.ctx.inputs.restart_type = RestartType.EPHREAD
+        except ImportError:
+            input_epw_new["epwread"] = True
+
+        self.ctx.inputs.parameters = orm.Dict(parameters)
+        self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
+
+        self.report_error_handled(calculation, action_taken)
+        return ProcessHandlerReport(True)
