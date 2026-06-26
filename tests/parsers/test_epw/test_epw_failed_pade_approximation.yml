@@ -49,40 +49,40 @@ output_parameters:
       nsiw: 923
       nsiw_itemp: 923
       pade:
-        delta: .nan
+        delta: null
         nsiter: 830
-        shift: .nan
-        znorm: .nan
+        shift: null
+        znorm: null
       startiw: 1
       wscut: 0.5
     '2.0':
       broyden_mixing_factor: 0.7
       iterations:
         deltai:
-        - .nan
-        - .nan
-        - .nan
-        - .nan
+        - null
+        - null
+        - null
+        - null
         ethr:
-        - .nan
-        - .nan
-        - .nan
-        - .nan
+        - null
+        - null
+        - null
+        - null
         mu:
         - 11.34792
         - 11.34792
         - 11.34792
         - 11.34792
         shifti:
-        - .nan
-        - .nan
-        - .nan
-        - .nan
+        - null
+        - null
+        - null
+        - null
         znormi:
-        - .nan
-        - .nan
-        - .nan
-        - .nan
+        - null
+        - null
+        - null
+        - null
       lastiw: 462
       nsiw: 462
       nsiw_itemp: 462

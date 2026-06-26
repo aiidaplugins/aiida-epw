@@ -204,14 +204,14 @@ class EpwParser(BaseParser):
         if "Allen_Dynes_Tc" in parsed_data:
             parsed_data.setdefault("allen_dynes", parsed_data["Allen_Dynes_Tc"])
 
-        self.out("output_parameters", orm.Dict(parsed_data))
+        self.out("output_parameters", orm.Dict(self.clean_nans(parsed_data)))
+
+        if "ERROR_PADE_APPROXIMANTS" in logs.error:
+            return self.exit(self.exit_codes.get("ERROR_PADE_APPROXIMANTS"), logs)
 
         for exit_code in list(self.get_error_map().values()):
             if exit_code in logs.error:
                 return self.exit(self.exit_codes.get(exit_code), logs)
-
-        if "ERROR_PADE_APPROXIMANTS" in logs.error:
-            return self.exit(self.exit_codes.get("ERROR_PADE_APPROXIMANTS"), logs)
 
         if "ERROR_OUTPUT_STDOUT_INCOMPLETE" in logs.error:
             return self.exit(
@@ -219,6 +219,23 @@ class EpwParser(BaseParser):
             )
 
         return self.exit(logs=logs)
+
+    @staticmethod
+    def clean_nans(value):
+        """Recursively replace float('nan'), float('inf'), and float('-inf') in dictionaries/lists with None."""
+        import math
+
+        if isinstance(value, float):
+            if math.isnan(value) or math.isinf(value):
+                return None
+            return value
+        if isinstance(value, dict):
+            return {k: EpwParser.clean_nans(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [EpwParser.clean_nans(v) for v in value]
+        if isinstance(value, tuple):
+            return tuple(EpwParser.clean_nans(v) for v in value)
+        return value
 
     @staticmethod
     def parse_stdout(stdout, logs, code_version):
