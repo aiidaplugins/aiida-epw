@@ -661,7 +661,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 original_temps = [float(t) for t in temps_val]
 
             nstemp = input_epw.get("nstemp", len(original_temps))
-            if len(original_temps) == 2 and nstemp > 2:
+            if len(original_temps) == 2 and nstemp >= 2:
                 is_linear_range = True
                 t_min, t_max = original_temps[0], original_temps[1]
                 all_temps = [
@@ -748,7 +748,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
 
         new_temps_list = []
         new_nstemp = len(remaining_temps)
-        if is_linear_range and new_nstemp > 2:
+        if is_linear_range and new_nstemp >= 2:
             new_temps_list = [remaining_temps[0], remaining_temps[-1]]
         else:
             new_temps_list = remaining_temps

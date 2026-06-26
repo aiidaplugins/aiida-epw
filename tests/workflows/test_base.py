@@ -298,3 +298,69 @@ def test_handle_pade_approximants_linear_range(aiida_localhost):
     # There are 6 temperatures remaining in the sequence (5.0, 6.0, 7.0, 8.0, 9.0, 10.0)
     assert input_epw["temps"] == "5.0 10.0"
     assert input_epw["nstemp"] == 6
+
+
+def test_handle_pade_approximants_range_nstemp_2(aiida_localhost):
+    """Test that the handler correctly processes linear range with nstemp=2."""
+
+    class MockWorkChain:
+        _MAX_NSIW = EpwBaseWorkChain._MAX_NSIW
+        _MIN_NSIW = EpwBaseWorkChain._MIN_NSIW
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = MagicMock()
+            self.report_messages = []
+
+        def report(self, msg):
+            self.report_messages.append(msg)
+
+        def report_error_handled(self, calculation, action):
+            self.report(f"Calculation failed: {action}")
+
+        handle_pade_approximants = EpwBaseWorkChain.handle_pade_approximants
+
+    workchain = MockWorkChain()
+
+    # Mock calculation
+    calc = MagicMock()
+    calc.outputs = MagicMock()
+    calc.outputs.remote_folder = orm.RemoteData(
+        computer=aiida_localhost, remote_path="/tmp"
+    )
+
+    # Mock outputs: 1.0 succeeded, 10.0 failed
+    calc.outputs.output_parameters = orm.Dict(
+        dict={
+            "isotropic_eliashberg": {
+                "1.0": {
+                    "nsiw": 100,
+                    "iterations": {"ethr": [1e-8]},
+                    "pade": {"delta": 2.4, "znorm": 1.2},
+                },
+                "10.0": {
+                    "nsiw": 100,
+                    "iterations": {"ethr": [None]},
+                    "pade": {"delta": None, "znorm": None},
+                },
+            }
+        }
+    )
+
+    # Setup ctx inputs: "1.0 10.0" with nstemp=2
+    initial_params = {"INPUTEPW": {"temps": "1.0 10.0", "nstemp": 2}}
+    workchain.ctx.inputs = MagicMock()
+    workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
+
+    # Run handler
+    report = workchain.handle_pade_approximants.__wrapped__(calc)
+
+    assert report.do_break is True
+    assert report.exit_code.status == 0
+
+    updated_params = workchain.ctx.inputs.parameters.get_dict()
+    input_epw = updated_params["INPUTEPW"]
+
+    # Since 1.0 succeeded and 10.0 failed, only 10.0 remains
+    assert input_epw["temps"] == "10.0"
+    assert input_epw["nstemp"] == 1
