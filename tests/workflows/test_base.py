@@ -16,8 +16,8 @@ def test_handle_pade_approximants(aiida_localhost):
     """Test the handle_pade_approximants error handler with successful/failed temperatures and nsiw reduction."""
 
     class MockWorkChain:
-        _nsiw_max_threshold = EpwBaseWorkChain._nsiw_max_threshold
-        _nsiw_min_threshold = EpwBaseWorkChain._nsiw_min_threshold
+        _MAX_NSIW = EpwBaseWorkChain._MAX_NSIW
+        _MIN_NSIW = EpwBaseWorkChain._MIN_NSIW
         exit_codes = EpwBaseWorkChain.exit_codes
 
         def __init__(self):
@@ -78,7 +78,7 @@ def test_handle_pade_approximants(aiida_localhost):
     assert input_epw["temps"] == [1.0]
     assert input_epw["nstemp"] == 1
 
-    # nsiw for failed temp was 800 (> _nsiw_max_threshold of 200), so should be reduced to 200
+    # nsiw for failed temp was 800 (> _MAX_NSIW of 200), so should be reduced to 200
     assert input_epw["nsiw"] == 200
 
     # Restart settings should be set
@@ -93,8 +93,8 @@ def test_handle_pade_approximants_lower_bound(aiida_localhost):
     """Test that nsiw reduction respects the lower bound threshold (min limit)."""
 
     class MockWorkChain:
-        _nsiw_max_threshold = EpwBaseWorkChain._nsiw_max_threshold
-        _nsiw_min_threshold = EpwBaseWorkChain._nsiw_min_threshold
+        _MAX_NSIW = EpwBaseWorkChain._MAX_NSIW
+        _MIN_NSIW = EpwBaseWorkChain._MIN_NSIW
         exit_codes = EpwBaseWorkChain.exit_codes
 
         def __init__(self):

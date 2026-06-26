@@ -71,8 +71,8 @@ def validate_inputs(  # pylint: disable=unused-argument,inconsistent-return-stat
 class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
     """BaseWorkchain to run a epw.x calculation."""
 
-    _nsiw_max_threshold = 200
-    _nsiw_min_threshold = 20
+    _MAX_NSIW = 200
+    _MIN_NSIW = 20
 
     _process_class = EpwCalculation
 
@@ -686,10 +686,10 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
 
         target_nsiw = None
         if current_nsiw is not None:
-            if current_nsiw > self._nsiw_max_threshold:
-                target_nsiw = self._nsiw_max_threshold
+            if current_nsiw > self._MAX_NSIW:
+                target_nsiw = self._MAX_NSIW
             else:
-                target_nsiw = max(self._nsiw_min_threshold, int(current_nsiw * 0.5))
+                target_nsiw = max(self._MIN_NSIW, int(current_nsiw * 0.5))
 
         action_taken = ""
         parameters = self.ctx.inputs.parameters.get_dict()
