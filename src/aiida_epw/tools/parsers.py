@@ -596,9 +596,10 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
         return float(val)
 
     # Parse isotropic Eliashberg temperature blocks
-    eliashberg_marker = "isotropic eliashberg equations"
-    eliashberg_idx = stdout.lower().find(eliashberg_marker)
-    if eliashberg_idx != -1:
+    eliashberg_pattern = re.compile(r"isotropic.*eliashberg", re.IGNORECASE)
+    eliashberg_match = eliashberg_pattern.search(stdout)
+    if eliashberg_match:
+        eliashberg_idx = eliashberg_match.start()
         eliashberg_content = stdout[eliashberg_idx:]
         temp_pattern = re.compile(r"temp\(\s*\d+\s*\)\s*=\s*([\d\.]+)\s*K")
         matches = list(temp_pattern.finditer(eliashberg_content))
@@ -659,9 +660,7 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
                 block_data["lastiw"] = int(iw_match.group(2))
                 block_data["nsiw_itemp"] = int(iw_match.group(3))
 
-            iter_header = re.search(
-                r"iter\s+ethr\s+znormi\s+deltai\s+\[meV\]", block_text
-            )
+            iter_header = re.search(r"iter\s+ethr", block_text, re.IGNORECASE)
             if iter_header:
                 header_end = iter_header.end()
                 remaining_text = block_text[header_end:]
@@ -696,9 +695,10 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
             parsed_data["isotropic_eliashberg"] = blocks
 
     # Parse anisotropic Eliashberg temperature blocks
-    anisotropic_marker = "anisotropic eliashberg equations"
-    anisotropic_idx = stdout.lower().find(anisotropic_marker)
-    if anisotropic_idx != -1:
+    anisotropic_pattern = re.compile(r"anisotropic.*eliashberg", re.IGNORECASE)
+    anisotropic_match = anisotropic_pattern.search(stdout)
+    if anisotropic_match:
+        anisotropic_idx = anisotropic_match.start()
         anisotropic_content = stdout[anisotropic_idx:]
         temp_pattern = re.compile(r"temp\(\s*\d+\s*\)\s*=\s*([\d\.]+)\s*K")
         matches = list(temp_pattern.finditer(anisotropic_content))
@@ -767,9 +767,7 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
                 block_data["gap_min"] = float(gap_match.group(1))
                 block_data["gap_max"] = float(gap_match.group(2))
 
-            iter_header = re.search(
-                r"iter\s+ethr\s+znormi\s+deltai\s+\[meV\]", block_text
-            )
+            iter_header = re.search(r"iter\s+ethr", block_text, re.IGNORECASE)
             if iter_header:
                 header_end = iter_header.end()
                 remaining_text = block_text[header_end:]
