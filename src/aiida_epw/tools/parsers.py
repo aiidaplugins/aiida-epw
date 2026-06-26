@@ -595,6 +595,102 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
         val = re.sub(r"([0-9\.]+)([\+\-]\d+)$", r"\1E\2", val)
         return float(val)
 
+    def parse_solver_section(text: str, target_dict: dict) -> None:
+        """Parse iterations, free energy, nsiter, and gap limits from solver logs."""
+        nsiter_match = re.search(
+            r"Convergence\s+was\s+(?:reached|not\s+reached)\s+in\s+nsiter\s*=\s*(\d+)",
+            text,
+            re.IGNORECASE,
+        )
+        if nsiter_match:
+            target_dict["nsiter"] = int(nsiter_match.group(1))
+
+        free_energy_match = re.search(
+            r"Free energy\s*=\s*([\d\.-]+)\s*meV", text, re.IGNORECASE
+        )
+        if free_energy_match:
+            target_dict["free_energy"] = float(free_energy_match.group(1))
+
+        gap_match = re.search(
+            r"Min\.\s*/\s*Max\.\s*values\s*of\s*superconducting\s*gap\s*=\s*([\d\.-]+)\s+([\d\.-]+)\s*meV",
+            text,
+            re.IGNORECASE,
+        )
+        if gap_match:
+            target_dict["gap_min"] = float(gap_match.group(1))
+            target_dict["gap_max"] = float(gap_match.group(2))
+
+        iter_header = re.search(r"iter\s+ethr", text, re.IGNORECASE)
+        if iter_header:
+            header_end = iter_header.end()
+            remaining_text = text[header_end:]
+            iterations = {
+                "ethr": [],
+                "znormi": [],
+                "deltai": [],
+            }
+            row_pattern = re.compile(
+                r"^\s*(\d+)\s+(\S+)\s+(\S+)\s+(\S+)(?:\s+(\S+))?(?:\s+(\S+))?\s*$"
+            )
+            has_shifti = False
+            has_mu = False
+            for line in remaining_text.split("\n"):
+                row_match = row_pattern.match(line)
+                if row_match:
+                    iterations["ethr"].append(parse_fortran_float(row_match.group(2)))
+                    iterations["znormi"].append(parse_fortran_float(row_match.group(3)))
+                    iterations["deltai"].append(parse_fortran_float(row_match.group(4)))
+                    if row_match.group(5) is not None:
+                        if not has_shifti:
+                            iterations["shifti"] = []
+                            has_shifti = True
+                        iterations["shifti"].append(
+                            parse_fortran_float(row_match.group(5))
+                        )
+                    if row_match.group(6) is not None:
+                        if not has_mu:
+                            iterations["mu"] = []
+                            has_mu = True
+                        iterations["mu"].append(parse_fortran_float(row_match.group(6)))
+                elif iterations["ethr"]:
+                    break
+            if iterations["ethr"]:
+                target_dict["iterations"] = iterations
+
+    def parse_pade_section(text: str, target_dict: dict) -> None:
+        """Parse order N, gap limits, and continued coefficients from Pade logs."""
+        nsiter_match = re.search(
+            r"Convergence\s+was\s+reached\s+for\s+N\s*=\s*(\d+)\s+Pade\s+approximants",
+            text,
+            re.IGNORECASE,
+        )
+        if nsiter_match:
+            target_dict["nsiter"] = int(nsiter_match.group(1))
+
+        gap_match = re.search(
+            r"Min\.\s*/\s*Max\.\s*values\s*of\s*superconducting\s*gap\s*=\s*([\d\.-]+)\s+([\d\.-]+)\s*meV",
+            text,
+            re.IGNORECASE,
+        )
+        if gap_match:
+            target_dict["gap_min"] = float(gap_match.group(1))
+            target_dict["gap_max"] = float(gap_match.group(2))
+
+        pade_header = re.search(r"pade\s+Re\[znorm\]", text, re.IGNORECASE)
+        if pade_header:
+            header_end = pade_header.end()
+            remaining_text = text[header_end:]
+            row_pattern = re.compile(r"^\s*(\d+)\s+(\S+)\s+(\S+)(?:\s+(\S+))?\s*$")
+            for line in remaining_text.split("\n"):
+                row_match = row_pattern.match(line)
+                if row_match:
+                    target_dict["nsiter"] = int(row_match.group(1))
+                    target_dict["znorm"] = parse_fortran_float(row_match.group(2))
+                    target_dict["delta"] = parse_fortran_float(row_match.group(3))
+                    if row_match.group(4) is not None:
+                        target_dict["shift"] = parse_fortran_float(row_match.group(4))
+                    break
+
     def parse_eliashberg_blocks(content: str) -> list:
         """Parse Eliashberg temperature blocks from the given content string."""
         temp_pattern = re.compile(r"temp\(\s*\d+\s*\)\s*=\s*([\d\.]+)\s*K")
@@ -617,16 +713,14 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
                 block_text,
             )
             wscut_match = re.search(
-                r"Cutoff frequency wscut\s*=\s*([\d\.]+)\s*eV", block_text
+                r"Cutoff frequency wscut\s*=\s*([\d\.]+)", block_text
             )
             broyden_match = re.search(
                 r"broyden mixing factor\s*=\s*([\d\.]+)", block_text
             )
-            nsiter_match = re.search(
-                r"Convergence was reached in nsiter\s*=\s*(\d+)", block_text
-            )
-            free_energy_match = re.search(
-                r"Free energy\s*=\s*([\d\.-]+)\s*meV", block_text
+            iw_match = re.search(
+                r"startiw\s*=\s*(\d+),\s*lastiw\s*=\s*(\d+),\s*nsiw\(itemp\)\s*=\s*(\d+)",
+                block_text,
             )
 
             block_data = {"temp": temp}
@@ -636,72 +730,47 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
                 block_data["wscut"] = float(wscut_match.group(1))
             if broyden_match:
                 block_data["broyden_mixing_factor"] = float(broyden_match.group(1))
-            if nsiter_match:
-                block_data["nsiter"] = int(nsiter_match.group(1))
-            if free_energy_match:
-                block_data["free_energy"] = float(free_energy_match.group(1))
-
-            iw_match = re.search(
-                r"startiw\s*=\s*(\d+),\s*lastiw\s*=\s*(\d+),\s*nsiw\(itemp\)\s*=\s*(\d+)",
-                block_text,
-            )
             if iw_match:
                 block_data["startiw"] = int(iw_match.group(1))
                 block_data["lastiw"] = int(iw_match.group(2))
                 block_data["nsiw_itemp"] = int(iw_match.group(3))
 
-            gap_match = re.search(
-                r"Min\.\s*/\s*Max\.\s*values\s*of\s*superconducting\s*gap\s*=\s*([\d\.-]+)\s+([\d\.-]+)\s*meV",
-                block_text,
+            section_pattern = re.compile(
+                r"("
+                r"Solve\s+(?:(?:adiabatic\s+)?(?:full-bandwidth|FSR)\s+)?(?:an)?isotropic\s+Eliashberg\s+equations\s+on\s+(?:imaginary|real)-axis|"
+                r"Read\s+from\s+file\s+delta\s+and\s+znorm\s+(?:and\s+shift\s+)?on\s+imaginary-axis|"
+                r"Pade\s+approximant\s+of\s+(?:(?:full-bandwidth)\s+)?(?:an)?isotropic\s+Eliashberg\s+equations\s+from\s+imaginary-axis\s+to\s+real-axis|"
+                r"Analytic\s+continuation\s+of\s+(?:an)?isotropic\s+Eliashberg\s+equations\s+from\s+imaginary-axis\s+to\s+real-axis"
+                r")",
+                re.IGNORECASE,
             )
-            if gap_match:
-                block_data["gap_min"] = float(gap_match.group(1))
-                block_data["gap_max"] = float(gap_match.group(2))
 
-            iter_header = re.search(r"iter\s+ethr", block_text, re.IGNORECASE)
-            if iter_header:
-                header_end = iter_header.end()
-                remaining_text = block_text[header_end:]
-                iterations = {
-                    "ethr": [],
-                    "znormi": [],
-                    "deltai": [],
-                }
-                row_pattern = re.compile(
-                    r"^\s*(\d+)\s+(\S+)\s+(\S+)\s+(\S+)(?:\s+(\S+))?(?:\s+(\S+))?\s*$"
-                )
-                has_shifti = False
-                has_mu = False
-                for line in remaining_text.split("\n"):
-                    row_match = row_pattern.match(line)
-                    if row_match:
-                        iterations["ethr"].append(
-                            parse_fortran_float(row_match.group(2))
-                        )
-                        iterations["znormi"].append(
-                            parse_fortran_float(row_match.group(3))
-                        )
-                        iterations["deltai"].append(
-                            parse_fortran_float(row_match.group(4))
-                        )
-                        if row_match.group(5) is not None:
-                            if not has_shifti:
-                                iterations["shifti"] = []
-                                has_shifti = True
-                            iterations["shifti"].append(
-                                parse_fortran_float(row_match.group(5))
-                            )
-                        if row_match.group(6) is not None:
-                            if not has_mu:
-                                iterations["mu"] = []
-                                has_mu = True
-                            iterations["mu"].append(
-                                parse_fortran_float(row_match.group(6))
-                            )
-                    elif iterations["ethr"]:
-                        break
-                if iterations["ethr"]:
-                    block_data["iterations"] = iterations
+            section_matches = list(section_pattern.finditer(block_text))
+            if not section_matches:
+                parse_solver_section(block_text, block_data)
+            else:
+                for j, s_match in enumerate(section_matches):
+                    s_start = s_match.start()
+                    s_end = (
+                        section_matches[j + 1].start()
+                        if j + 1 < len(section_matches)
+                        else len(block_text)
+                    )
+                    sec_text = block_text[s_start:s_end]
+                    sec_header = s_match.group(1).lower()
+
+                    if "pade" in sec_header:
+                        pade_data = {}
+                        parse_pade_section(sec_text, pade_data)
+                        if pade_data:
+                            block_data["pade"] = pade_data
+                    elif "analytic" in sec_header:
+                        acon_data = {}
+                        parse_solver_section(sec_text, acon_data)
+                        if acon_data:
+                            block_data["acon"] = acon_data
+                    else:
+                        parse_solver_section(sec_text, block_data)
 
             blocks.append(block_data)
 
@@ -725,7 +794,10 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
 
         blocks = parse_eliashberg_blocks(iso_content)
         if blocks:
-            parsed_data["isotropic_eliashberg"] = blocks
+            parsed_data["isotropic_eliashberg"] = {
+                str(b["temp"]): {k: v for k, v in b.items() if k != "temp"}
+                for b in blocks
+            }
 
     aniso_match = anisotropic_pattern.search(stdout)
     if aniso_match:
@@ -736,6 +808,9 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
 
         blocks = parse_eliashberg_blocks(aniso_content)
         if blocks:
-            parsed_data["anisotropic_eliashberg"] = blocks
+            parsed_data["anisotropic_eliashberg"] = {
+                str(b["temp"]): {k: v for k, v in b.items() if k != "temp"}
+                for b in blocks
+            }
 
     return parsed_data
