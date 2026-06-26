@@ -78,8 +78,8 @@ def test_handle_pade_approximants(aiida_localhost):
     assert input_epw["temps"] == [1.0]
     assert input_epw["nstemp"] == 1
 
-    # nsiw for failed temp was 800 (> _MAX_NSIW of 200), so should be reduced to 200
-    assert input_epw["nsiw"] == 200
+    # npade should be reduced to 25 to achieve N=200 with nsiw=800
+    assert input_epw["npade"] == 25
 
     # Restart settings should be set
     if HAS_RESTART_TYPE:
@@ -143,8 +143,8 @@ def test_handle_pade_approximants_lower_bound(aiida_localhost):
     assert report.exit_code.status == 0
 
     updated_params = workchain.ctx.inputs.parameters.get_dict()
-    # 30 * 0.5 = 15, which is below min limit of 20, so should be capped at 20
-    assert updated_params["INPUTEPW"]["nsiw"] == 20
+    # nsiw=30, current_N = 90*30/100 = 27. target_N = 20. npade = 20*100/30 = 66
+    assert updated_params["INPUTEPW"]["npade"] == 66
 
 
 def test_handle_pade_approximants_string_temps(aiida_localhost):
@@ -213,3 +213,5 @@ def test_handle_pade_approximants_string_temps(aiida_localhost):
     # And since the original input was a string, the result should also be a string
     assert input_epw["temps"] == "1.0"
     assert input_epw["nstemp"] == 1
+    # npade should be reduced to 25 to achieve N=200 with nsiw=800
+    assert input_epw["npade"] == 25

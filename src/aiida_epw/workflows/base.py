@@ -678,24 +678,54 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         remaining_temps = [t for t in all_temps if t not in succeeded_temps]
         remaining_temps = [t for t in all_temps if t in remaining_temps]
 
-        current_nsiw = None
+        nsiw = None
         for t in remaining_temps:
             for k, data in eliashberg_data.items():
                 if abs(float(k) - t) < 1e-4:
-                    current_nsiw = data.get("nsiw")
+                    nsiw = data.get("nsiw")
                     break
-            if current_nsiw is not None:
+            if nsiw is not None:
                 break
 
-        if current_nsiw is None:
-            current_nsiw = input_epw.get("nsiw")
+        if nsiw is None:
+            nsiw = input_epw.get("nsiw")
 
-        target_nsiw = None
-        if current_nsiw is not None:
-            if current_nsiw > self._MAX_NSIW:
-                target_nsiw = self._MAX_NSIW
+        current_npade = input_epw.get("npade", 90)
+
+        current_N = None
+        for t in remaining_temps:
+            for k, data in eliashberg_data.items():
+                if abs(float(k) - t) < 1e-4:
+                    current_N = data.get("pade", {}).get("nsiter")
+                    break
+            if current_N is not None:
+                break
+
+        if current_N is None and nsiw is not None:
+            fbw = input_epw.get("fbw", False)
+            positive_matsu = input_epw.get("positive_matsu", True)
+            if fbw and not positive_matsu:
+                current_N = int(current_npade * (nsiw / 2) / 100)
             else:
-                target_nsiw = max(self._MIN_NSIW, int(current_nsiw * 0.5))
+                current_N = int(current_npade * nsiw / 100)
+
+        target_npade = None
+        if current_N is not None and nsiw:
+            if current_N > self._MAX_NSIW:
+                target_N = self._MAX_NSIW
+            else:
+                target_N = max(self._MIN_NSIW, int(current_N * 0.5))
+
+            fbw = input_epw.get("fbw", False)
+            positive_matsu = input_epw.get("positive_matsu", True)
+            if fbw and not positive_matsu:
+                target_npade = int(target_N * 100 / (nsiw / 2))
+            else:
+                target_npade = int(target_N * 100 / nsiw)
+
+            target_npade = max(1, min(100, target_npade))
+            if target_npade == current_npade and current_npade > 1:
+                target_npade = max(1, current_npade - 5)
 
         action_taken = ""
         parameters = self.ctx.inputs.parameters.get_dict()
@@ -709,9 +739,9 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         input_epw_new.pop("tempsmin", None)
         input_epw_new.pop("tempsmax", None)
 
-        if target_nsiw is not None and target_nsiw != current_nsiw:
-            input_epw_new["nsiw"] = target_nsiw
-            action_taken += f"Reduced nsiw from {current_nsiw} to {target_nsiw}. "
+        if target_npade is not None and target_npade != current_npade:
+            input_epw_new["npade"] = target_npade
+            action_taken += f"Reduced npade from {current_npade} to {target_npade}. "
 
         if len(remaining_temps) < len(all_temps):
             action_taken += (
@@ -720,7 +750,8 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
 
         if not action_taken:
             self.report_error_handled(
-                calculation, "Cannot reduce nsiw further or pop temperatures. Aborting."
+                calculation,
+                "Cannot reduce npade further or pop temperatures. Aborting.",
             )
             return ProcessHandlerReport(
                 True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
