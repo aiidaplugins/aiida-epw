@@ -343,6 +343,10 @@ class EpwParser(BaseParser):
                 if "nan" in first_line.lower():
                     logs.error.append("ERROR_PADE_APPROXIMANTS")
 
+        # Also check for NaN in any Eliashberg self-consistent solver iteration lines
+        if re.search(r"^\s*\d+\s+nan", stdout, re.MULTILINE | re.IGNORECASE):
+            logs.error.append("ERROR_PADE_APPROXIMANTS")
+
         return parsed_data, logs
 
     @staticmethod
