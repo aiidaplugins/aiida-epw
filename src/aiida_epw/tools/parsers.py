@@ -595,130 +595,21 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
         val = re.sub(r"([0-9\.]+)([\+\-]\d+)$", r"\1E\2", val)
         return float(val)
 
-    # Parse isotropic Eliashberg temperature blocks
-    eliashberg_pattern = re.compile(r"\bisotropic\b.*eliashberg", re.IGNORECASE)
-    eliashberg_match = eliashberg_pattern.search(stdout)
-    if eliashberg_match:
-        eliashberg_idx = eliashberg_match.start()
-        eliashberg_content = stdout[eliashberg_idx:]
+    def parse_eliashberg_blocks(content: str) -> list:
+        """Parse Eliashberg temperature blocks from the given content string."""
         temp_pattern = re.compile(r"temp\(\s*\d+\s*\)\s*=\s*([\d\.]+)\s*K")
-        matches = list(temp_pattern.finditer(eliashberg_content))
+        matches = list(temp_pattern.finditer(content))
 
         blocks = []
         for i, match in enumerate(matches):
             start = match.start()
-            end = (
-                matches[i + 1].start()
-                if i + 1 < len(matches)
-                else len(eliashberg_content)
-            )
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
 
-            unfolding_idx = eliashberg_content.find(
-                "Unfolding on the coarse grid", start, end
-            )
+            unfolding_idx = content.find("Unfolding on the coarse grid", start, end)
             if unfolding_idx != -1:
                 end = unfolding_idx
 
-            block_text = eliashberg_content[start:end]
-            temp = float(match.group(1))
-
-            nsiw_match = re.search(
-                r"Total number of frequency points nsiw\(\s*\d+\s*\)\s*=\s*(\d+)",
-                block_text,
-            )
-            wscut_match = re.search(
-                r"Cutoff frequency wscut\s*=\s*([\d\.]+)\s*eV", block_text
-            )
-            broyden_match = re.search(
-                r"broyden mixing factor\s*=\s*([\d\.]+)", block_text
-            )
-            nsiter_match = re.search(
-                r"Convergence was reached in nsiter\s*=\s*(\d+)", block_text
-            )
-            free_energy_match = re.search(
-                r"Free energy\s*=\s*([\d\.-]+)\s*meV", block_text
-            )
-
-            block_data = {"temp": temp}
-            if nsiw_match:
-                block_data["nsiw"] = int(nsiw_match.group(1))
-            if wscut_match:
-                block_data["wscut"] = float(wscut_match.group(1))
-            if broyden_match:
-                block_data["broyden_mixing_factor"] = float(broyden_match.group(1))
-            if nsiter_match:
-                block_data["nsiter"] = int(nsiter_match.group(1))
-            if free_energy_match:
-                block_data["free_energy"] = float(free_energy_match.group(1))
-
-            iw_match = re.search(
-                r"startiw\s*=\s*(\d+),\s*lastiw\s*=\s*(\d+),\s*nsiw\(itemp\)\s*=\s*(\d+)",
-                block_text,
-            )
-            if iw_match:
-                block_data["startiw"] = int(iw_match.group(1))
-                block_data["lastiw"] = int(iw_match.group(2))
-                block_data["nsiw_itemp"] = int(iw_match.group(3))
-
-            iter_header = re.search(r"iter\s+ethr", block_text, re.IGNORECASE)
-            if iter_header:
-                header_end = iter_header.end()
-                remaining_text = block_text[header_end:]
-                iterations = []
-                row_pattern = re.compile(
-                    r"^\s*(\d+)\s+(\S+)\s+(\S+)\s+(\S+)(?:\s+(\S+))?(?:\s+(\S+))?\s*$"
-                )
-                for line in remaining_text.split("\n"):
-                    row_match = row_pattern.match(line)
-                    if row_match:
-                        iter_data = {
-                            "iter": int(row_match.group(1)),
-                            "ethr": parse_fortran_float(row_match.group(2)),
-                            "znormi": parse_fortran_float(row_match.group(3)),
-                            "deltai": parse_fortran_float(row_match.group(4)),
-                        }
-                        if row_match.group(5) is not None:
-                            iter_data["shifti"] = parse_fortran_float(
-                                row_match.group(5)
-                            )
-                        if row_match.group(6) is not None:
-                            iter_data["mu"] = parse_fortran_float(row_match.group(6))
-                        iterations.append(iter_data)
-                    elif iterations:
-                        break
-                if iterations:
-                    block_data["iterations"] = iterations
-
-            blocks.append(block_data)
-
-        if blocks:
-            parsed_data["isotropic_eliashberg"] = blocks
-
-    # Parse anisotropic Eliashberg temperature blocks
-    anisotropic_pattern = re.compile(r"\banisotropic\b.*eliashberg", re.IGNORECASE)
-    anisotropic_match = anisotropic_pattern.search(stdout)
-    if anisotropic_match:
-        anisotropic_idx = anisotropic_match.start()
-        anisotropic_content = stdout[anisotropic_idx:]
-        temp_pattern = re.compile(r"temp\(\s*\d+\s*\)\s*=\s*([\d\.]+)\s*K")
-        matches = list(temp_pattern.finditer(anisotropic_content))
-
-        blocks = []
-        for i, match in enumerate(matches):
-            start = match.start()
-            end = (
-                matches[i + 1].start()
-                if i + 1 < len(matches)
-                else len(anisotropic_content)
-            )
-
-            unfolding_idx = anisotropic_content.find(
-                "Unfolding on the coarse grid", start, end
-            )
-            if unfolding_idx != -1:
-                end = unfolding_idx
-
-            block_text = anisotropic_content[start:end]
+            block_text = content[start:end]
             temp = float(match.group(1))
 
             nsiw_match = re.search(
@@ -771,33 +662,79 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
             if iter_header:
                 header_end = iter_header.end()
                 remaining_text = block_text[header_end:]
-                iterations = []
+                iterations = {
+                    "ethr": [],
+                    "znormi": [],
+                    "deltai": [],
+                }
                 row_pattern = re.compile(
                     r"^\s*(\d+)\s+(\S+)\s+(\S+)\s+(\S+)(?:\s+(\S+))?(?:\s+(\S+))?\s*$"
                 )
+                has_shifti = False
+                has_mu = False
                 for line in remaining_text.split("\n"):
                     row_match = row_pattern.match(line)
                     if row_match:
-                        iter_data = {
-                            "iter": int(row_match.group(1)),
-                            "ethr": parse_fortran_float(row_match.group(2)),
-                            "znormi": parse_fortran_float(row_match.group(3)),
-                            "deltai": parse_fortran_float(row_match.group(4)),
-                        }
+                        iterations["ethr"].append(
+                            parse_fortran_float(row_match.group(2))
+                        )
+                        iterations["znormi"].append(
+                            parse_fortran_float(row_match.group(3))
+                        )
+                        iterations["deltai"].append(
+                            parse_fortran_float(row_match.group(4))
+                        )
                         if row_match.group(5) is not None:
-                            iter_data["shifti"] = parse_fortran_float(
-                                row_match.group(5)
+                            if not has_shifti:
+                                iterations["shifti"] = []
+                                has_shifti = True
+                            iterations["shifti"].append(
+                                parse_fortran_float(row_match.group(5))
                             )
                         if row_match.group(6) is not None:
-                            iter_data["mu"] = parse_fortran_float(row_match.group(6))
-                        iterations.append(iter_data)
-                    elif iterations:
+                            if not has_mu:
+                                iterations["mu"] = []
+                                has_mu = True
+                            iterations["mu"].append(
+                                parse_fortran_float(row_match.group(6))
+                            )
+                    elif iterations["ethr"]:
                         break
-                if iterations:
+                if iterations["ethr"]:
                     block_data["iterations"] = iterations
 
             blocks.append(block_data)
 
+        return blocks
+
+    isotropic_pattern = re.compile(
+        r"Solve\s+(?:adiabatic\s+(?:full-bandwidth|FSR)\s+)?(?:full-bandwidth\s+)?isotropic\s+Eliashberg\s+equations(?:\s+\(image\s+para\))?",
+        re.IGNORECASE,
+    )
+    anisotropic_pattern = re.compile(
+        r"Solve\s+(?:full-bandwidth\s+)?anisotropic\s+Eliashberg\s+equations",
+        re.IGNORECASE,
+    )
+
+    iso_match = isotropic_pattern.search(stdout)
+    if iso_match:
+        iso_content = stdout[iso_match.start() :]
+        aniso_match_in_iso = anisotropic_pattern.search(iso_content)
+        if aniso_match_in_iso:
+            iso_content = iso_content[: aniso_match_in_iso.start()]
+
+        blocks = parse_eliashberg_blocks(iso_content)
+        if blocks:
+            parsed_data["isotropic_eliashberg"] = blocks
+
+    aniso_match = anisotropic_pattern.search(stdout)
+    if aniso_match:
+        aniso_content = stdout[aniso_match.start() :]
+        iso_match_in_aniso = isotropic_pattern.search(aniso_content)
+        if iso_match_in_aniso:
+            aniso_content = aniso_content[: iso_match_in_aniso.start()]
+
+        blocks = parse_eliashberg_blocks(aniso_content)
         if blocks:
             parsed_data["anisotropic_eliashberg"] = blocks
 
