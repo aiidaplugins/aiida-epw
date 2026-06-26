@@ -650,19 +650,31 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         input_epw = input_params.get("INPUTEPW", {})
 
         all_temps = []
+        is_linear_range = False
         if "temps" in input_epw:
             temps_val = input_epw["temps"]
             if isinstance(temps_val, str):
-                all_temps = [float(t) for t in temps_val.replace(",", " ").split()]
+                original_temps = [float(t) for t in temps_val.replace(",", " ").split()]
             elif isinstance(temps_val, (int, float)):
-                all_temps = [float(temps_val)]
+                original_temps = [float(temps_val)]
             else:
-                all_temps = [float(t) for t in temps_val]
+                original_temps = [float(t) for t in temps_val]
+
+            nstemp = input_epw.get("nstemp", len(original_temps))
+            if len(original_temps) == 2 and nstemp > 2:
+                is_linear_range = True
+                t_min, t_max = original_temps[0], original_temps[1]
+                all_temps = [
+                    t_min + i * (t_max - t_min) / (nstemp - 1) for i in range(nstemp)
+                ]
+            else:
+                all_temps = original_temps
         elif (
             "tempsmin" in input_epw
             and "tempsmax" in input_epw
             and "nstemp" in input_epw
         ):
+            is_linear_range = True
             t_min = float(input_epw["tempsmin"])
             t_max = float(input_epw["tempsmax"])
             n_temp = int(input_epw["nstemp"])
@@ -675,8 +687,11 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         else:
             all_temps = [float(k) for k in eliashberg_data.keys()]
 
-        remaining_temps = [t for t in all_temps if t not in succeeded_temps]
-        remaining_temps = [t for t in all_temps if t in remaining_temps]
+        remaining_temps = [
+            t
+            for t in all_temps
+            if not any(abs(t - st) < 1e-4 for st in succeeded_temps)
+        ]
 
         nsiw = None
         for t in remaining_temps:
@@ -731,11 +746,18 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         parameters = self.ctx.inputs.parameters.get_dict()
         input_epw_new = parameters.setdefault("INPUTEPW", {})
 
-        if isinstance(input_epw.get("temps"), str):
-            input_epw_new["temps"] = " ".join(str(t) for t in remaining_temps)
+        new_temps_list = []
+        new_nstemp = len(remaining_temps)
+        if is_linear_range and new_nstemp > 2:
+            new_temps_list = [remaining_temps[0], remaining_temps[-1]]
         else:
-            input_epw_new["temps"] = remaining_temps
-        input_epw_new["nstemp"] = len(remaining_temps)
+            new_temps_list = remaining_temps
+
+        if isinstance(input_epw.get("temps"), str):
+            input_epw_new["temps"] = " ".join(str(t) for t in new_temps_list)
+        else:
+            input_epw_new["temps"] = new_temps_list
+        input_epw_new["nstemp"] = new_nstemp
         input_epw_new.pop("tempsmin", None)
         input_epw_new.pop("tempsmax", None)
 
@@ -744,8 +766,13 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             action_taken += f"Reduced npade from {current_npade} to {target_npade}. "
 
         if len(remaining_temps) < len(all_temps):
+            succeeded_list = [
+                t
+                for t in all_temps
+                if any(abs(t - st) < 1e-4 for st in succeeded_temps)
+            ]
             action_taken += (
-                f"Removed successfully calculated temperatures: {succeeded_temps}. "
+                f"Removed successfully calculated temperatures: {succeeded_list}. "
             )
 
         if not action_taken:
