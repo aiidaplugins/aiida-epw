@@ -651,7 +651,13 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
 
         all_temps = []
         if "temps" in input_epw:
-            all_temps = [float(t) for t in input_epw["temps"]]
+            temps_val = input_epw["temps"]
+            if isinstance(temps_val, str):
+                all_temps = [float(t) for t in temps_val.replace(",", " ").split()]
+            elif isinstance(temps_val, (int, float)):
+                all_temps = [float(temps_val)]
+            else:
+                all_temps = [float(t) for t in temps_val]
         elif (
             "tempsmin" in input_epw
             and "tempsmax" in input_epw
@@ -695,7 +701,10 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         parameters = self.ctx.inputs.parameters.get_dict()
         input_epw_new = parameters.setdefault("INPUTEPW", {})
 
-        input_epw_new["temps"] = remaining_temps
+        if isinstance(input_epw.get("temps"), str):
+            input_epw_new["temps"] = " ".join(str(t) for t in remaining_temps)
+        else:
+            input_epw_new["temps"] = remaining_temps
         input_epw_new["nstemp"] = len(remaining_temps)
         input_epw_new.pop("tempsmin", None)
         input_epw_new.pop("tempsmax", None)
