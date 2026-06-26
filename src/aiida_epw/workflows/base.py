@@ -464,7 +464,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         self.report("{}<{}> failed with exit status {}: {}".format(*arguments))
         self.report(f"Action taken: {action}")
 
-    @process_handler(priority=600)
+    @process_handler(priority=10)
     def handle_unrecoverable_failure(self, calculation):
         """Handle calculations with an exit status below 400 which are unrecoverable, so abort the work chain."""
         if calculation.is_failed and calculation.exit_status < 400:
