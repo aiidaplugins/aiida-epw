@@ -596,7 +596,7 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
         return float(val)
 
     # Parse isotropic Eliashberg temperature blocks
-    eliashberg_pattern = re.compile(r"isotropic.*eliashberg", re.IGNORECASE)
+    eliashberg_pattern = re.compile(r"\bisotropic\b.*eliashberg", re.IGNORECASE)
     eliashberg_match = eliashberg_pattern.search(stdout)
     if eliashberg_match:
         eliashberg_idx = eliashberg_match.start()
@@ -695,7 +695,7 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
             parsed_data["isotropic_eliashberg"] = blocks
 
     # Parse anisotropic Eliashberg temperature blocks
-    anisotropic_pattern = re.compile(r"anisotropic.*eliashberg", re.IGNORECASE)
+    anisotropic_pattern = re.compile(r"\banisotropic\b.*eliashberg", re.IGNORECASE)
     anisotropic_match = anisotropic_pattern.search(stdout)
     if anisotropic_match:
         anisotropic_idx = anisotropic_match.start()
