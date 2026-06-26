@@ -70,7 +70,7 @@ def test_epw_failed_broyden_factor(parse_from_files, data_regression):
         EpwParser, "isotropic/fsr/failed_broyden_factor"
     )
     expected_exit_status = (
-        EpwCalculation.exit_codes.ERROR_OUTPUT_STDOUT_INCOMPLETE.status
+        EpwCalculation.exit_codes.ERROR_TEMPERATURE_OUT_OF_RANGE.status
     )
 
     assert calcfunction.is_failed
@@ -397,3 +397,80 @@ def test_epw_reads_lambda_k_pairs_as_dos(aiida_localhost, files_path):
     assert results["lambda_k_pairs"].get_energy().shape == (2,)
     assert results["lambda_k_pairs"].get_dos().shape == (2,)
     assert results["lambda_k_pairs"].get_integrated_dos() is None
+
+
+def test_epw_factorization_errors(aiida_localhost):
+    """Test detection of factorization and temperature out of range errors."""
+    import io
+
+    # Common function to run parser on mock stdout
+    def run_parser(stdout_content):
+        parser_entry_point = get_entry_point_string_from_class(
+            class_module=EpwParser.__module__, class_name=EpwParser.__name__
+        )
+        calc_entry_point = format_entry_point_string(
+            group="aiida.calculations", name=parser_entry_point.split(":")[1]
+        )
+
+        node = orm.CalcJobNode(computer=aiida_localhost, process_type=calc_entry_point)
+        node.base.attributes.set("output_filename", "aiida.out")
+        node.store()
+
+        retrieved = orm.FolderData()
+        retrieved.base.repository.put_object_from_filelike(
+            io.BytesIO(stdout_content.encode("utf-8")), "aiida.out"
+        )
+        retrieved.base.links.add_incoming(
+            node, link_type=LinkType.CREATE, link_label="retrieved"
+        )
+        retrieved.store()
+
+        return EpwParser.parse_from_node(node, store_provenance=False)
+
+    # 1. Standard factorization failure (deltai last value is 0.1 meV > 1E-10)
+    stdout_factorization = """
+     Program EPW v.6.0 
+     EPW v6.0
+     Solve isotropic Eliashberg equations
+     temp(   1) =    10.00000 K
+     Total number of frequency points nsiw(   1) =    200
+     Cutoff frequency wscut =    0.500
+     broyden mixing factor =    0.700
+     startiw =    1, lastiw =   200, nsiw(itemp) =   200
+   iter      ethr          znormi      deltai [meV]
+     1     0.100E-01     1.100000     0.100000
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     Error in routine mix_broyden (5):
+     factorization
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    """
+    _, calcfunction1 = run_parser(stdout_factorization)
+    assert calcfunction1.is_failed
+    assert (
+        calcfunction1.exit_status
+        == EpwCalculation.exit_codes.ERROR_FACTORIZATION.status
+    )
+
+    # 2. Temperature out of range (deltai last value is 0.1E-11 < 1E-10)
+    stdout_temp_out_of_range = """
+     Program EPW v.6.0 
+     EPW v6.0
+     Solve isotropic Eliashberg equations
+     temp(   1) =    10.00000 K
+     Total number of frequency points nsiw(   1) =    200
+     Cutoff frequency wscut =    0.500
+     broyden mixing factor =    0.700
+     startiw =    1, lastiw =   200, nsiw(itemp) =   200
+   iter      ethr          znormi      deltai [meV]
+     1     0.100E-01     1.100000     0.100E-11
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     Error in routine mix_broyden (5):
+     factorization
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    """
+    _, calcfunction2 = run_parser(stdout_temp_out_of_range)
+    assert calcfunction2.is_failed
+    assert (
+        calcfunction2.exit_status
+        == EpwCalculation.exit_codes.ERROR_TEMPERATURE_OUT_OF_RANGE.status
+    )

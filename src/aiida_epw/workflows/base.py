@@ -597,3 +597,20 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         return ProcessHandlerReport(
             True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
         )
+
+    @process_handler(
+        priority=450,
+        exit_codes=[EpwCalculation.exit_codes.ERROR_TEMPERATURE_OUT_OF_RANGE],
+    )
+    def handle_temperature_out_of_range(self, calculation):
+        """Handle exit code 323 (Temperature out of range / phase transition reached).
+
+        Since the gap has converged to zero, we consider the physical calculation complete
+        and exit the workchain successfully.
+        """
+        self.ctx.is_finished = True
+        self.report_error_handled(
+            calculation,
+            "Temperature reached phase transition (delta converged to zero). Finishing workchain successfully.",
+        )
+        return ProcessHandlerReport(True)
