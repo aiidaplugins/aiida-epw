@@ -497,3 +497,61 @@ def test_epw_stages_ph_stash_folder_by_target_basepath(
         ).as_posix(),
         "save",
     ) in calc_info.remote_copy_list
+
+
+def test_epw_calculation_type_parameter(
+    fixture_sandbox, generate_calc_job, generate_inputs_epw
+):
+    """Test that calculation_type correctly overrides the namelist parameters."""
+    from aiida_epw.common.types import CalculationTypes
+    from aiida_epw.calculations.epw import EpwCalculation
+    import pytest
+
+    # 1. Test Eliashberg mode
+    inputs = generate_inputs_epw(
+        calculation_type=orm.EnumData(CalculationTypes.ELIASHBERG),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "eliashberg = .true." in input_contents
+    assert "scattering = .false." in input_contents
+    assert "plrn = .false." in input_contents
+
+    # 2. Test Transport mode
+    inputs = generate_inputs_epw(
+        calculation_type=orm.EnumData(CalculationTypes.TRANSPORT),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "eliashberg = .false." in input_contents
+    assert "scattering = .true." in input_contents
+    assert "plrn = .false." in input_contents
+
+    # 3. Test Polaron mode
+    inputs = generate_inputs_epw(
+        calculation_type=orm.EnumData(CalculationTypes.POLARON),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "eliashberg = .false." in input_contents
+    assert "scattering = .false." in input_contents
+    assert "plrn = .true." in input_contents
+
+    # 4. Test validation of Eliashberg inputs in non-Eliashberg modes
+    if "real_axis" in EpwCalculation.spec().inputs:
+        with pytest.raises(
+            ValueError,
+            match="Eliashberg parameter 'real_axis' cannot be specified",
+        ):
+            inputs_invalid = generate_inputs_epw(
+                calculation_type=orm.EnumData(CalculationTypes.TRANSPORT),
+                real_axis=orm.Bool(True),
+            )
+            generate_calc_job(fixture_sandbox, "epw.epw", inputs_invalid)
+
+    # 5. Test blocked parameter validation
+    with pytest.raises(ValueError, match="parameters.INPUTEPW.scattering"):
+        inputs_blocked = generate_inputs_epw(
+            parameters={"INPUTEPW": {"scattering": True}}
+        )
+        generate_calc_job(fixture_sandbox, "epw.epw", inputs_blocked)
