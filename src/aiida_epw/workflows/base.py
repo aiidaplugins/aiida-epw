@@ -597,3 +597,64 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         return ProcessHandlerReport(
             True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
         )
+
+    @process_handler(
+        priority=650,
+        exit_codes=[
+            EpwCalculation.exit_codes.ERROR_OUT_OF_WALLTIME,
+            EpwCalculation.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME,
+        ],
+    )
+    def handle_out_of_walltime(self, calculation):
+        """Handle exit code 120 (scheduler walltime timeout) and 400 (software walltime timeout)."""
+        try:
+            from aiida_epw.common.types import CalculationTypes, RestartType
+
+            calculation_type = (
+                self.ctx.inputs.calculation_type.get_member()
+                if "calculation_type" in self.ctx.inputs
+                else None
+            )
+            restart_type = (
+                self.ctx.inputs.restart_type.get_member()
+                if "restart_type" in self.ctx.inputs
+                else None
+            )
+            is_valid_eliashberg_ephwrite = (
+                calculation_type == CalculationTypes.ELIASHBERG
+                and restart_type == RestartType.EPHWRITE
+            )
+        except ImportError:
+            # Fallback for branches/environments where ports do not exist yet
+            parameters = self.ctx.inputs.parameters.get_dict()
+            input_epw = parameters.get("INPUTEPW", {})
+            is_valid_eliashberg_ephwrite = (
+                input_epw.get("eliashberg", False)
+                and input_epw.get("epwread", False)
+                and input_epw.get("ephwrite", True)
+            )
+
+        if is_valid_eliashberg_ephwrite:
+            # Set parent folder to the failed calculation's remote folder
+            self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
+
+            # Modify the parameters to set restart = True
+            parameters = self.ctx.inputs.parameters.get_dict()
+            input_epw = parameters.setdefault("INPUTEPW", {})
+            input_epw["restart"] = True
+            self.ctx.inputs.parameters = orm.Dict(parameters)
+
+            self.report_error_handled(
+                calculation,
+                "Walltime reached during Eliashberg ephwrite calculation. Restarting from the last checkpoint.",
+            )
+            return ProcessHandlerReport(True)
+
+        # For other cases, do not handle (let it fail/abort)
+        self.report_error_handled(
+            calculation,
+            "Walltime reached but this calculation/restart type is not supported for auto-recovery. Aborting.",
+        )
+        return ProcessHandlerReport(
+            True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+        )
