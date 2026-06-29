@@ -222,9 +222,49 @@ lambda:
 - 0.2642835
 - 0.2642907
 output_parameters:
+  Allen_Dynes_Tc: 13.93963
   allen_dynes: 13.93963
   code_version: '5.7'
   degaussw: 0.1
   fermi_energy_coarse: 9.290638
   fsthick: 0.8
+  isotropic_eliashberg:
+    '10.0':
+      broyden_mixing_factor: 0.7
+      free_energy: -0.00142
+      iterations:
+        deltai:
+        - 2.227784
+        - 2.247454
+        - 2.335191
+        - 2.399728
+        - 2.434678
+        - 2.587938
+        - 2.629833
+        - 2.634845
+        ethr:
+        - 2.706274
+        - 0.02313367
+        - 0.09518529
+        - 0.0214576
+        - 0.01443724
+        - 0.060867
+        - 0.01689328
+        - 0.001986864
+        znormi:
+        - 1.616123
+        - 1.616134
+        - 1.616102
+        - 1.615906
+        - 1.615806
+        - 1.615356
+        - 1.61523
+        - 1.615215
+      nsiter: 8
+      nsiw: 92
+      pade:
+        delta: 2.639689
+        nsiter: 82
+        znorm: 1.615773
+      wscut: 0.5008
   wall_time_seconds: 9.83
