@@ -491,3 +491,326 @@ def _is_numeric_table_row(line):
         return False
 
     return True
+
+
+def parse_transport_matrices(block):
+    """Parse transport tensor matrices from a text block."""
+    parsed = {}
+
+    def extract_matrix_pair(header_pattern, text):
+        start_match = re.search(header_pattern, text)
+        if not start_match:
+            return None, None
+
+        lines_start = start_match.end()
+        lines = text[lines_start:].strip().split("\n")
+        # Take up to 3 lines
+        lines = lines[:3]
+
+        m1 = []
+        m2 = []
+        try:
+            for line in lines:
+                # Format " val1 val2 val3 | val4 val5 val6 " (approx)
+                parts = line.split("|")
+                if len(parts) < 2:
+                    continue
+
+                # Handle Fortran D notation
+                row1 = [
+                    float(x.replace("D", "E").replace("d", "e"))
+                    for x in parts[0].split()
+                ]
+                row2 = [
+                    float(x.replace("D", "E").replace("d", "e"))
+                    for x in parts[1].split()
+                ]
+
+                if len(row1) == 3 and len(row2) == 3:
+                    m1.append(row1)
+                    m2.append(row2)
+        except ValueError:
+            pass
+
+        if len(m1) == 3 and len(m2) == 3:
+            return m1, m2
+        return None, None
+
+    def extract_single_matrix(header_pattern, text):
+        start_match = re.search(header_pattern, text)
+        if not start_match:
+            return None
+
+        lines_start = start_match.end()
+        lines = text[lines_start:].strip().split("\n")[:3]
+        m = []
+        try:
+            for line in lines:
+                # Just one set of 3 values
+                row = [
+                    float(x.replace("D", "E").replace("d", "e")) for x in line.split()
+                ]
+                if len(row) == 3:
+                    m.append(row)
+        except ValueError:
+            pass
+
+        if len(m) == 3:
+            return m
+        return None
+
+    # 1. Conductivity
+    cond, cond_B = extract_matrix_pair(
+        r"Conductivity tensor without magnetic field\s*\|\s*with magnetic field \[Siemens/m\]",
+        block,
+    )
+    if cond:
+        parsed["conductivity"] = cond
+        parsed["conductivity_with_B"] = cond_B
+
+    # 2. Mobility
+    mob, hall_mob = extract_matrix_pair(
+        r"Mobility tensor without magnetic field\s*\|\s*(?:Hall mobility|with magnetic field) \[cm\^2/Vs\]",
+        block,
+    )
+    if mob:
+        parsed["mobility"] = mob
+        parsed["hall_mobility"] = hall_mob
+
+    # 3. Hall Factor
+    hall_fac = extract_single_matrix(r"Hall factor", block)
+    if hall_fac:
+        parsed["hall_factor"] = hall_fac
+
+    return parsed
+
+
+def parse_stdout_eliashberg(stdout: str) -> dict:
+    """Parse isotropic and anisotropic Eliashberg temperature blocks from stdout."""
+    parsed_data = {}
+
+    def parse_fortran_float(value: str) -> float:
+        """Parse a Fortran-style double float (e.g. 1.23D-04) into a Python float."""
+        val = value.replace("D", "E").replace("d", "E")
+        val = re.sub(r"([0-9\.]+)([\+\-]\d+)$", r"\1E\2", val)
+        return float(val)
+
+    def parse_solver_section(text: str, target_dict: dict) -> None:
+        """Parse iterations, free energy, nsiter, and gap limits from solver logs."""
+        nsiter_match = re.search(
+            r"Convergence\s+was\s+(?:reached|not\s+reached)\s+in\s+nsiter\s*=\s*(\d+)",
+            text,
+            re.IGNORECASE,
+        )
+        if nsiter_match:
+            target_dict["nsiter"] = int(nsiter_match.group(1))
+
+        free_energy_match = re.search(
+            r"Free energy\s*=\s*([\d\.-]+)\s*meV", text, re.IGNORECASE
+        )
+        if free_energy_match:
+            target_dict["free_energy"] = float(free_energy_match.group(1))
+
+        gap_match = re.search(
+            r"Min\.\s*/\s*Max\.\s*values\s*of\s*superconducting\s*gap\s*=\s*([\d\.-]+)\s+([\d\.-]+)\s*meV",
+            text,
+            re.IGNORECASE,
+        )
+        if gap_match:
+            target_dict["gap_min"] = float(gap_match.group(1))
+            target_dict["gap_max"] = float(gap_match.group(2))
+
+        iter_header = re.search(r"iter\s+ethr", text, re.IGNORECASE)
+        if iter_header:
+            header_end = iter_header.end()
+            remaining_text = text[header_end:]
+            iterations = {
+                "ethr": [],
+                "znormi": [],
+                "deltai": [],
+            }
+            row_pattern = re.compile(
+                r"^\s*(\d+)\s+(\S+)\s+(\S+)\s+(\S+)(?:\s+(\S+))?(?:\s+(\S+))?\s*$"
+            )
+            has_shifti = False
+            has_mu = False
+            for line in remaining_text.split("\n"):
+                row_match = row_pattern.match(line)
+                if row_match:
+                    iterations["ethr"].append(parse_fortran_float(row_match.group(2)))
+                    iterations["znormi"].append(parse_fortran_float(row_match.group(3)))
+                    iterations["deltai"].append(parse_fortran_float(row_match.group(4)))
+                    if row_match.group(5) is not None:
+                        if not has_shifti:
+                            iterations["shifti"] = []
+                            has_shifti = True
+                        iterations["shifti"].append(
+                            parse_fortran_float(row_match.group(5))
+                        )
+                    if row_match.group(6) is not None:
+                        if not has_mu:
+                            iterations["mu"] = []
+                            has_mu = True
+                        iterations["mu"].append(parse_fortran_float(row_match.group(6)))
+                elif iterations["ethr"]:
+                    break
+            if iterations["ethr"]:
+                target_dict["iterations"] = iterations
+
+    def parse_pade_section(text: str, target_dict: dict) -> None:
+        """Parse order N, gap limits, and continued coefficients from Pade logs."""
+        nsiter_match = re.search(
+            r"Convergence\s+was\s+reached\s+for\s+N\s*=\s*(\d+)\s+Pade\s+approximants",
+            text,
+            re.IGNORECASE,
+        )
+        if nsiter_match:
+            target_dict["nsiter"] = int(nsiter_match.group(1))
+
+        gap_match = re.search(
+            r"Min\.\s*/\s*Max\.\s*values\s*of\s*superconducting\s*gap\s*=\s*([\d\.-]+)\s+([\d\.-]+)\s*meV",
+            text,
+            re.IGNORECASE,
+        )
+        if gap_match:
+            target_dict["gap_min"] = float(gap_match.group(1))
+            target_dict["gap_max"] = float(gap_match.group(2))
+
+        pade_header = re.search(r"pade\s+Re\[znorm\]", text, re.IGNORECASE)
+        if pade_header:
+            header_end = pade_header.end()
+            remaining_text = text[header_end:]
+            row_pattern = re.compile(r"^\s*(\d+)\s+(\S+)\s+(\S+)(?:\s+(\S+))?\s*$")
+            for line in remaining_text.split("\n"):
+                row_match = row_pattern.match(line)
+                if row_match:
+                    target_dict["nsiter"] = int(row_match.group(1))
+                    target_dict["znorm"] = parse_fortran_float(row_match.group(2))
+                    target_dict["delta"] = parse_fortran_float(row_match.group(3))
+                    if row_match.group(4) is not None:
+                        target_dict["shift"] = parse_fortran_float(row_match.group(4))
+                    break
+
+    def parse_eliashberg_blocks(content: str) -> list:
+        """Parse Eliashberg temperature blocks from the given content string."""
+        temp_pattern = re.compile(r"temp\(\s*\d+\s*\)\s*=\s*([\d\.]+)\s*K")
+        matches = list(temp_pattern.finditer(content))
+
+        blocks = []
+        for i, match in enumerate(matches):
+            start = match.start()
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
+
+            unfolding_idx = content.find("Unfolding on the coarse grid", start, end)
+            if unfolding_idx != -1:
+                end = unfolding_idx
+
+            block_text = content[start:end]
+            temp = float(match.group(1))
+
+            nsiw_match = re.search(
+                r"Total number of frequency points nsiw\(\s*\d+\s*\)\s*=\s*(\d+)",
+                block_text,
+            )
+            wscut_match = re.search(
+                r"Cutoff frequency wscut\s*=\s*([\d\.]+)", block_text
+            )
+            broyden_match = re.search(
+                r"broyden mixing factor\s*=\s*([\d\.]+)", block_text
+            )
+            iw_match = re.search(
+                r"startiw\s*=\s*(\d+),\s*lastiw\s*=\s*(\d+),\s*nsiw\(itemp\)\s*=\s*(\d+)",
+                block_text,
+            )
+
+            block_data = {"temp": temp}
+            if nsiw_match:
+                block_data["nsiw"] = int(nsiw_match.group(1))
+            if wscut_match:
+                block_data["wscut"] = float(wscut_match.group(1))
+            if broyden_match:
+                block_data["broyden_mixing_factor"] = float(broyden_match.group(1))
+            if iw_match:
+                block_data["startiw"] = int(iw_match.group(1))
+                block_data["lastiw"] = int(iw_match.group(2))
+                block_data["nsiw_itemp"] = int(iw_match.group(3))
+
+            section_pattern = re.compile(
+                r"("
+                r"Solve\s+(?:(?:adiabatic\s+)?(?:full-bandwidth|FSR)\s+)?(?:an)?isotropic\s+Eliashberg\s+equations\s+on\s+(?:imaginary|real)-axis|"
+                r"Read\s+from\s+file\s+delta\s+and\s+znorm\s+(?:and\s+shift\s+)?on\s+imaginary-axis|"
+                r"Pade\s+approximant\s+of\s+(?:(?:full-bandwidth)\s+)?(?:an)?isotropic\s+Eliashberg\s+equations\s+from\s+imaginary-axis\s+to\s+real-axis|"
+                r"Analytic\s+continuation\s+of\s+(?:an)?isotropic\s+Eliashberg\s+equations\s+from\s+imaginary-axis\s+to\s+real-axis"
+                r")",
+                re.IGNORECASE,
+            )
+
+            section_matches = list(section_pattern.finditer(block_text))
+            if not section_matches:
+                parse_solver_section(block_text, block_data)
+            else:
+                for j, s_match in enumerate(section_matches):
+                    s_start = s_match.start()
+                    s_end = (
+                        section_matches[j + 1].start()
+                        if j + 1 < len(section_matches)
+                        else len(block_text)
+                    )
+                    sec_text = block_text[s_start:s_end]
+                    sec_header = s_match.group(1).lower()
+
+                    if "pade" in sec_header:
+                        pade_data = {}
+                        parse_pade_section(sec_text, pade_data)
+                        if pade_data:
+                            block_data["pade"] = pade_data
+                    elif "analytic" in sec_header:
+                        acon_data = {}
+                        parse_solver_section(sec_text, acon_data)
+                        if acon_data:
+                            block_data["acon"] = acon_data
+                    else:
+                        parse_solver_section(sec_text, block_data)
+
+            blocks.append(block_data)
+
+        return blocks
+
+    isotropic_pattern = re.compile(
+        r"Solve\s+(?:adiabatic\s+(?:full-bandwidth|FSR)\s+)?(?:full-bandwidth\s+)?isotropic\s+Eliashberg\s+equations(?:\s+\(image\s+para\))?",
+        re.IGNORECASE,
+    )
+    anisotropic_pattern = re.compile(
+        r"Solve\s+(?:full-bandwidth\s+)?anisotropic\s+Eliashberg\s+equations",
+        re.IGNORECASE,
+    )
+
+    iso_match = isotropic_pattern.search(stdout)
+    if iso_match:
+        iso_content = stdout[iso_match.start() :]
+        aniso_match_in_iso = anisotropic_pattern.search(iso_content)
+        if aniso_match_in_iso:
+            iso_content = iso_content[: aniso_match_in_iso.start()]
+
+        blocks = parse_eliashberg_blocks(iso_content)
+        if blocks:
+            parsed_data["isotropic_eliashberg"] = {
+                str(b["temp"]): {k: v for k, v in b.items() if k != "temp"}
+                for b in blocks
+            }
+
+    aniso_match = anisotropic_pattern.search(stdout)
+    if aniso_match:
+        aniso_content = stdout[aniso_match.start() :]
+        iso_match_in_aniso = isotropic_pattern.search(aniso_content)
+        if iso_match_in_aniso:
+            aniso_content = aniso_content[: iso_match_in_aniso.start()]
+
+        blocks = parse_eliashberg_blocks(aniso_content)
+        if blocks:
+            parsed_data["anisotropic_eliashberg"] = {
+                str(b["temp"]): {k: v for k, v in b.items() if k != "temp"}
+                for b in blocks
+            }
+
+    return parsed_data
