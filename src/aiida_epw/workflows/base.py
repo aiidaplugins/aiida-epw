@@ -624,14 +624,34 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 calculation_type == CalculationTypes.ELIASHBERG
                 and restart_type == RestartType.EPHWRITE
             )
+            is_valid_eliashberg_ephread = (
+                calculation_type == CalculationTypes.ELIASHBERG
+                and restart_type == RestartType.EPHREAD
+            )
+            is_valid_eliashberg_wannierize = (
+                calculation_type == CalculationTypes.ELIASHBERG
+                and restart_type == RestartType.WANNIERIZE
+            )
         except ImportError:
             # Fallback for branches/environments where ports do not exist yet
             parameters = self.ctx.inputs.parameters.get_dict()
             input_epw = parameters.get("INPUTEPW", {})
+            is_eliashberg = input_epw.get("eliashberg", False)
+
             is_valid_eliashberg_ephwrite = (
-                input_epw.get("eliashberg", False)
+                is_eliashberg
                 and input_epw.get("epwread", False)
                 and input_epw.get("ephwrite", True)
+            )
+            is_valid_eliashberg_ephread = (
+                is_eliashberg
+                and input_epw.get("epwread", False)
+                and not input_epw.get("ephwrite", True)
+            )
+            is_valid_eliashberg_wannierize = (
+                is_eliashberg
+                and input_epw.get("wannierize", False)
+                and not input_epw.get("epwread", False)
             )
 
         if is_valid_eliashberg_ephwrite:
@@ -649,6 +669,43 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 "Walltime reached during Eliashberg ephwrite calculation. Restarting from the last checkpoint.",
             )
             return ProcessHandlerReport(True)
+
+        elif is_valid_eliashberg_ephread:
+            from aiida_epw.tools.workchain import pop_succeeded_temperatures
+
+            parameters = self.ctx.inputs.parameters.get_dict()
+            outputs = calculation.outputs.output_parameters.get_dict()
+
+            updated_params, succeeded_temps, remaining_temps, _ = (
+                pop_succeeded_temperatures(parameters, outputs)
+            )
+
+            if succeeded_temps:
+                self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
+                self.ctx.inputs.parameters = orm.Dict(updated_params)
+                self.report_error_handled(
+                    calculation,
+                    f"Walltime reached during Eliashberg ephread calculation. "
+                    f"Removed successfully calculated temperatures: {succeeded_temps}. Restarting.",
+                )
+                return ProcessHandlerReport(True)
+            else:
+                self.report_error_handled(
+                    calculation,
+                    "Walltime reached during Eliashberg ephread calculation but no temperatures finished. Aborting.",
+                )
+                return ProcessHandlerReport(
+                    True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+                )
+
+        elif is_valid_eliashberg_wannierize:
+            self.report_error_handled(
+                calculation,
+                "Walltime reached during Wannierization. Resuming Wannierization via epbread is not implemented yet. Aborting.",
+            )
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+            )
 
         # For other cases, do not handle (let it fail/abort)
         self.report_error_handled(
