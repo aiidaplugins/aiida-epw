@@ -1,6 +1,32 @@
 from unittest.mock import MagicMock
 from aiida import orm
 from aiida_epw.workflows.base import EpwBaseWorkChain
+import enum
+
+try:
+    from aiida_epw.common.types import CalculationTypes, RestartType
+
+    HAS_RESTART_TYPE = True
+except ImportError:
+    # Fallback for testing when types module is not fully defined on this branch
+    class CalculationTypes(enum.Enum):
+        ELIASHBERG = "eliashberg"
+        TRANSPORT = "transport"
+        POLARON = "polaron"
+
+    try:
+        from aiida_epw.common.types import RestartType
+
+        HAS_RESTART_TYPE = True
+    except ImportError:
+
+        class RestartType(enum.Enum):
+            WANNIERIZE = "wannierize"
+            EPHWRITE = "ephwrite"
+            EPHREAD = "ephread"
+            EPHWRITE_RESTART = "ephwrite_restart"
+
+        HAS_RESTART_TYPE = False
 
 
 def test_handle_out_of_walltime(aiida_localhost):
@@ -41,6 +67,20 @@ def test_handle_out_of_walltime(aiida_localhost):
     workchain.ctx.inputs = MagicMock()
     workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
 
+    if HAS_RESTART_TYPE:
+        calc_type_mock = MagicMock()
+        calc_type_mock.get_member.return_value = CalculationTypes.ELIASHBERG
+        restart_type_mock = MagicMock()
+        restart_type_mock.get_member.return_value = RestartType.EPHWRITE
+
+        workchain.ctx.inputs.calculation_type = calc_type_mock
+        workchain.ctx.inputs.restart_type = restart_type_mock
+        workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
+            "calculation_type",
+            "restart_type",
+            "parameters",
+        )
+
     # Run handler
     report = workchain.handle_out_of_walltime.__wrapped__(calc)
 
@@ -48,9 +88,11 @@ def test_handle_out_of_walltime(aiida_localhost):
     assert report.do_break is True
     assert report.exit_code.status == 0
     assert workchain.ctx.inputs.parent_folder_epw == calc.outputs.remote_folder
-
-    updated_params = workchain.ctx.inputs.parameters.get_dict()
-    assert updated_params["INPUTEPW"]["restart"] is True
+    if HAS_RESTART_TYPE:
+        assert workchain.ctx.inputs.restart_type == RestartType.EPHWRITE_RESTART
+    else:
+        updated_params = workchain.ctx.inputs.parameters.get_dict()
+        assert updated_params["INPUTEPW"]["restart"] is True
 
 
 def test_handle_out_of_walltime_unsupported(aiida_localhost):

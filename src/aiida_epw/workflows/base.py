@@ -622,7 +622,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             )
             is_valid_eliashberg_ephwrite = (
                 calculation_type == CalculationTypes.ELIASHBERG
-                and restart_type == RestartType.EPHWRITE
+                and restart_type in (RestartType.EPHWRITE, RestartType.EPHWRITE_RESTART)
             )
             is_valid_eliashberg_ephread = (
                 calculation_type == CalculationTypes.ELIASHBERG
@@ -658,11 +658,16 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             # Set parent folder to the failed calculation's remote folder
             self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
 
-            # Modify the parameters to set restart = True
-            parameters = self.ctx.inputs.parameters.get_dict()
-            input_epw = parameters.setdefault("INPUTEPW", {})
-            input_epw["restart"] = True
-            self.ctx.inputs.parameters = orm.Dict(parameters)
+            try:
+                from aiida_epw.common.types import RestartType
+
+                self.ctx.inputs.restart_type = RestartType.EPHWRITE_RESTART
+            except ImportError:
+                # Fallback: Modify the parameters to set restart = True
+                parameters = self.ctx.inputs.parameters.get_dict()
+                input_epw = parameters.setdefault("INPUTEPW", {})
+                input_epw["restart"] = True
+                self.ctx.inputs.parameters = orm.Dict(parameters)
 
             self.report_error_handled(
                 calculation,
