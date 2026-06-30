@@ -418,7 +418,11 @@ class EpwCalculation(NamelistsCalculation):
                     "doing wannierization (restart_type='wannierize')."
                 )
         else:
-            if restart_type in (RestartType.EPHWRITE, RestartType.EPHREAD):
+            if restart_type in (
+                RestartType.EPHWRITE,
+                RestartType.EPHREAD,
+                RestartType.EPHWRITE_RESTART,
+            ):
                 if "parent_folder_epw" not in inputs:
                     raise exceptions.InputValidationError(
                         f"`parent_folder_epw` must be specified when "
@@ -427,9 +431,10 @@ class EpwCalculation(NamelistsCalculation):
             if "parent_folder_epw" in inputs and restart_type not in (
                 RestartType.EPHWRITE,
                 RestartType.EPHREAD,
+                RestartType.EPHWRITE_RESTART,
             ):
                 raise exceptions.InputValidationError(
-                    "`restart_type` must be specified and set to 'ephwrite' or 'ephread' "
+                    "`restart_type` must be specified and set to 'ephwrite', 'ephread' or 'ephwrite_restart' "
                     "when `parent_folder_epw` is provided."
                 )
 
@@ -679,6 +684,14 @@ class EpwCalculation(NamelistsCalculation):
                 inputepw_parameters["epwread"] = True
                 inputepw_parameters["epwwrite"] = False
                 inputepw_parameters["restart"] = False
+                inputepw_parameters["ep_coupling"] = True
+                inputepw_parameters["elph"] = True
+                inputepw_parameters["ephwrite"] = True
+            elif restart_val is RestartType.EPHWRITE_RESTART:
+                inputepw_parameters["wannierize"] = False
+                inputepw_parameters["epwread"] = True
+                inputepw_parameters["epwwrite"] = False
+                inputepw_parameters["restart"] = True
                 inputepw_parameters["ep_coupling"] = True
                 inputepw_parameters["elph"] = True
                 inputepw_parameters["ephwrite"] = True

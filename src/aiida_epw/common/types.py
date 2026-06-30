@@ -7,3 +7,4 @@ class RestartType(enum.Enum):
     WANNIERIZE = "wannierize"
     EPHWRITE = "ephwrite"
     EPHREAD = "ephread"
+    EPHWRITE_RESTART = "ephwrite_restart"
