@@ -280,6 +280,11 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             full_bandwidth = epw_inputs.pop("full_bandwidth", False)
             real_axis = epw_inputs.pop("real_axis", False)
             analytical_continuation = epw_inputs.pop("analytical_continuation", None)
+            calculation_type = epw_inputs.pop("calculation_type", "eliashberg")
+            default_restart_type = (
+                "ephwrite" if epw_namespace == "epw_interp" else "ephread"
+            )
+            restart_type = epw_inputs.pop("restart_type", default_restart_type)
 
             # Check which input ports are supported by EpwBaseWorkChain dynamically for cross-branch compatibility
             base_inputs = EpwBaseWorkChain.spec().inputs
@@ -300,6 +305,18 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 overrides=epw_inputs,
                 **kwargs,
             )
+
+            if "calculation_type" in base_inputs:
+                from aiida_epw.calculations.epw import serialize_calculation_type
+
+                epw_builder.calculation_type = serialize_calculation_type(
+                    calculation_type
+                )
+
+            if "restart_type" in base_inputs:
+                from aiida_epw.calculations.epw import serialize_restart_type
+
+                epw_builder.restart_type = serialize_restart_type(restart_type)
 
             if epw_namespace == "epw_interp" and scon_epw_code is not None:
                 epw_builder.code = scon_epw_code
