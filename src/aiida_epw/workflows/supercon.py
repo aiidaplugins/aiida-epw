@@ -271,13 +271,34 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             pass
 
         for epw_namespace in ("epw_interp", "epw_final_iso", "epw_final_aniso"):
-            epw_inputs = inputs.get(epw_namespace, None)
+            epw_inputs = inputs.get(epw_namespace, None) or {}
+
+            # Hardcode momentum_dependence: True for final anisotropic run, False otherwise
+            momentum_dependence = True if epw_namespace == "epw_final_aniso" else False
+
+            # Pop other flags directly from overrides / protocol dictionary
+            full_bandwidth = epw_inputs.pop("full_bandwidth", False)
+            real_axis = epw_inputs.pop("real_axis", False)
+            analytical_continuation = epw_inputs.pop("analytical_continuation", None)
+
+            # Check which input ports are supported by EpwBaseWorkChain dynamically for cross-branch compatibility
+            base_inputs = EpwBaseWorkChain.spec().inputs
+            kwargs = {}
+            if "momentum_dependence" in base_inputs:
+                kwargs["momentum_dependence"] = momentum_dependence
+            if "full_bandwidth" in base_inputs:
+                kwargs["full_bandwidth"] = full_bandwidth
+            if "real_axis" in base_inputs:
+                kwargs["real_axis"] = real_axis
+            if "analytical_continuation" in base_inputs:
+                kwargs["analytical_continuation"] = analytical_continuation
 
             epw_builder = EpwBaseWorkChain.get_builder_from_protocol(
                 code=epw_code,
                 structure=structure,
                 protocol=protocol,
                 overrides=epw_inputs,
+                **kwargs,
             )
 
             if epw_namespace == "epw_interp" and scon_epw_code is not None:

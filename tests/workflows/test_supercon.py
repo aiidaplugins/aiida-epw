@@ -206,3 +206,55 @@ def test_supercon_should_run_final():
         epw_interp_list=[object()], is_converged=False, always_run_final=False
     )
     assert SuperConWorkChain.should_run_final(wc4) == "ERROR_ALLEN_DYNES_NOT_CONVERGED"
+
+
+def test_supercon_get_builder_from_protocol_default(
+    fixture_code,
+    generate_structure,
+    generate_remote_data,
+    fixture_localhost,
+    monkeypatch,
+):
+    """Test get_builder_from_protocol default values."""
+    from aiida_epw.workflows.supercon import SuperConWorkChain
+    from plumpy.ports import Port, PortNamespace
+
+    monkeypatch.setattr(Port, "validate", lambda *a, **k: None)
+    monkeypatch.setattr(PortNamespace, "validate", lambda *a, **k: None)
+
+    epw_code = fixture_code("epw.epw")
+    structure = generate_structure()
+    remote_stash = generate_remote_data(fixture_localhost, "/tmp/remote_stash")
+
+    parent_epw = MagicMock()
+    parent_epw.process_label = "EpwBaseWorkChain"
+    parent_epw.inputs = MagicMock()
+    parent_epw.inputs.structure = structure
+    parent_epw.inputs.code = epw_code
+    parent_epw.inputs.kpoints = orm.KpointsData()
+    parent_epw.inputs.qpoints = orm.KpointsData()
+    parent_epw.outputs = MagicMock()
+    parent_epw.outputs.remote_stash = remote_stash
+
+    builder = SuperConWorkChain.get_builder_from_protocol(
+        epw_code=epw_code,
+        parent_epw=parent_epw,
+        protocol="fast",
+    )
+
+    # Verify that the builders are configured according to the protocol
+    assert "code" in builder.epw_interp
+    assert "code" in builder.epw_final_iso
+    assert "code" in builder.epw_final_aniso
+
+    # epw_final_iso check
+    if "momentum_dependence" in builder.epw_final_iso:
+        assert not builder.epw_final_iso.momentum_dependence.value
+        assert not builder.epw_final_iso.real_axis.value
+    assert builder.epw_final_iso.parameters.get_dict()["INPUTEPW"]["tc_linear"] is False
+
+    # epw_final_aniso check
+    if "momentum_dependence" in builder.epw_final_aniso:
+        assert builder.epw_final_aniso.momentum_dependence.value
+        assert not builder.epw_final_aniso.full_bandwidth.value
+        assert not builder.epw_final_aniso.real_axis.value
