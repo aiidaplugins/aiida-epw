@@ -11,6 +11,7 @@ from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida_epw.calculations.epw import serialize_restart_type
 from aiida_epw.workflows.base import EpwBaseWorkChain
 from aiida_epw.data import A2fData
+from aiida_epw.tools.workchain import set_auto_temps
 
 from aiida.engine import calcfunction
 
@@ -462,6 +463,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs = AttributeDict(
             self.exposed_inputs(EpwBaseWorkChain, namespace="epw_final_iso")
         )
+        set_auto_temps(inputs, self.ctx.epw_interp[-1])
 
         inputs.structure = self.inputs.structure
         parent_folder_epw = self.ctx.epw_interp[-1].outputs.remote_folder
@@ -500,6 +502,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs = AttributeDict(
             self.exposed_inputs(EpwBaseWorkChain, namespace="epw_final_aniso")
         )
+        set_auto_temps(inputs, self.ctx.epw_interp[-1])
 
         inputs.structure = self.inputs.structure
         parent_folder_epw = self.ctx.epw_interp[-1].outputs.remote_folder
