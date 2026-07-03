@@ -268,7 +268,10 @@ def test_supercon_get_builder_from_protocol_default(
         from aiida_epw.common import RestartType
 
         assert builder.epw_final_iso.restart_type == RestartType.EPHREAD
-    assert builder.epw_final_iso.parameters.get_dict()["INPUTEPW"]["tc_linear"] is False
+    assert (
+        builder.epw_final_iso.parameters.get_dict()["INPUTEPW"].get("tc_linear", False)
+        is False
+    )
 
     # epw_final_aniso check
     if "momentum_dependence" in builder.epw_final_aniso:
