@@ -57,10 +57,8 @@ default_inputs:
         muc: 0.13
         nqstep: 500
         nsiter: 500
-        nstemp: 40
         selecqread:  False
         tc_linear: False
-        temps: 1 40
         vme: 'dipole'
         wscut: 0.5
   epw_final_aniso:
@@ -83,9 +81,7 @@ default_inputs:
         muc: 0.13
         nqstep: 500
         nsiter: 500
-        nstemp: 20
         selecqread:  False
-        temps: 5 43
         vme: 'dipole'
         wscut: 0.5
 default_protocol: moderate
