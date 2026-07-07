@@ -658,7 +658,6 @@ class EpwCalculation(NamelistsCalculation):
                 inputepw_parameters["scattering"] = False
                 inputepw_parameters["plrn"] = True
             elif calc_type == CalculationTypes.WANNIERIZE:
-                inputepw_parameters["wannierize"] = True
                 inputepw_parameters["epwread"] = False
                 inputepw_parameters["epwwrite"] = True
                 inputepw_parameters.setdefault("restart", False)
