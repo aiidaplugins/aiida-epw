@@ -56,8 +56,6 @@ default_inputs:
         degaussq: 0.05
         degaussw: 0.2
         elph: True
-        epbread: False
-        epbwrite: True
         epwread: False
         epwwrite: True
         fsthick: 100
