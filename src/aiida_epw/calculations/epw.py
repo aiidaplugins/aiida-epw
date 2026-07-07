@@ -379,20 +379,29 @@ class EpwCalculation(NamelistsCalculation):
         """Validate restart-related input combinations against the EPW parameters."""
         inputepw = parameters["INPUTEPW"]
 
-        if not inputepw.get("wannierize", False):
+        is_wannierize = False
+        calculation_type = inputs.get("calculation_type", None)
+        if calculation_type is not None:
+            calc_type = calculation_type.get_member()
+            from aiida_epw.common.types import CalculationTypes
+
+            if calc_type is CalculationTypes.WANNIERIZE:
+                is_wannierize = True
+        if not is_wannierize:
+            is_wannierize = inputepw.get("wannierize", False)
+
+        if not is_wannierize:
             return
 
         for input_name in ("parent_folder_epw", "parent_folder_chk"):
             if input_name in inputs:
                 raise exceptions.InputValidationError(
-                    f"`{input_name}` cannot be specified when "
-                    "`parameters.INPUTEPW.wannierize` is true."
+                    f"`{input_name}` cannot be specified when wannierize is enabled."
                 )
 
         if "parent_folder_nscf" not in inputs:
             raise exceptions.InputValidationError(
-                "`parent_folder_nscf` must be specified when "
-                "`parameters.INPUTEPW.wannierize` is true."
+                "`parent_folder_nscf` must be specified when wannierize is enabled."
             )
 
     @staticmethod
@@ -416,7 +425,18 @@ class EpwCalculation(NamelistsCalculation):
         cls.validate_restart_inputs(parameters, inputs)
 
         inputepw = parameters["INPUTEPW"]
-        if inputepw.get("wannierize", False):
+        is_wannierize = False
+        calculation_type = inputs.get("calculation_type", None)
+        if calculation_type is not None:
+            calc_type = calculation_type.get_member()
+            from aiida_epw.common.types import CalculationTypes
+
+            if calc_type is CalculationTypes.WANNIERIZE:
+                is_wannierize = True
+        if not is_wannierize:
+            is_wannierize = inputepw.get("wannierize", False)
+
+        if is_wannierize:
             if inputepw.get("auto_projections", False):
                 raise exceptions.InputValidationError(
                     "`parameters.INPUTEPW.auto_projections` is not supported; "
@@ -437,8 +457,7 @@ class EpwCalculation(NamelistsCalculation):
 
             if not cls.has_manual_projections(inputepw):
                 raise exceptions.InputValidationError(
-                    "Manual `proj` entries must be provided when "
-                    "`parameters.INPUTEPW.wannierize` is true."
+                    "Manual `proj` entries must be provided when wannierize is enabled."
                 )
 
         calculation_type = inputs.get("calculation_type", None)
@@ -638,6 +657,15 @@ class EpwCalculation(NamelistsCalculation):
                 inputepw_parameters["eliashberg"] = False
                 inputepw_parameters["scattering"] = False
                 inputepw_parameters["plrn"] = True
+            elif calc_type == CalculationTypes.WANNIERIZE:
+                inputepw_parameters["wannierize"] = True
+                inputepw_parameters["epwread"] = False
+                inputepw_parameters["epwwrite"] = True
+                inputepw_parameters.setdefault("restart", False)
+                inputepw_parameters["ep_coupling"] = True
+                inputepw_parameters["elph"] = True
+                inputepw_parameters["epbwrite"] = True
+                inputepw_parameters["epbread"] = False
 
         inputepw_parameters["outdir"] = self._OUTPUT_SUBFOLDER
         inputepw_parameters["dvscf_dir"] = self._FOLDER_SAVE
