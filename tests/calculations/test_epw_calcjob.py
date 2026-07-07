@@ -194,75 +194,6 @@ def test_epw_accepts_parser_options_setting(
     assert calc_info.retrieve_list == ["aiida.out"]
 
 
-def test_epw_accepts_manual_proj_for_wannierize(
-    fixture_sandbox,
-    fixture_localhost,
-    generate_calc_job,
-    generate_inputs_epw,
-    generate_remote_data,
-):
-    """Direct EPW Wannierization should accept manual `proj` lists."""
-    inputs = generate_inputs_epw(
-        restart_type=RestartType.WANNIERIZE,
-        parameters={"INPUTEPW": {"proj": ["Si:s", "Si:p"]}},
-        parent_folder_nscf=generate_remote_data(fixture_localhost, "/remote/nscf"),
-    )
-
-    generate_calc_job(fixture_sandbox, "epw.epw", inputs)
-
-    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
-    assert "wannierize = .true." in input_contents
-    assert "proj(1) = 'Si:s'" in input_contents
-    assert "proj(2) = 'Si:p'" in input_contents
-
-
-def test_epw_requires_nscf_parent_for_wannierize(
-    fixture_sandbox, generate_calc_job, generate_inputs_epw
-):
-    """Direct EPW Wannierization should always stage an NSCF parent."""
-    inputs = generate_inputs_epw(
-        restart_type="wannierize", parameters={"INPUTEPW": {"proj": ["Si:s"]}}
-    )
-
-    with pytest.raises(ValueError, match="parent_folder_nscf"):
-        generate_calc_job(fixture_sandbox, "epw.epw", inputs)
-
-
-def test_epw_rejects_auto_projections_for_wannierize(
-    fixture_sandbox,
-    fixture_localhost,
-    generate_calc_job,
-    generate_inputs_epw,
-    generate_remote_data,
-):
-    """Only manual `proj` entries are supported for EPW Wannierization."""
-    inputs = generate_inputs_epw(
-        restart_type="wannierize",
-        parameters={"INPUTEPW": {"auto_projections": True, "proj": ["Si:s"]}},
-        parent_folder_nscf=generate_remote_data(fixture_localhost, "/remote/nscf"),
-    )
-
-    with pytest.raises(ValueError, match="auto_projections"):
-        generate_calc_job(fixture_sandbox, "epw.epw", inputs)
-
-
-def test_epw_requires_manual_proj_for_wannierize(
-    fixture_sandbox,
-    fixture_localhost,
-    generate_calc_job,
-    generate_inputs_epw,
-    generate_remote_data,
-):
-    """Direct EPW Wannierization should require explicit manual projections."""
-    inputs = generate_inputs_epw(
-        restart_type="wannierize",
-        parent_folder_nscf=generate_remote_data(fixture_localhost, "/remote/nscf"),
-    )
-
-    with pytest.raises(ValueError, match="Manual `proj` entries"):
-        generate_calc_job(fixture_sandbox, "epw.epw", inputs)
-
-
 def test_epw_additional_retrieve_list_emits_deprecation_warning(
     fixture_sandbox, generate_calc_job, generate_inputs_epw
 ):
@@ -516,20 +447,6 @@ def test_epw_restart_type_parameter(
     generate_remote_data,
 ):
     """Test that specifying `restart_type` updates the namelist correctly in the input file."""
-    # 1. WANNIERIZE
-    inputs_wann = generate_inputs_epw(
-        restart_type=RestartType.WANNIERIZE,
-        parameters={"INPUTEPW": {"proj": ["Si:s"]}},
-        parent_folder_nscf=generate_remote_data(fixture_localhost, "/remote/nscf"),
-    )
-    generate_calc_job(fixture_sandbox, "epw.epw", inputs_wann)
-    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
-    assert "wannierize = .true." in input_contents
-    assert "epwread = .false." in input_contents
-    assert "epwwrite = .true." in input_contents
-    assert "restart = .false." in input_contents
-    assert "ep_coupling = .true." in input_contents
-    assert "elph = .true." in input_contents
 
     # 2. EPHWRITE
     inputs_write = generate_inputs_epw(
@@ -538,7 +455,6 @@ def test_epw_restart_type_parameter(
     )
     generate_calc_job(fixture_sandbox, "epw.epw", inputs_write)
     input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
-    assert "wannierize = .false." in input_contents
     assert "epwread = .true." in input_contents
     assert "epwwrite = .false." in input_contents
     assert "restart = .false." in input_contents
@@ -553,7 +469,6 @@ def test_epw_restart_type_parameter(
     )
     generate_calc_job(fixture_sandbox, "epw.epw", inputs_read1)
     input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
-    assert "wannierize = .false." in input_contents
     assert "epwread = .true." in input_contents
     assert "restart = .false." in input_contents
     assert "ep_coupling = .false." in input_contents
@@ -569,7 +484,6 @@ def test_epw_restart_type_parameter(
     )
     generate_calc_job(fixture_sandbox, "epw.epw", inputs_read2)
     input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
-    assert "wannierize = .false." in input_contents
     assert "epwread = .true." in input_contents
     assert "restart = .false." in input_contents
     assert "ep_coupling = .false." in input_contents
@@ -584,7 +498,6 @@ def test_epw_restart_type_parameter(
     )
     generate_calc_job(fixture_sandbox, "epw.epw", inputs_write_restart)
     input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
-    assert "wannierize = .false." in input_contents
     assert "epwread = .true." in input_contents
     assert "epwwrite = .false." in input_contents
     assert "restart = .true." in input_contents

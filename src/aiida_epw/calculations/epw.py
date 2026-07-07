@@ -402,41 +402,25 @@ class EpwCalculation(NamelistsCalculation):
                 except ValueError:
                     pass
 
-        is_wannierize = restart_type is RestartType.WANNIERIZE
-
-        if is_wannierize:
-            for input_name in ("parent_folder_epw", "parent_folder_chk"):
-                if input_name in inputs:
-                    raise exceptions.InputValidationError(
-                        f"`{input_name}` cannot be specified when "
-                        "doing wannierization (restart_type='wannierize')."
-                    )
-
-            if "parent_folder_nscf" not in inputs:
+        if restart_type in (
+            RestartType.EPHWRITE,
+            RestartType.EPHREAD,
+            RestartType.EPHWRITE_RESTART,
+        ):
+            if "parent_folder_epw" not in inputs:
                 raise exceptions.InputValidationError(
-                    "`parent_folder_nscf` must be specified when "
-                    "doing wannierization (restart_type='wannierize')."
+                    f"`parent_folder_epw` must be specified when "
+                    f"restart_type is '{restart_type.value}'."
                 )
-        else:
-            if restart_type in (
-                RestartType.EPHWRITE,
-                RestartType.EPHREAD,
-                RestartType.EPHWRITE_RESTART,
-            ):
-                if "parent_folder_epw" not in inputs:
-                    raise exceptions.InputValidationError(
-                        f"`parent_folder_epw` must be specified when "
-                        f"restart_type is '{restart_type.value}'."
-                    )
-            if "parent_folder_epw" in inputs and restart_type not in (
-                RestartType.EPHWRITE,
-                RestartType.EPHREAD,
-                RestartType.EPHWRITE_RESTART,
-            ):
-                raise exceptions.InputValidationError(
-                    "`restart_type` must be specified and set to 'ephwrite', 'ephread' or 'ephwrite_restart' "
-                    "when `parent_folder_epw` is provided."
-                )
+        if "parent_folder_epw" in inputs and restart_type not in (
+            RestartType.EPHWRITE,
+            RestartType.EPHREAD,
+            RestartType.EPHWRITE_RESTART,
+        ):
+            raise exceptions.InputValidationError(
+                "`restart_type` must be specified and set to 'ephwrite', 'ephread' or 'ephwrite_restart' "
+                "when `parent_folder_epw` is provided."
+            )
 
     @staticmethod
     def has_manual_projections(inputepw):
@@ -457,54 +441,6 @@ class EpwCalculation(NamelistsCalculation):
 
         cls.set_blocked_keywords(parameters)
         cls.validate_restart_inputs(parameters, inputs)
-
-        inputepw = parameters["INPUTEPW"]
-        from aiida_epw.common import RestartType
-
-        restart_type = None
-        if "restart_type" in inputs:
-            restart_node = inputs["restart_type"]
-            if hasattr(restart_node, "get_member"):
-                restart_type = restart_node.get_member()
-            elif hasattr(restart_node, "value"):
-                try:
-                    restart_type = RestartType(restart_node.value)
-                except Exception:
-                    pass
-            elif isinstance(restart_node, RestartType):
-                restart_type = restart_node
-            elif isinstance(restart_node, str):
-                try:
-                    restart_type = RestartType(restart_node.lower())
-                except ValueError:
-                    pass
-
-        is_wannierize = restart_type is RestartType.WANNIERIZE
-
-        if is_wannierize:
-            if inputepw.get("auto_projections", False):
-                raise exceptions.InputValidationError(
-                    "`parameters.INPUTEPW.auto_projections` is not supported; "
-                    "provide manual `proj` entries instead."
-                )
-
-            if inputepw.get("scdm_proj", False):
-                raise exceptions.InputValidationError(
-                    "`parameters.INPUTEPW.scdm_proj` is not supported; "
-                    "provide manual `proj` entries instead."
-                )
-
-            if "proj" in inputepw and not isinstance(inputepw["proj"], (list, tuple)):
-                raise exceptions.InputValidationError(
-                    "`parameters.INPUTEPW.proj` must be a list or tuple so it can "
-                    "be written as `proj(i)` entries."
-                )
-
-            if not cls.has_manual_projections(inputepw):
-                raise exceptions.InputValidationError(
-                    "Manual `proj` entries must be provided when "
-                    "doing wannierization (restart_type='wannierize')."
-                )
 
     @classmethod
     def set_blocked_keywords(cls, parameters):
@@ -672,15 +608,7 @@ class EpwCalculation(NamelistsCalculation):
             restart_val = self.inputs.restart_type.get_member()
             from aiida_epw.common import RestartType
 
-            if restart_val is RestartType.WANNIERIZE:
-                inputepw_parameters["wannierize"] = True
-                inputepw_parameters["epwread"] = False
-                inputepw_parameters["epwwrite"] = True
-                inputepw_parameters["restart"] = False
-                inputepw_parameters["ep_coupling"] = True
-                inputepw_parameters["elph"] = True
-            elif restart_val is RestartType.EPHWRITE:
-                inputepw_parameters["wannierize"] = False
+            if restart_val is RestartType.EPHWRITE:
                 inputepw_parameters["epwread"] = True
                 inputepw_parameters["epwwrite"] = False
                 inputepw_parameters["restart"] = False
@@ -688,7 +616,6 @@ class EpwCalculation(NamelistsCalculation):
                 inputepw_parameters["elph"] = True
                 inputepw_parameters["ephwrite"] = True
             elif restart_val is RestartType.EPHWRITE_RESTART:
-                inputepw_parameters["wannierize"] = False
                 inputepw_parameters["epwread"] = True
                 inputepw_parameters["epwwrite"] = False
                 inputepw_parameters["restart"] = True
@@ -696,7 +623,6 @@ class EpwCalculation(NamelistsCalculation):
                 inputepw_parameters["elph"] = True
                 inputepw_parameters["ephwrite"] = True
             elif restart_val is RestartType.EPHREAD:
-                inputepw_parameters["wannierize"] = False
                 inputepw_parameters["epwread"] = True
                 inputepw_parameters["restart"] = False
                 inputepw_parameters["ep_coupling"] = False
