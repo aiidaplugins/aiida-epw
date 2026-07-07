@@ -608,7 +608,9 @@ class EpwCalculation(NamelistsCalculation):
             restart_val = self.inputs.restart_type.get_member()
             from aiida_epw.common import RestartType
 
-            if restart_val is RestartType.EPHWRITE:
+            if restart_val is RestartType.NONE:
+                pass
+            elif restart_val is RestartType.EPHWRITE:
                 inputepw_parameters["epwread"] = True
                 inputepw_parameters["epwwrite"] = False
                 inputepw_parameters["restart"] = False
