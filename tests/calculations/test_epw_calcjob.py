@@ -507,8 +507,11 @@ def test_epw_stages_a2f_when_ephwrite_disabled(
     generate_remote_data,
 ):
     """Test that EpwCalculation stages prefix.a2f when eliashberg is True and ephwrite is False."""
+    from aiida_epw.common.types import CalculationTypes
+
     parent_folder = generate_remote_data(fixture_localhost, "/remote/epw")
     inputs = generate_inputs_epw(
+        calculation_type=orm.EnumData(CalculationTypes.ELIASHBERG),
         parameters={"INPUTEPW": {"ephwrite": False}},
         momentum_dependence=orm.Bool(False),
         parent_folder_epw=parent_folder,
@@ -524,7 +527,10 @@ def test_epw_eliashberg_parameters(
     fixture_sandbox, generate_calc_job, generate_inputs_epw
 ):
     """Test that Eliashberg parameters are correctly written to the EPW input file."""
+    from aiida_epw.common.types import CalculationTypes
+
     inputs = generate_inputs_epw(
+        calculation_type=orm.EnumData(CalculationTypes.ELIASHBERG),
         momentum_dependence=orm.Bool(True),
         full_bandwidth=orm.Bool(False),
         real_axis=orm.Bool(False),
@@ -547,7 +553,10 @@ def test_epw_eliashberg_parameters_continuation_none(
     fixture_sandbox, generate_calc_job, generate_inputs_epw
 ):
     """Test that analytical_continuation='none' writes lpade/lacon as False."""
+    from aiida_epw.common.types import CalculationTypes
+
     inputs = generate_inputs_epw(
+        calculation_type=orm.EnumData(CalculationTypes.ELIASHBERG),
         momentum_dependence=orm.Bool(False),
         full_bandwidth=orm.Bool(False),
         real_axis=orm.Bool(True),
@@ -564,3 +573,61 @@ def test_epw_eliashberg_parameters_continuation_none(
     assert "limag = .false." in input_contents
     assert "lpade = .false." in input_contents
     assert "lacon = .false." in input_contents
+
+
+def test_epw_calculation_type_parameter(
+    fixture_sandbox, generate_calc_job, generate_inputs_epw
+):
+    """Test that calculation_type correctly overrides the namelist parameters."""
+    from aiida_epw.common.types import CalculationTypes
+    from aiida_epw.calculations.epw import EpwCalculation
+    import pytest
+
+    # 1. Test Eliashberg mode
+    inputs = generate_inputs_epw(
+        calculation_type=orm.EnumData(CalculationTypes.ELIASHBERG),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "eliashberg = .true." in input_contents
+    assert "scattering = .false." in input_contents
+    assert "plrn = .false." in input_contents
+
+    # 2. Test Transport mode
+    inputs = generate_inputs_epw(
+        calculation_type=orm.EnumData(CalculationTypes.TRANSPORT),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "eliashberg = .false." in input_contents
+    assert "scattering = .true." in input_contents
+    assert "plrn = .false." in input_contents
+
+    # 3. Test Polaron mode
+    inputs = generate_inputs_epw(
+        calculation_type=orm.EnumData(CalculationTypes.POLARON),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "eliashberg = .false." in input_contents
+    assert "scattering = .false." in input_contents
+    assert "plrn = .true." in input_contents
+
+    # 4. Test validation of Eliashberg inputs in non-Eliashberg modes
+    if "real_axis" in EpwCalculation.spec().inputs:
+        with pytest.raises(
+            ValueError,
+            match="Eliashberg parameter 'real_axis' cannot be specified",
+        ):
+            inputs_invalid = generate_inputs_epw(
+                calculation_type=orm.EnumData(CalculationTypes.TRANSPORT),
+                real_axis=orm.Bool(True),
+            )
+            generate_calc_job(fixture_sandbox, "epw.epw", inputs_invalid)
+
+    # 5. Test blocked parameter validation
+    with pytest.raises(ValueError, match="parameters.INPUTEPW.scattering"):
+        inputs_blocked = generate_inputs_epw(
+            parameters={"INPUTEPW": {"scattering": True}}
+        )
+        generate_calc_job(fixture_sandbox, "epw.epw", inputs_blocked)
