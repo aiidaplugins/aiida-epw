@@ -8,3 +8,4 @@ class RestartType(enum.Enum):
     EPHWRITE = "ephwrite"
     EPHREAD = "ephread"
     EPHWRITE_RESTART = "ephwrite_restart"
+    EPWREAD = "epwread"

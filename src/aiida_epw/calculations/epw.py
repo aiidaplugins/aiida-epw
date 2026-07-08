@@ -632,6 +632,14 @@ class EpwCalculation(NamelistsCalculation):
                 inputepw_parameters["ephwrite"] = False
                 if inputepw_parameters.get("scattering", False):
                     inputepw_parameters["epmatkqread"] = True
+            elif restart_val is RestartType.EPWREAD:
+                inputepw_parameters["epwread"] = True
+                inputepw_parameters["epwwrite"] = False
+                inputepw_parameters["epbwrite"] = False
+                inputepw_parameters["epbread"] = False
+                inputepw_parameters.setdefault("restart", False)
+                inputepw_parameters["ep_coupling"] = True
+                inputepw_parameters["elph"] = True
 
         inputepw_parameters["outdir"] = self._OUTPUT_SUBFOLDER
         inputepw_parameters["dvscf_dir"] = self._FOLDER_SAVE
