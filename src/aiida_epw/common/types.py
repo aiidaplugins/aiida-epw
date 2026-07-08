@@ -11,3 +11,4 @@ class CalculationTypes(enum.Enum):
     ELIASHBERG = "eliashberg"
     TRANSPORT = "transport"
     POLARON = "polaron"
+    BANDS = "bands"

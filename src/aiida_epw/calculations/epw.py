@@ -665,6 +665,11 @@ class EpwCalculation(NamelistsCalculation):
                 inputepw_parameters["elph"] = True
                 inputepw_parameters["epbwrite"] = True
                 inputepw_parameters["epbread"] = False
+            elif calc_type == CalculationTypes.BANDS:
+                inputepw_parameters["band_plot"] = True
+                inputepw_parameters["eliashberg"] = False
+                inputepw_parameters["scattering"] = False
+                inputepw_parameters["plrn"] = False
 
         inputepw_parameters["outdir"] = self._OUTPUT_SUBFOLDER
         inputepw_parameters["dvscf_dir"] = self._FOLDER_SAVE
