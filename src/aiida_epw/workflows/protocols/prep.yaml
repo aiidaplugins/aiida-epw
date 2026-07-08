@@ -59,6 +59,7 @@ default_inputs:
         phonselfen: False
         temps: 300
         vme: 'dipole'
+    restart_type: none
   epw_bands:
     options:
       resources:
@@ -67,7 +68,8 @@ default_inputs:
     parameters:
       INPUTEPW:
         band_plot: True
-    restart_type: ephread
+    calculation_type: bands
+    restart_type: epwread
 default_protocol: moderate
 protocols:
   moderate:
