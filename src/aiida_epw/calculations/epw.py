@@ -78,6 +78,7 @@ class EpwCalculation(NamelistsCalculation):
         ("INPUTEPW", "eliashberg"),
         ("INPUTEPW", "scattering"),
         ("INPUTEPW", "plrn"),
+        ("INPUTEPW", "band_plot"),
     ]
 
     _use_kpoints = True
