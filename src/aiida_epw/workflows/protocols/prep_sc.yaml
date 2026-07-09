@@ -64,9 +64,6 @@ default_inputs:
       resources:
         num_machines: 1
       withmpi: True
-    parameters:
-      INPUTEPW:
-        band_plot: True
 default_protocol: moderate
 protocols:
   moderate:
