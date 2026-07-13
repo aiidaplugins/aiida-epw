@@ -223,5 +223,5 @@ def test_epw_base_restart_types(fixture_code, generate_structure):
     )
 
     # We should be able to set and access restart_type on the builder
-    builder.restart_type = RestartType.WANNIERIZE
-    assert builder.restart_type == RestartType.WANNIERIZE
+    builder.restart_type = RestartType.EPHWRITE
+    assert builder.restart_type == RestartType.EPHWRITE
