@@ -318,15 +318,16 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             real_axis = None
             if epw_namespace == "epw_final_iso":
                 momentum_dependence = False
+                full_bandwidth = True
                 real_axis = False
-                # Ensure tc_linear is True in parameters override
+                # Ensure tc_linear is False in parameters override (since full_bandwidth is True)
                 epw_inputs = epw_inputs or {}
                 params = epw_inputs.setdefault("parameters", {})
                 inputepw = params.setdefault("INPUTEPW", {})
-                inputepw["tc_linear"] = True
+                inputepw["tc_linear"] = False
             elif epw_namespace == "epw_final_aniso":
                 momentum_dependence = True
-                full_bandwidth = False
+                full_bandwidth = True
                 real_axis = False
 
             epw_builder = EpwBaseWorkChain.get_builder_from_protocol(

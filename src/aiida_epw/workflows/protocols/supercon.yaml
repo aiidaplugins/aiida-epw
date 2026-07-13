@@ -82,7 +82,7 @@ default_inputs:
         nstemp: 40
         restart: True
         selecqread:  False
-        tc_linear: True
+        tc_linear: False
         tc_linear_solver: 'power'   
         temps: 1 40
         vme: 'dipole'
