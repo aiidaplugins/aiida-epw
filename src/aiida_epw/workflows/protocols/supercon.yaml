@@ -18,7 +18,6 @@ default_inputs:
         num_machines: 1
       max_wallclock_seconds: 43200  # Twelve hours
       withmpi: True
-    restart_type: ephwrite
     parameters:
       INPUTEPW:
         broyden_beta: 0.4
@@ -43,7 +42,6 @@ default_inputs:
         num_machines: 1
       max_wallclock_seconds: 43200  # Twelve hours
       withmpi: True
-    restart_type: ephread
     parameters:
       INPUTEPW:
         conv_thr_iaxis: 0.01
@@ -66,7 +64,6 @@ default_inputs:
         num_machines: 1
       max_wallclock_seconds: 43200  # Twelve hours
       withmpi: True
-    restart_type: ephread
     parameters:
       INPUTEPW:
         conv_thr_iaxis: 0.01
