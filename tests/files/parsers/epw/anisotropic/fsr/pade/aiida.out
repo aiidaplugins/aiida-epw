@@ -1,0 +1,947 @@
+                                                                                      
+                                       ``:oss/                                        
+                           `.+s+.     .+ys--yh+     `./ss+.                           
+                          -sh//yy+`   +yy   +yy    -+h+-oyy                           
+                          -yh- .oyy/.-sh.   .syo-.:sy-  /yh                           
+                 `.-.`    `yh+   -oyyyo.     `/syys:    oys      `.`                  
+               `/+ssys+-` `sh+      `                   oys`   .:osyo`                
+               -yh- ./syyooyo`                          .sys+/oyo--yh/                
+               `yy+    .-:-.                             `-/+/:`  -sh-                
+                /yh.                                              oys                 
+          ``..---hho---------`   .---------..`      `.-----.`    -hd+---.             
+       `./osmNMMMMMMMMMMMMMMMs. +NNMMMMMMMMNNmh+.   yNMMMMMNm-  oNMMMMMNmo++:`        
+       +sy--/sdMMMhyyyyyyyNMMh- .oyNMMmyyyyyhNMMm+` -yMMMdyyo:` .oyyNMMNhs+syy`       
+       -yy/   /MMM+.`-+/``mMMy-   `mMMh:`````.dMMN:` `MMMy-`-dhhy```mMMy:``+hs        
+        -yy+` /MMMo:-mMM+`-oo/.    mMMh:     `dMMN/`  dMMm:`dMMMMy..MMMo-.+yo`        
+         .sys`/MMMMNNMMMs-         mMMmyooooymMMNo:   oMMM/sMMMMMM++MMN//oh:          
+          `sh+/MMMhyyMMMs- `-`     mMMMMMMMMMNmy+-`   -MMMhMMMsmMMmdMMd/yy+           
+    `-/+++oyy-/MMM+.`/hh/.`mNm:`   mMMd+/////:-.`      NMMMMMd/:NMMMMMy:/yyo/:.`      
+   +os+//:-..-oMMMo:--:::-/MMMo. .-mMMd+---`           hMMMMN+. oMMMMMo. `-+osyso:`   
+   syo     `mNMMMMMNNNNNNNNMMMo.oNNMMMMMNNNN:`         +MMMMs:`  dMMMN/`     ``:syo   
+   /yh`     :syyyyyyyyyyyyyyyy+.`+syyyyyyyyo:`         .oyys:`   .oyys:`        +yh   
+   -yh-        ````````````````    `````````              ``        ``          oys   
+   -+h/------------------------::::::::://////++++++++++++++++++++++///////::::/yd:   
+   shdddddddddddddddddddddddddddddhhhhhhhhyyyyyssssssssssssssssyyyyyyyhhhhhhhddddh`   
+                                                                                      
+ Lee, H., Poncé, S., Bushick, K., Hajinazar, S., Lafuente-Bartolome, J.,Leveillee, J.,
+    Lian, C., Lihm, J., Macheda, F., Mori, H., Paudyal, H., Sio, W., Tiwari, S.,      
+ Zacharias, M., Zhang, X., Bonini, N., Kioupakis, E., Margine, E.R., and Giustino F., 
+                                                     npj Comput Mater 9, 156 (2023)   
+                                                                                      
+
+     Program EPW v.6.0 starts on 24Jun2026 at 16: 1:49 
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI & OpenMP), running on     128 processor cores
+     Number of MPI processes:               128
+     Threads/MPI process:                     1
+
+     MPI processes distributed on     1 nodes
+     K-points division:     npool     =     128
+     236507 MiB available memory on the printing compute node when the environment starts
+
+     Reading input from aiida.in
+      Title line not specified: using 'default'.
+
+     Generating evenly spaced temperature list.
+                      
+     ------------------------------------------------------------------------ 
+                   RESTART - RESTART - RESTART - RESTART                         
+     Restart is done without reading PWSCF save file.                  
+     Be aware that some consistency checks are therefore not done.                  
+     ------------------------------------------------------------------------ 
+                      
+
+     default                                                                    
+
+     bravais-lattice index     =            0
+     lattice parameter (a_0)   =       0.0000  a.u.
+     unit-cell volume          =       0.0000 (a.u.)^3
+     number of atoms/cell      =            0
+     number of atomic types    =            0
+     kinetic-energy cut-off    =       0.0000  Ry
+     charge density cut-off    =       0.0000  Ry
+     Exchange-correlation= not set
+                           (  -1  -1  -1  -1  -1  -1  -1)
+
+
+     celldm(1)=    0.00000  celldm(2)=    0.00000  celldm(3)=    0.00000
+     celldm(4)=    0.00000  celldm(5)=    0.00000  celldm(6)=    0.00000
+
+     crystal axes: (cart. coord. in units of a_0)
+               a(1) = (  0.0000  0.0000  0.0000 )  
+               a(2) = (  0.0000  0.0000  0.0000 )  
+               a(3) = (  0.0000  0.0000  0.0000 )  
+
+     reciprocal axes: (cart. coord. in units 2 pi/a_0)
+               b(1) = (  0.0000  0.0000  0.0000 )  
+               b(2) = (  0.0000  0.0000  0.0000 )  
+               b(3) = (  0.0000  0.0000  0.0000 )  
+
+
+     Atoms inside the unit cell: 
+
+   Cartesian axes
+
+     site n.  atom      mass           positions (a_0 units)
+
+
+     No symmetry!
+
+     G cutoff =    0.0000  (      0 G-vectors)     FFT grid: (  0,  0,  0)
+     number of k points=    0
+                       cart. coord. in units 2pi/a_0
+     EPW          :      0.01s CPU      0.04s WALL
+
+     EPW          :      0.01s CPU      0.04s WALL
+
+
+     -------------------------------------------------------------------
+     Using aiida.ukk from disk
+     -------------------------------------------------------------------
+
+     HDF5 is used in the current build. Exciton-phonon coupling calculations are enabled.
+     Symmetries of Bravais lattice:  24
+     Symmetries of crystal:          24
+
+     Do not need to read .epb files; read .fmt files
+
+
+     Band disentanglement is used: nbndsub =    9
+     Construct the Wigner-Seitz cell using Wannier centers and atomic positions 
+     Number of WS vectors for electrons      209
+     Number of WS vectors for phonons      209
+     Number of WS vectors for electron-phonon      206
+     Maximum number of cores for efficient parallelization      618
+
+     Reading Hamiltonian, Dynamical matrix and EP vertex in Wann rep from file
+
+
+     Finished reading Wann rep data from file
+
+     ===================================================================
+     Memory usage:  VmHWM =        33Mb
+                   VmPeak =       904Mb
+     ===================================================================
+     
+     Using uniform q-mesh:    16   16   12
+     Size of q point mesh for interpolation:       3072
+     Using uniform k-mesh:    16   16   12
+     Size of k point mesh for interpolation:       3072
+     Max number of k points per pool:               24
+
+     Fermi energy coarse grid =   9.306949 eV
+
+     Skipping    4 occupied bands:
+
+     The Fermi level will be determined with   8.00000 electrons
+
+     Fermi energy is calculated from the fine k-mesh: Ef =   9.253792 eV
+
+     ===================================================================
+
+              ibndmin =     3  ebndmin =     8.454 eV
+              ibndmax =     5  ebndmax =    10.051 eV
+
+
+     Number of ep-matrix elements per pool :         1944 ~=   15.19 Kb (@ 8 bytes/ DP)
+      
+     A selecq.fmt file was found but re-created because selecqread == .FALSE.  
+     Number selected, total            100            100
+     Number selected, total            200            200
+     Number selected, total            300            300
+     Number selected, total            400            400
+     Number selected, total            500            500
+     Number selected, total            600            600
+     Number selected, total            700            700
+     Number selected, total            800            800
+     Number selected, total            900            900
+     Number selected, total           1000           1000
+     Number selected, total           1100           1100
+     Number selected, total           1200           1200
+     Number selected, total           1300           1300
+     Number selected, total           1400           1400
+     Number selected, total           1500           1500
+     Number selected, total           1600           1600
+     Number selected, total           1700           1700
+     Number selected, total           1800           1800
+     Number selected, total           1900           1900
+     Number selected, total           2000           2000
+     Number selected, total           2100           2100
+     Number selected, total           2200           2200
+     Number selected, total           2300           2300
+     Number selected, total           2400           2400
+     Number selected, total           2500           2500
+     Number selected, total           2600           2600
+     Number selected, total           2700           2700
+     Number selected, total           2800           2800
+     Number selected, total           2900           2900
+     Number selected, total           3000           3000
+     We only need to compute     3072 q-points
+      
+
+     Nr. of k-points on the uniform grid:      3072
+
+
+     Finish mapping k+sign*q onto the fine k-mesh and and writing .ikamp file
+
+
+     Nr k-points within the Fermi shell =      1391 out of      3072
+
+     Progression iq (fine) =        100/      3072
+     Progression iq (fine) =        200/      3072
+     Progression iq (fine) =        300/      3072
+     Progression iq (fine) =        400/      3072
+     Progression iq (fine) =        500/      3072
+     Progression iq (fine) =        600/      3072
+     Progression iq (fine) =        700/      3072
+     Progression iq (fine) =        800/      3072
+     Progression iq (fine) =        900/      3072
+     Progression iq (fine) =       1000/      3072
+     Progression iq (fine) =       1100/      3072
+     Progression iq (fine) =       1200/      3072
+     Progression iq (fine) =       1300/      3072
+     Progression iq (fine) =       1400/      3072
+     Progression iq (fine) =       1500/      3072
+     Progression iq (fine) =       1600/      3072
+     Progression iq (fine) =       1700/      3072
+     Progression iq (fine) =       1800/      3072
+     Progression iq (fine) =       1900/      3072
+     Progression iq (fine) =       2000/      3072
+     Progression iq (fine) =       2100/      3072
+     Progression iq (fine) =       2200/      3072
+     Progression iq (fine) =       2300/      3072
+     Progression iq (fine) =       2400/      3072
+     Progression iq (fine) =       2500/      3072
+     Progression iq (fine) =       2600/      3072
+     Progression iq (fine) =       2700/      3072
+     Progression iq (fine) =       2800/      3072
+     Progression iq (fine) =       2900/      3072
+     Progression iq (fine) =       3000/      3072
+                  Fermi level (eV) =    0.925379177820745D+01
+     DOS(states/spin/eV/Unit Cell) =    0.320152751027926D+00
+            Electron smearing (eV) =    0.100000000000000D+00
+                 Fermi window (eV) =    0.800000000000000D+00
+      
+     Finish writing .ephmat files
+
+     ===================================================================
+     Memory usage:  VmHWM =        53Mb
+                   VmPeak =      1020Mb
+     ===================================================================
+
+
+     Finish writing dos file aiida.dos
+
+
+     Finish writing phdos files aiida.phdos and aiida.phdos_proj
+
+
+     ===================================================================
+     Solve anisotropic Eliashberg equations
+     ===================================================================
+
+
+     Finish reading freq file
+
+                  Fermi level (eV) =     9.2537917782E+00
+     DOS(states/spin/eV/Unit Cell) =     3.2015275103E-01
+            Electron smearing (eV) =     1.0000000000E-01
+                 Fermi window (eV) =     8.0000000000E-01
+     Nr k-points within the Fermi shell =      1391 out of      3072
+
+           2 bands within the Fermi window
+
+
+     Finish reading egnv file 
+
+
+     Max nr of q-points =      1391
+
+
+     Finish reading ikmap files
+
+
+     Start reading .ephmat files
+
+
+     Finish reading .ephmat files
+
+     a2f file is not found to estimate initial gap: calculating a2f files
+ 
+
+     Finish reading a2f file
+
+     Electron-phonon coupling strength =    0.6331292
+ 
+     Estimated Tc using McMillan expression =  13.9152 K for muc =   0.1300
+  
+     Estimated Tc using Allen-Dynes modified McMillan expression =  14.2727 K
+  
+     Estimated Tc using SISSO machine learning model =  14.1872 K
+  
+     Estimated w_log =  61.6043 meV
+  
+     Estimated BCS superconducting gap using McMillan Tc =   2.1105 meV
+  
+  
+     WARNING WARNING WARNING 
+  
+     The code may crash since tempsmax =   40.000 K is larger than McMillan Tc =    13.915 K
+     Actual number of frequency points (     1) =     92 for uniform       sampling
+    
+     temp(  1) =     10.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     1) =     92
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4954 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0908 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   2.744190E+00   1.619343E+00   2.203765E+00
+          2   1.857187E-01   1.618934E+00   2.436615E+00
+          3   8.295377E-02   1.618139E+00   2.678249E+00
+          4   2.314177E-01   1.614658E+00   3.520859E+00
+          5   2.279187E-02   1.614306E+00   3.593949E+00
+          6   3.269837E-02   1.613640E+00   3.705470E+00
+          7   8.565958E-02   1.615171E+00   3.412320E+00
+          8   1.387320E-02   1.614973E+00   3.472250E+00
+          9   2.301323E-02   1.614652E+00   3.544842E+00
+         10   9.423868E-03   1.614534E+00   3.577666E+00
+     Convergence was reached in nsiter =     10
+ 
+     Temp (itemp =   1) =   10.000 K  Free energy =    -0.003487 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    6.671845 meV
+     iaxis_imag   :      8.14s CPU      8.28s WALL (       1 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         82   1.652462E+00   3.274317E+00
+ 
+     Convergence was reached for N =     82 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    6.724116 meV
+     raxis_pade   :      0.05s CPU      0.15s WALL (       1 calls)
+ 
+     itemp =   1   total cpu time :              8.42 secs
+ 
+     Actual number of frequency points (     2) =     71 for uniform       sampling
+    
+     temp(  2) =     13.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     2) =     71
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4962 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0711 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   3.033882E+00   1.615733E+00   3.249336E+00
+          2   2.108099E-01   1.615948E+00   3.325027E+00
+          3   1.004375E-01   1.615587E+00   3.379509E+00
+          4   4.672950E-02   1.614625E+00   3.541130E+00
+          5   5.599847E-02   1.613663E+00   3.741662E+00
+          6   1.151127E-02   1.613804E+00   3.704659E+00
+          7   2.476893E-02   1.614223E+00   3.618520E+00
+          8   1.721863E-02   1.614007E+00   3.677038E+00
+          9   3.765534E-03   1.613989E+00   3.684538E+00
+     Convergence was reached in nsiter =      9
+ 
+     Temp (itemp =   2) =   13.000 K  Free energy =    -0.003305 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    6.849693 meV
+     iaxis_imag   :     12.65s CPU     13.35s WALL (       2 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         64   1.652302E+00   3.378147E+00
+ 
+     Convergence was reached for N =     64 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    6.910092 meV
+     raxis_pade   :      0.09s CPU      0.23s WALL (       2 calls)
+ 
+     itemp =   2   total cpu time :             13.58 secs
+ 
+     Actual number of frequency points (     3) =     58 for uniform       sampling
+    
+     temp(  3) =     16.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     3) =     58
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4981 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0590 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   3.088433E+00   1.615590E+00   3.260458E+00
+          2   2.213350E-01   1.615969E+00   3.300878E+00
+          3   1.055615E-01   1.615714E+00   3.326008E+00
+          4   5.042410E-02   1.614996E+00   3.428606E+00
+          5   5.572854E-02   1.614068E+00   3.623153E+00
+          6   1.940801E-02   1.614382E+00   3.556894E+00
+          7   1.896866E-02   1.614676E+00   3.494426E+00
+          8   1.583842E-02   1.614439E+00   3.544948E+00
+          9   1.115569E-03   1.614411E+00   3.548787E+00
+     Convergence was reached in nsiter =      9
+ 
+     Temp (itemp =   3) =   16.000 K  Free energy =    -0.002663 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    6.650705 meV
+     iaxis_imag   :     15.73s CPU     16.56s WALL (       3 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         52   1.653259E+00   3.250145E+00
+ 
+     Convergence was reached for N =     52 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    6.711567 meV
+     raxis_pade   :      0.12s CPU      0.36s WALL (       3 calls)
+ 
+     itemp =   3   total cpu time :             16.92 secs
+ 
+     Actual number of frequency points (     4) =     49 for uniform       sampling
+    
+     temp(  4) =     19.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     4) =     49
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4989 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0505 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   3.117360E+00   1.616175E+00   3.091840E+00
+          2   2.302144E-01   1.616591E+00   3.114499E+00
+          3   1.089393E-01   1.616369E+00   3.131845E+00
+          4   5.230955E-02   1.615721E+00   3.224540E+00
+          5   7.155357E-02   1.614603E+00   3.465413E+00
+          6   3.650894E-02   1.615146E+00   3.346770E+00
+          7   1.819066E-02   1.615399E+00   3.288925E+00
+          8   8.984215E-03   1.615264E+00   3.317493E+00
+     Convergence was reached in nsiter =      8
+ 
+     Temp (itemp =   4) =   19.000 K  Free energy =    -0.001908 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    6.245032 meV
+     iaxis_imag   :     17.77s CPU     18.69s WALL (       4 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         44   1.654951E+00   3.037884E+00
+ 
+     Convergence was reached for N =     44 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    6.303174 meV
+     raxis_pade   :      0.15s CPU      0.43s WALL (       4 calls)
+ 
+     itemp =   4   total cpu time :             19.11 secs
+ 
+     Actual number of frequency points (     5) =     42 for uniform       sampling
+    
+     temp(  5) =     22.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     5) =     42
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4943 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0440 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   3.147990E+00   1.616848E+00   2.843516E+00
+          2   2.364792E-01   1.617269E+00   2.848106E+00
+          3   1.118078E-01   1.617092E+00   2.857511E+00
+          4   5.397774E-02   1.616554E+00   2.936598E+00
+          5   9.880363E-02   1.615160E+00   3.251387E+00
+          6   9.862429E-02   1.616417E+00   2.964187E+00
+          7   2.320964E-02   1.615838E+00   3.034293E+00
+          8   1.217989E-03   1.616129E+00   3.035951E+00
+     Convergence was reached in nsiter =      8
+ 
+     Temp (itemp =   5) =   22.000 K  Free energy =    -0.001237 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    5.735216 meV
+     iaxis_imag   :     19.34s CPU     20.36s WALL (       5 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         38   1.656675E+00   2.781003E+00
+ 
+     Convergence was reached for N =     38 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    5.790679 meV
+     raxis_pade   :      0.18s CPU      0.50s WALL (       5 calls)
+ 
+     itemp =   5   total cpu time :             20.85 secs
+ 
+     Actual number of frequency points (     6) =     37 for uniform       sampling
+    
+     temp(  6) =     25.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     6) =     37
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4941 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0393 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   3.183125E+00   1.617821E+00   2.551422E+00
+          2   2.460971E-01   1.618237E+00   2.535727E+00
+          3   1.152889E-01   1.618129E+00   2.531820E+00
+          4   5.555118E-02   1.617772E+00   2.579698E+00
+          5   1.143301E-01   1.616448E+00   2.908524E+00
+          6   1.345998E-01   1.617815E+00   2.566023E+00
+          7   4.677214E-02   1.617339E+00   2.694109E+00
+          8   1.102277E-03   1.617359E+00   2.690012E+00
+     Convergence was reached in nsiter =      8
+ 
+     Temp (itemp =   6) =   25.000 K  Free energy =    -0.000700 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    5.092376 meV
+     iaxis_imag   :     20.58s CPU     21.66s WALL (       6 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         34   1.658593E+00   2.464077E+00
+ 
+     Convergence was reached for N =     34 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    5.140433 meV
+     raxis_pade   :      0.20s CPU      0.56s WALL (       6 calls)
+ 
+     itemp =   6   total cpu time :             22.22 secs
+ 
+     Actual number of frequency points (     7) =     33 for uniform       sampling
+    
+     temp(  7) =     28.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     7) =     33
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4927 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0356 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   3.224804E+00   1.618826E+00   2.211507E+00
+          2   2.578248E-01   1.619211E+00   2.176291E+00
+          3   1.213854E-01   1.619176E+00   2.156135E+00
+          4   5.759619E-02   1.619000E+00   2.166712E+00
+          5   8.621372E-02   1.618317E+00   2.370539E+00
+          6   9.971206E-02   1.619036E+00   2.155793E+00
+          7   4.084566E-02   1.618732E+00   2.250747E+00
+          8   1.035374E-03   1.618746E+00   2.247075E+00
+     Convergence was reached in nsiter =      8
+ 
+     Temp (itemp =   7) =   28.000 K  Free energy =    -0.000311 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    4.260435 meV
+     iaxis_imag   :     21.59s CPU     22.73s WALL (       7 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         30   1.661662E+00   2.057806E+00
+ 
+     Convergence was reached for N =     30 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    4.298477 meV
+     raxis_pade   :      0.22s CPU      0.63s WALL (       7 calls)
+ 
+     itemp =   7   total cpu time :             23.36 secs
+ 
+     Actual number of frequency points (     8) =     30 for uniform       sampling
+    
+     temp(  8) =     31.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     8) =     30
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4951 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0328 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   3.270934E+00   1.620049E+00   1.804149E+00
+          2   2.735474E-01   1.620362E+00   1.755389E+00
+          3   1.310352E-01   1.620379E+00   1.721380E+00
+          4   6.602657E-02   1.620333E+00   1.700263E+00
+          5   2.637702E-02   1.620212E+00   1.745608E+00
+          6   1.851856E-02   1.620297E+00   1.714528E+00
+          7   1.609982E-02   1.620215E+00   1.744575E+00
+          8   2.589253E-03   1.620207E+00   1.748494E+00
+     Convergence was reached in nsiter =      8
+ 
+     Temp (itemp =   8) =   31.000 K  Free energy =    -0.000102 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    3.328679 meV
+     iaxis_imag   :     22.45s CPU     23.64s WALL (       8 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         28   1.665464E+00   1.601489E+00
+ 
+     Convergence was reached for N =     28 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    3.356432 meV
+     raxis_pade   :      0.23s CPU      0.69s WALL (       8 calls)
+ 
+     itemp =   8   total cpu time :             24.33 secs
+ 
+     Actual number of frequency points (     9) =     27 for uniform       sampling
+    
+     temp(  9) =     34.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(     9) =     27
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4878 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0300 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   3.326422E+00   1.620722E+00   1.367964E+00
+          2   2.862171E-01   1.620938E+00   1.312529E+00
+          3   1.447165E-01   1.620979E+00   1.269253E+00
+          4   8.558922E-02   1.620997E+00   1.227861E+00
+          5   9.158930E-03   1.621008E+00   1.219641E+00
+     Convergence was reached in nsiter =      5
+ 
+     Temp (itemp =   9) =   34.000 K  Free energy =    -0.000021 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    2.325582 meV
+     iaxis_imag   :     22.98s CPU     24.19s WALL (       9 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         24   1.668103E+00   1.117373E+00
+ 
+     Convergence was reached for N =     24 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    2.338379 meV
+     raxis_pade   :      0.25s CPU      0.75s WALL (       9 calls)
+ 
+     itemp =   9   total cpu time :             24.95 secs
+ 
+     Actual number of frequency points (    10) =     25 for uniform       sampling
+    
+     temp( 10) =     37.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(    10) =     25
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4908 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0281 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   3.380651E+00   1.621598E+00   9.272283E-01
+          2   3.077328E-01   1.621717E+00   8.760554E-01
+          3   1.621083E-01   1.621752E+00   8.333065E-01
+          4   1.099547E-01   1.621778E+00   7.886231E-01
+          5   1.491147E-02   1.621758E+00   8.031581E-01
+          6   5.968297E-02   1.621810E+00   7.554664E-01
+          7   8.682456E-03   1.621805E+00   7.626071E-01
+     Convergence was reached in nsiter =      7
+ 
+     Temp (itemp =  10) =   37.000 K  Free energy =    -0.000003 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    1.458506 meV
+     iaxis_imag   :     23.58s CPU     24.81s WALL (      10 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         22   1.670236E+00   6.974536E-01
+ 
+     Convergence was reached for N =     22 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    1.469225 meV
+     raxis_pade   :      0.28s CPU      0.81s WALL (      10 calls)
+ 
+     itemp =  10   total cpu time :             25.62 secs
+ 
+     Actual number of frequency points (    11) =     23 for uniform       sampling
+    
+     temp( 11) =     40.00000 K
+    
+     Solve anisotropic Eliashberg equations on imaginary-axis
+    
+     Total number of frequency points nsiw(    11) =     23
+     Cutoff frequency wscut =     0.5000 eV
+     Maximum frequency =         0.4873 eV
+     broyden mixing factor =      0.70000
+    
+
+     Size of allocated memory per pool: ~=    0.0262 Gb
+        iter      ethr          znormi      deltai [meV]
+          1   3.448846E+00   1.621874E+00   5.622834E-01
+          2   3.260917E-01   1.621926E+00   5.222564E-01
+          3   1.830086E-01   1.621945E+00   4.875250E-01
+          4   1.337004E-01   1.621959E+00   4.523982E-01
+          5   8.574463E-02   1.621925E+00   4.977928E-01
+          6   8.479832E-02   1.621942E+00   4.566469E-01
+          7   3.939783E-02   1.621966E+00   4.392437E-01
+          8   7.149017E-02   1.621987E+00   4.085497E-01
+          9   2.782843E-02   1.621979E+00   4.210808E-01
+         10   1.724878E-02   1.621985E+00   4.133294E-01
+         11   3.650116E-03   1.621986E+00   4.117280E-01
+     Convergence was reached in nsiter =     11
+ 
+     Temp (itemp =  11) =   40.000 K  Free energy =    -0.000000 meV
+ 
+     Min. / Max. values of superconducting gap =     0.000000    0.784510 meV
+     iaxis_imag   :     24.31s CPU     25.55s WALL (      11 calls)
+ 
+    
+     Pade approximant of anisotropic Eliashberg equations from imaginary-axis to real-axis
+     Cutoff frequency wscut =     0.5000
+    
+        pade    Re[znorm]   Re[delta] [meV]
+         20   1.670815E+00   3.768844E-01
+ 
+     Convergence was reached for N =     20 Pade approximants
+ 
+     Min. / Max. values of superconducting gap =     0.000000    0.789861 meV
+     raxis_pade   :      0.30s CPU      0.87s WALL (      11 calls)
+ 
+     itemp =  11   total cpu time :             26.43 secs
+ 
+
+     Unfolding on the coarse grid
+     elphon_wrap  :      0.00s CPU      0.02s WALL (       1 calls)
+
+     INITIALIZATION: 
+
+
+
+
+     Electron-Phonon interpolation
+     ep-interp    :     58.60s CPU     80.73s WALL (    3072 calls)
+
+     wigner_seitz :      0.02s CPU      0.02s WALL (       1 calls)
+     DynW2B       :      0.48s CPU      0.57s WALL (    6144 calls)
+     HamW2B       :      5.08s CPU      5.45s WALL (  147528 calls)
+     ephW2Bp      :     34.05s CPU     44.30s WALL (    3072 calls)
+     ephW2B       :      4.04s CPU      4.25s WALL (   33384 calls)
+
+     ELIASHBERG   :     43.04s CPU     46.33s WALL (       1 calls)
+
+
+     Total program execution
+     EPW          :    103.80s CPU    129.78s WALL
+
+     % Copyright (C) 2016-2023 EPW-Collaboration                                    
+                                                                                    
+     ===============================================================================
+     Please consider citing the following papers.                                   
+                                                                                                 
+     % Paper describing the method on which EPW relies                                           
+       F. Giustino and M. L. Cohen and S. G. Louie, Phys. Rev. B 76, 165108 (2007)               
+                                                                                                 
+     % Papers describing the EPW software                                                        
+       H. Lee et al., npj Comput. Mater. 9, 156 (2023)                                           
+       S. Ponc\'e, E.R. Margine, C. Verdi and F. Giustino, Comput. Phys. Commun. 209, 116 (2016) 
+       J. Noffsinger et al., Comput. Phys. Commun. 181, 2140 (2010)                              
+                                                                                                 
+                                                                                             
+     % Since you used the [eliashberg] input,     please consider also citing                    
+       E. R. Margine and F. Giustino, Phys. Rev. B 87, 024505 (2013)                         
+                                                                                    
+     For your convenience, this information is also reported in the                 
+     functionality-dependent EPW.bib file.                                          
+     ===============================================================================
+                                                                                    
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries
+[CRAYBLAS_WARNING] Application linked against multiple cray-libsci libraries

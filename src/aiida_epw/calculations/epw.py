@@ -308,6 +308,11 @@ class EpwCalculation(NamelistsCalculation):
             "ERROR_CANNOT_BRACKET_EF",
             message="Internal error, cannot bracket Ef.",
         )
+        spec.exit_code(
+            321,
+            "ERROR_PADE_APPROXIMANTS",
+            message="The Pade approximants calculation failed (NaN values detected).",
+        )
 
     @classmethod
     def normalize_parameters(cls, parameters):

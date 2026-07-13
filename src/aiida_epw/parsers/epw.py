@@ -1,33 +1,26 @@
+"""Parser for the EPW calculations."""
+
 import re
 from pathlib import Path
 
-import numpy
 from aiida import orm
 from aiida_quantumespresso.parsers.base import BaseParser
 from aiida_quantumespresso.utils.mapping import get_logging_container
+from packaging.version import Version
 
 from aiida_epw.calculations.epw import EpwCalculation
 from aiida_epw.data import (
     A2fData,
-    PA2fData,
     DosData,
-    PDosData,
-    PhDosData,
     GapFunctionData,
     LambdaFSData,
+    PA2fData,
+    PDosData,
+    PhDosData,
 )
-from aiida_epw.tools.parsers import (
-    parse_epw_a2f,
-    parse_epw_a2f_proj,
-    parse_epw_bands,
-    parse_epw_dos,
-    parse_epw_imag_aniso_gap0,
-    parse_epw_imag_iso,
-    parse_epw_lambda_fs,
-    parse_epw_lambda_k_pairs,
-    parse_epw_max_eigenvalue,
-    parse_epw_phdos,
-    parse_epw_phdos_proj,
+from aiida_epw.parsers.schemas import (
+    REGEX_PATTERNS_LEGACY,
+    REGEX_PATTERNS_MODERN,
 )
 
 
@@ -35,6 +28,28 @@ class EpwParser(BaseParser):
     """``Parser`` implementation for the ``EpwCalculation`` calculation job."""
 
     success_string = "EPW.bib"
+
+    class_error_map = {
+        "Size of required memory exceeds max_memlt": "ERROR_MEMORY_EXCEEDS_MAX_MEMLT",
+        "internal error, cannot bracket Ef": "ERROR_CANNOT_BRACKET_EF",
+    }
+
+    @staticmethod
+    def is_scheduler_out_of_memory(stderr):
+        """Return whether scheduler stderr indicates an out-of-memory kill."""
+        if not stderr:
+            return False
+
+        stderr_lower = stderr.lower()
+        return any(
+            marker in stderr_lower
+            for marker in (
+                "oom_kill",
+                "out of memory",
+                "oom killed",
+                "exceeded memory limit",
+            )
+        )
 
     @staticmethod
     def get_parser_settings_key():
@@ -64,12 +79,31 @@ class EpwParser(BaseParser):
         logs = get_logging_container()
 
         stdout, parsed_data, logs = self.parse_stdout_from_retrieved(logs)
+        scheduler_stderr = self.node.get_scheduler_stderr()
+
+        # Preserve scheduler walltime failures instead of overriding them with parser-side stdout errors.
+        if (
+            self.node.exit_status
+            == self.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME.status
+        ):
+            return self.exit(logs=logs)
+
+        if (
+            self.node.exit_status
+            == self.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY.status
+        ):
+            return self.exit(logs=logs)
+
+        if self.is_scheduler_out_of_memory(scheduler_stderr):
+            return self.exit(self.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY, logs)
 
         base_exit_code = self.check_base_errors(logs)
         if base_exit_code:
             return self.exit(base_exit_code, logs)
 
-        parsed_epw, logs = self.parse_stdout(stdout, logs)
+        parsed_epw, logs = self.parse_stdout(
+            stdout, logs, code_version=Version(parsed_data["code_version"])
+        )
         parsed_data.update(parsed_epw)
 
         elbands_contents = self.get_retrieved_content(
@@ -96,49 +130,51 @@ class EpwParser(BaseParser):
 
         a2f_contents = self.get_retrieved_content(EpwCalculation._OUTPUT_A2F_FILE)
         if a2f_contents is not None:
-            a2f_data, parsed_a2f = self.parse_a2f(a2f_contents)
+            a2f_data = A2fData.from_string(a2f_contents)
             self.out("a2f", a2f_data)
-            parsed_data.update(parsed_a2f)
-
-        dos_contents = self.get_retrieved_content(
-            EpwCalculation._OUTPUT_DOS_FILE,
-            Path(
-                EpwCalculation._OUTPUT_SUBFOLDER, EpwCalculation._OUTPUT_DOS_FILE
-            ).as_posix(),
-        )
-        if dos_contents is not None:
-            self.out("dos", self.parse_dos(dos_contents))
-
-        phdos_contents = self.get_retrieved_content(EpwCalculation._OUTPUT_PHDOS_FILE)
-        if phdos_contents is not None:
-            self.out("phdos", self.parse_phdos(phdos_contents))
-
-        phdos_proj_contents = self.get_retrieved_content(
-            EpwCalculation._OUTPUT_PHDOS_PROJ_FILE
-        )
-        if phdos_proj_contents is not None:
-            self.out("phdos_proj", self.parse_phdos_proj(phdos_proj_contents))
-
-        a2f_proj_contents = self.get_retrieved_content(
-            EpwCalculation._OUTPUT_A2F_PROJ_FILE
-        )
-        if a2f_proj_contents is not None:
-            self.out("a2f_proj", self.parse_a2f_proj(a2f_proj_contents))
-
-        lambda_FS_contents = self.get_retrieved_content(
-            EpwCalculation._OUTPUT_LAMBDA_FS_FILE
-        )
-        if lambda_FS_contents is not None:
-            self.out("lambda_FS", self.parse_lambda_FS(lambda_FS_contents))
-
-        lambda_k_pairs_contents = self.get_retrieved_content(
-            EpwCalculation._OUTPUT_LAMBDA_K_PAIRS_FILE
-        )
-        if lambda_k_pairs_contents is not None:
-            self.out(
-                "lambda_k_pairs",
-                self.parse_lambda_k_pairs(lambda_k_pairs_contents),
+            parsed_data.update(
+                {
+                    "degaussw": a2f_data.electron_smearing,
+                    "fsthick": a2f_data.fermi_window,
+                }
             )
+
+        # Declarative specification for standard retrieved array output files
+        standard_outputs = [
+            (
+                [
+                    EpwCalculation._OUTPUT_DOS_FILE,
+                    Path(
+                        EpwCalculation._OUTPUT_SUBFOLDER,
+                        EpwCalculation._OUTPUT_DOS_FILE,
+                    ).as_posix(),
+                ],
+                "dos",
+                DosData.from_string,
+            ),
+            ([EpwCalculation._OUTPUT_PHDOS_FILE], "phdos", PhDosData.from_string),
+            (
+                [EpwCalculation._OUTPUT_PHDOS_PROJ_FILE],
+                "phdos_proj",
+                PDosData.from_string,
+            ),
+            ([EpwCalculation._OUTPUT_A2F_PROJ_FILE], "a2f_proj", PA2fData.from_string),
+            (
+                [EpwCalculation._OUTPUT_LAMBDA_FS_FILE],
+                "lambda_FS",
+                LambdaFSData.from_string,
+            ),
+            (
+                [EpwCalculation._OUTPUT_LAMBDA_K_PAIRS_FILE],
+                "lambda_k_pairs",
+                self.parse_lambda_k_pairs,
+            ),
+        ]
+
+        for paths, link_label, parser_func in standard_outputs:
+            contents = self.get_retrieved_content(*paths)
+            if contents is not None:
+                self.out(link_label, parser_func(contents))
 
         iso_gap_filecontents = self.get_retrieved_contents_matching(
             re.compile(rf"{EpwCalculation._PREFIX}\.imag_iso_\d+\.\d+$")
@@ -146,7 +182,9 @@ class EpwParser(BaseParser):
         if iso_gap_filecontents:
             self.out(
                 "iso_gap_functions",
-                self.parse_iso_gap_functions(iso_gap_filecontents),
+                GapFunctionData.from_files(
+                    iso_gap_filecontents, prefix=EpwCalculation._PREFIX, kind="iso"
+                ),
             )
 
         aniso_gap_filecontents = self.get_retrieved_contents_matching(
@@ -155,7 +193,9 @@ class EpwParser(BaseParser):
         if aniso_gap_filecontents:
             self.out(
                 "aniso_gap_functions",
-                self.parse_aniso_gap_functions(aniso_gap_filecontents),
+                GapFunctionData.from_files(
+                    aniso_gap_filecontents, prefix=EpwCalculation._PREFIX, kind="aniso"
+                ),
             )
 
         if "max_eigenvalue" in parsed_data:
@@ -164,7 +204,10 @@ class EpwParser(BaseParser):
         if "Allen_Dynes_Tc" in parsed_data:
             parsed_data.setdefault("allen_dynes", parsed_data["Allen_Dynes_Tc"])
 
-        self.out("output_parameters", orm.Dict(parsed_data))
+        self.out("output_parameters", orm.Dict(self.clean_nans(parsed_data)))
+
+        if "ERROR_PADE_APPROXIMANTS" in logs.error:
+            return self.exit(self.exit_codes.get("ERROR_PADE_APPROXIMANTS"), logs)
 
         for exit_code in list(self.get_error_map().values()):
             if exit_code in logs.error:
@@ -178,10 +221,29 @@ class EpwParser(BaseParser):
         return self.exit(logs=logs)
 
     @staticmethod
-    def parse_stdout(stdout, logs):
+    def clean_nans(value):
+        """Recursively replace float('nan'), float('inf'), and float('-inf') in dictionaries/lists with None."""
+        import math
+
+        if isinstance(value, float):
+            if math.isnan(value) or math.isinf(value):
+                return None
+            return value
+        if isinstance(value, dict):
+            return {k: EpwParser.clean_nans(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [EpwParser.clean_nans(v) for v in value]
+        if isinstance(value, tuple):
+            return tuple(EpwParser.clean_nans(v) for v in value)
+        return value
+
+    @staticmethod
+    def parse_stdout(stdout, logs, code_version):
         """Parse the ``stdout``."""
 
         def parse_max_eigenvalue(stdout_block):
+            from aiida_epw.tools.parsers import parse_epw_max_eigenvalue
+
             parsed_max_ev = parse_epw_max_eigenvalue(stdout_block)
             max_eigenvalue_array = orm.XyData()
             max_eigenvalue_array.set_array(
@@ -190,110 +252,12 @@ class EpwParser(BaseParser):
             )
             return max_eigenvalue_array
 
-        def parse_transport_matrices(block):
-            """Parse transport tensor matrices from a text block."""
-            parsed = {}
-
-            def extract_matrix_pair(header_pattern, text):
-                start_match = re.search(header_pattern, text)
-                if not start_match:
-                    return None, None
-
-                lines_start = start_match.end()
-                lines = text[lines_start:].strip().split("\n")
-                # Take up to 3 lines
-                lines = lines[:3]
-
-                m1 = []
-                m2 = []
-                try:
-                    for line in lines:
-                        # Format " val1 val2 val3 | val4 val5 val6 " (approx)
-                        parts = line.split("|")
-                        if len(parts) < 2:
-                            continue
-
-                        # Handle Fortran D notation
-                        row1 = [
-                            float(x.replace("D", "E").replace("d", "e"))
-                            for x in parts[0].split()
-                        ]
-                        row2 = [
-                            float(x.replace("D", "E").replace("d", "e"))
-                            for x in parts[1].split()
-                        ]
-
-                        if len(row1) == 3 and len(row2) == 3:
-                            m1.append(row1)
-                            m2.append(row2)
-                except ValueError:
-                    pass
-
-                if len(m1) == 3 and len(m2) == 3:
-                    return m1, m2
-                return None, None
-
-            def extract_single_matrix(header_pattern, text):
-                start_match = re.search(header_pattern, text)
-                if not start_match:
-                    return None
-
-                lines_start = start_match.end()
-                lines = text[lines_start:].strip().split("\n")[:3]
-                m = []
-                try:
-                    for line in lines:
-                        # Just one set of 3 values
-                        row = [
-                            float(x.replace("D", "E").replace("d", "e"))
-                            for x in line.split()
-                        ]
-                        if len(row) == 3:
-                            m.append(row)
-                except ValueError:
-                    pass
-
-                if len(m) == 3:
-                    return m
-                return None
-
-            # 1. Conductivity
-            cond, cond_B = extract_matrix_pair(
-                r"Conductivity tensor without magnetic field\s*\|\s*with magnetic field \[Siemens/m\]",
-                block,
-            )
-            if cond:
-                parsed["conductivity"] = cond
-                parsed["conductivity_with_B"] = cond_B
-
-            # 2. Mobility
-            mob, hall_mob = extract_matrix_pair(
-                r"Mobility tensor without magnetic field\s*\|\s*(?:Hall mobility|with magnetic field) \[cm\^2/Vs\]",
-                block,
-            )
-            if mob:
-                parsed["mobility"] = mob
-                parsed["hall_mobility"] = hall_mob
-
-            # 3. Hall Factor
-            hall_fac = extract_single_matrix(r"Hall factor", block)
-            if hall_fac:
-                parsed["hall_factor"] = hall_fac
-
-            return parsed
-
-        data_type_regex = (
-            (
-                "allen_dynes",
-                float,
-                re.compile(r"\s+Estimated Allen-Dynes Tc =\s+([\d\.]+) K"),
-            ),
-            (
-                "fermi_energy_coarse",
-                float,
-                re.compile(r"\s+Fermi energy coarse grid =\s+([\d\.-]+)\seV"),
-            ),
+        patterns = (
+            REGEX_PATTERNS_LEGACY
+            if code_version < Version("5.9")
+            else REGEX_PATTERNS_MODERN
         )
+
         data_block_marker_parser = (
             (
                 "max_eigenvalue",
@@ -305,16 +269,25 @@ class EpwParser(BaseParser):
         stdout_lines = stdout.split("\n")
 
         for line_number, line in enumerate(stdout_lines):
-            for data_key, type, re_pattern in data_type_regex:
-                match = re_pattern.search(line)
+            for key, type_func, pattern in patterns:
+                match = pattern.search(line)
                 if match:
-                    parsed_data[data_key] = type(match.group(1))
+                    parsed_data[key] = type_func(match.group(1))
 
-            for data_key, data_marker, block_parser in data_block_marker_parser:
+            for (
+                data_key,
+                data_marker,
+                block_parser,
+            ) in data_block_marker_parser:
                 if data_marker in line:
-                    parsed_data[data_key] = block_parser(stdout[line_number:])
+                    parsed_data[data_key] = block_parser(
+                        "\n".join(stdout_lines[line_number:])
+                    )
 
         # Parse carrier mobility matrices (SERTA and iBTE)
+        from aiida_epw.tools.parsers import parse_transport_matrices
+        import numpy
+
         # Identify SERTA block
         serta_match = re.search(
             r"BTE in the self-energy relaxation time approximation \(SERTA\)", stdout
@@ -352,160 +325,47 @@ class EpwParser(BaseParser):
                     numpy.trace(numpy.array(ibte_data["mobility"])) / 3.0
                 )
 
+        # Parse Eliashberg temperature blocks
+        from aiida_epw.tools.parsers import parse_stdout_eliashberg
+
+        parsed_data.update(parse_stdout_eliashberg(stdout))
+
+        # Check for Pade approximation failure (NaN values under the pade table header)
+        pade_header_match = re.search(
+            r"pade\s+Re\[znorm\]\s+Re\[delta\]\s+\[meV\]\s+Re\[shift\]\s+\[meV\]",
+            stdout,
+        )
+        if pade_header_match:
+            start_idx = pade_header_match.end()
+            remaining = stdout[start_idx:].lstrip()
+            if remaining:
+                first_line = remaining.split("\n", 1)[0]
+                if "nan" in first_line.lower():
+                    logs.error.append("ERROR_PADE_APPROXIMANTS")
+
         return parsed_data, logs
-
-    @staticmethod
-    def parse_a2f(content):
-        """Parse the contents of the `.a2f` file."""
-        parsed_a2f = parse_epw_a2f(content)
-
-        a2f_data = A2fData()
-        a2f_data.set_a2f_data(
-            frequency=parsed_a2f["frequency"],
-            spectrum=parsed_a2f["a2f"],
-            lambda_values=parsed_a2f["lambda"],
-            phonon_smearing=parsed_a2f["phonon_smearing"],
-            cumulative_lambda=parsed_a2f.get("cumulative_lambda"),
-            electron_smearing=parsed_a2f.get("electron_smearing"),
-            fermi_window=parsed_a2f.get("fermi_window"),
-            summed_elph_coupling=parsed_a2f.get("summed_elph_coupling"),
-        )
-
-        parsed_data = {
-            "degaussw": parsed_a2f["electron_smearing"],
-            "fsthick": parsed_a2f["fermi_window"],
-        }
-        return a2f_data, parsed_data
-
-    @staticmethod
-    def parse_iso_gap_functions(file_contents):
-        """Parse isotropic gap-function files into a typed datatype."""
-        gap_functions = parse_epw_imag_iso(file_contents, prefix=EpwCalculation._PREFIX)
-        gap_function_data = GapFunctionData()
-        gap_function_data.set_gap_functions(gap_functions, kind="iso")
-        return gap_function_data
-
-    @staticmethod
-    def parse_aniso_gap_functions(file_contents):
-        """Parse anisotropic gap-function files into a typed datatype."""
-        gap_functions = parse_epw_imag_aniso_gap0(
-            file_contents, prefix=EpwCalculation._PREFIX
-        )
-        gap_function_data = GapFunctionData()
-        gap_function_data.set_gap_functions(gap_functions, kind="aniso")
-        return gap_function_data
-
-    @staticmethod
-    def parse_a2f_proj(content):
-        """Parse the contents of the `.a2f_proj` file."""
-        parsed = parse_epw_a2f_proj(content)
-        pa2f_data = PA2fData()
-        pa2f_data.set_pa2f_data(
-            frequency=parsed["frequency"],
-            a2f=parsed["a2f"],
-            projected_a2f=parsed["projected_a2f"],
-            lambda_int=parsed.get("lambda_int"),
-            lambda_sum=parsed.get("lambda_sum"),
-        )
-        return pa2f_data
 
     @staticmethod
     def parse_bands(content, kpoints_data, units):
         """Parse the contents of a band structure file."""
-        parsed_bands = parse_epw_bands(content)
-        kpts = parsed_bands["kpoints"]
-        bands = parsed_bands["bands"]
+        from aiida_epw.tools.parsers import parse_epw_bands
+
+        parsed = parse_epw_bands(content)
 
         if kpoints_data is None:
-            nbnd, nks = (
-                int(v)
-                for v in re.search(
-                    r"&plot nbnd=\s+(\d+), nks=\s+(\d+)", content
-                ).groups()
-            )
-            if len(kpts) != nks:
-                raise ValueError(
-                    "Could not reconstruct the band k-points from the retrieved EPW file."
-                )
-
             kpoints_data = orm.KpointsData()
-            kpoints_data.set_kpoints(kpts)
+            kpoints_data.set_kpoints(parsed["kpoints"])
 
         bands_data = orm.BandsData()
         # We should use the KpointsData from the inputs.
         bands_data.set_kpointsdata(kpoints_data)
-        bands_data.set_bands(bands, units=units)
+        bands_data.set_bands(parsed["bands"], units=units)
 
         return bands_data
 
     @staticmethod
-    def parse_dos(content):
-        """Parse the contents of the `.dos` file."""
-        parsed_dos = parse_epw_dos(content)
-        dos_data = DosData()
-        dos_data.set_dos_data(
-            energy=parsed_dos["energy"],
-            dos=parsed_dos["dos"],
-            integrated_dos=parsed_dos.get("integrated_dos"),
-        )
-        return dos_data
-
-    @staticmethod
-    def parse_phdos(content):
-        """Parse the contents of the `.phdos` file."""
-        parsed_phdos = parse_epw_phdos(content)
-        phdos_data = PhDosData()
-        phdos_data.set_phdos_data(
-            frequency=parsed_phdos["frequency"],
-            phdos=parsed_phdos["phdos"],
-        )
-        return phdos_data
-
-    @staticmethod
-    def parse_phdos_proj(content):
-        """Parse the contents of the `.phdos_proj` file."""
-        parsed = parse_epw_phdos_proj(content)
-        pdos_data = PDosData()
-        pdos_data.set_pdos_data(
-            frequency=parsed["frequency"],
-            phdos=parsed["phdos"],
-            projected_phdos=parsed["projected_phdos"],
-        )
-        return pdos_data
-
-    @staticmethod
-    def parse_lambda_FS(content):
-        """Parse the contents of the `.lambda_FS` file."""
-        parsed_lambda_fs = parse_epw_lambda_fs(content)
-        lambda_fs_data = LambdaFSData()
-        lambda_fs_data.set_lambda_fs(
-            kpoints=parsed_lambda_fs["kpoints"],
-            bands=parsed_lambda_fs["band"],
-            energies=parsed_lambda_fs["energy"],
-            couplings=parsed_lambda_fs["lambda"],
-            energy_units=parsed_lambda_fs["energy_units"],
-        )
-        return lambda_fs_data
-
-    @staticmethod
     def parse_lambda_k_pairs(content):
-        """Parse the contents of the `.lambda_k_pairs` file."""
-        parsed = parse_epw_lambda_k_pairs(content)
-        dos_data = DosData()
-        dos_data.set_dos_data(
-            energy=parsed["energy"],
-            dos=parsed["dos"],
-            integrated_dos=parsed.get("integrated_dos"),
-        )
-        return dos_data
+        """Parse ``.lambda_k_pairs`` content into a generic DOS-style dataset."""
+        from aiida_epw.tools.parsers import parse_epw_lambda_k_pairs
 
-    @staticmethod
-    def parse_gap_function(content, skiprows=0):
-        """Parse the contents of the `gap_function.dat` file."""
-        import io
-
-        gap_function = numpy.loadtxt(
-            io.StringIO(content), dtype=float, comments="#", skiprows=skiprows
-        )
-
-        return gap_function
+        return DosData.from_parsed(parse_epw_lambda_k_pairs(content))

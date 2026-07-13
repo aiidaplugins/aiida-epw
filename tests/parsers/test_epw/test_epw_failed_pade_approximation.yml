@@ -1,0 +1,93 @@
+output_parameters:
+  Allen_Dynes_Tc: 6.7964
+  BCS_gap: 0.9598
+  DOS: 3.1493409263
+  McMillan_Tc: 6.3282
+  SISSO_Tc: 6.7229
+  allen_dynes: 6.7964
+  code_version: '6.0'
+  electron_smearing: 5.0
+  fermi_level: 1.1347915324
+  fermi_window: 8.0
+  isotropic_eliashberg:
+    '1.0':
+      broyden_mixing_factor: 0.7
+      free_energy: -0.004309
+      iterations:
+        deltai:
+        - 2.210584
+        - 1.772487
+        - 1.749082
+        - 1.731728
+        - 1.726291
+        ethr:
+        - 1.955151
+        - 0.8694986
+        - 0.09949484
+        - 0.03070477
+        - 0.002975657
+        mu:
+        - 11.34792
+        - 11.34792
+        - 11.34792
+        - 11.34792
+        - 11.34792
+        shifti:
+        - -1.185599
+        - -0.852621
+        - -0.872951
+        - -0.8605152
+        - -0.8594232
+        znormi:
+        - 2.371782
+        - 2.097359
+        - 2.090447
+        - 2.092728
+        - 2.093612
+      lastiw: 923
+      nsiter: 5
+      nsiw: 923
+      nsiw_itemp: 923
+      pade:
+        delta: null
+        nsiter: 830
+        shift: null
+        znorm: null
+      startiw: 1
+      wscut: 0.5
+    '2.0':
+      broyden_mixing_factor: 0.7
+      iterations:
+        deltai:
+        - null
+        - null
+        - null
+        - null
+        ethr:
+        - null
+        - null
+        - null
+        - null
+        mu:
+        - 11.34792
+        - 11.34792
+        - 11.34792
+        - 11.34792
+        shifti:
+        - null
+        - null
+        - null
+        - null
+        znormi:
+        - null
+        - null
+        - null
+        - null
+      lastiw: 462
+      nsiw: 462
+      nsiw_itemp: 462
+      startiw: 1
+      wscut: 0.5
+  lambda: 1.2658267
+  muc: 0.13
+  w_log: 6.3939

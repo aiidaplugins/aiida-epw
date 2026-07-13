@@ -71,6 +71,9 @@ def validate_inputs(  # pylint: disable=unused-argument,inconsistent-return-stat
 class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
     """BaseWorkchain to run a epw.x calculation."""
 
+    _MAX_NSIW = 200
+    _MIN_NSIW = 20
+
     _process_class = EpwCalculation
 
     @classmethod
@@ -461,7 +464,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         self.report("{}<{}> failed with exit status {}: {}".format(*arguments))
         self.report(f"Action taken: {action}")
 
-    @process_handler(priority=600)
+    @process_handler(priority=10)
     def handle_unrecoverable_failure(self, calculation):
         """Handle calculations with an exit status below 400 which are unrecoverable, so abort the work chain."""
         if calculation.is_failed and calculation.exit_status < 400:
@@ -597,3 +600,199 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         return ProcessHandlerReport(
             True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
         )
+
+    @process_handler(
+        priority=400,
+        exit_codes=[EpwCalculation.exit_codes.ERROR_PADE_APPROXIMANTS],
+    )
+    def handle_pade_approximants(self, calculation):
+        """Handle exit code 322 (Pade NaN failure) by reducing nsiw and popping successful temperatures."""
+
+        outputs = calculation.outputs.output_parameters.get_dict()
+        eliashberg_data = (
+            outputs.get("isotropic_eliashberg")
+            or outputs.get("anisotropic_eliashberg")
+            or {}
+        )
+
+        succeeded_temps = []
+        for temp_str, data in eliashberg_data.items():
+            temp = float(temp_str)
+            has_failed = False
+
+            iterations = data.get("iterations", {})
+            if iterations:
+                if not iterations.get("ethr") or any(
+                    v is None for v in iterations.get("ethr", [])
+                ):
+                    has_failed = True
+                elif any(v is None for v in iterations.get("znormi", [])) or any(
+                    v is None for v in iterations.get("deltai", [])
+                ):
+                    has_failed = True
+
+            pade = data.get("pade", {})
+            if pade:
+                if any(
+                    pade.get(k) is None
+                    for k in ("delta", "znorm", "shift")
+                    if k in pade
+                ):
+                    has_failed = True
+
+            if not iterations and not pade:
+                has_failed = True
+
+            if not has_failed:
+                succeeded_temps.append(temp)
+
+        input_params = self.ctx.inputs.parameters.get_dict()
+        input_epw = input_params.get("INPUTEPW", {})
+
+        all_temps = []
+        is_linear_range = False
+        if "temps" in input_epw:
+            temps_val = input_epw["temps"]
+            if isinstance(temps_val, str):
+                original_temps = [float(t) for t in temps_val.replace(",", " ").split()]
+            elif isinstance(temps_val, (int, float)):
+                original_temps = [float(temps_val)]
+            else:
+                original_temps = [float(t) for t in temps_val]
+
+            nstemp = input_epw.get("nstemp", len(original_temps))
+            if len(original_temps) == 2 and nstemp >= 2:
+                is_linear_range = True
+                t_min, t_max = original_temps[0], original_temps[1]
+                all_temps = [
+                    t_min + i * (t_max - t_min) / (nstemp - 1) for i in range(nstemp)
+                ]
+            else:
+                all_temps = original_temps
+        elif (
+            "tempsmin" in input_epw
+            and "tempsmax" in input_epw
+            and "nstemp" in input_epw
+        ):
+            is_linear_range = True
+            t_min = float(input_epw["tempsmin"])
+            t_max = float(input_epw["tempsmax"])
+            n_temp = int(input_epw["nstemp"])
+            if n_temp > 1:
+                all_temps = [
+                    t_min + i * (t_max - t_min) / (n_temp - 1) for i in range(n_temp)
+                ]
+            else:
+                all_temps = [t_min]
+        else:
+            all_temps = [float(k) for k in eliashberg_data.keys()]
+
+        remaining_temps = [
+            t
+            for t in all_temps
+            if not any(abs(t - st) < 1e-4 for st in succeeded_temps)
+        ]
+
+        nsiw = None
+        for t in remaining_temps:
+            for k, data in eliashberg_data.items():
+                if abs(float(k) - t) < 1e-4:
+                    nsiw = data.get("nsiw")
+                    break
+            if nsiw is not None:
+                break
+
+        if nsiw is None:
+            nsiw = input_epw.get("nsiw")
+
+        current_npade = input_epw.get("npade", 90)
+
+        current_N = None
+        for t in remaining_temps:
+            for k, data in eliashberg_data.items():
+                if abs(float(k) - t) < 1e-4:
+                    current_N = data.get("pade", {}).get("nsiter")
+                    break
+            if current_N is not None:
+                break
+
+        if current_N is None and nsiw is not None:
+            fbw = input_epw.get("fbw", False)
+            positive_matsu = input_epw.get("positive_matsu", True)
+            if fbw and not positive_matsu:
+                current_N = int(current_npade * (nsiw / 2) / 100)
+            else:
+                current_N = int(current_npade * nsiw / 100)
+
+        target_npade = None
+        if current_N is not None and nsiw:
+            if current_N > self._MAX_NSIW:
+                target_N = self._MAX_NSIW
+            else:
+                target_N = max(self._MIN_NSIW, int(current_N * 0.5))
+
+            fbw = input_epw.get("fbw", False)
+            positive_matsu = input_epw.get("positive_matsu", True)
+            if fbw and not positive_matsu:
+                target_npade = int(target_N * 100 / (nsiw / 2))
+            else:
+                target_npade = int(target_N * 100 / nsiw)
+
+            target_npade = max(1, min(100, target_npade))
+            if target_npade == current_npade and current_npade > 1:
+                target_npade = max(1, current_npade - 5)
+
+        action_taken = ""
+        parameters = self.ctx.inputs.parameters.get_dict()
+        input_epw_new = parameters.setdefault("INPUTEPW", {})
+
+        new_temps_list = []
+        new_nstemp = len(remaining_temps)
+        if is_linear_range and new_nstemp >= 2:
+            new_temps_list = [remaining_temps[0], remaining_temps[-1]]
+        else:
+            new_temps_list = remaining_temps
+
+        if isinstance(input_epw.get("temps"), str):
+            input_epw_new["temps"] = " ".join(str(t) for t in new_temps_list)
+        else:
+            input_epw_new["temps"] = new_temps_list
+        input_epw_new["nstemp"] = new_nstemp
+        input_epw_new.pop("tempsmin", None)
+        input_epw_new.pop("tempsmax", None)
+
+        if target_npade is not None and target_npade != current_npade:
+            input_epw_new["npade"] = target_npade
+            action_taken += f"Reduced npade from {current_npade} to {target_npade}. "
+
+        if len(remaining_temps) < len(all_temps):
+            succeeded_list = [
+                t
+                for t in all_temps
+                if any(abs(t - st) < 1e-4 for st in succeeded_temps)
+            ]
+            action_taken += (
+                f"Removed successfully calculated temperatures: {succeeded_list}. "
+            )
+
+        if not action_taken:
+            self.report_error_handled(
+                calculation,
+                "Cannot reduce npade further or pop temperatures. Aborting.",
+            )
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+            )
+
+        try:
+            from aiida_epw.common.types import RestartType
+
+            self.ctx.inputs.restart_type = RestartType.EPHREAD
+        except ImportError:
+            input_epw_new["epwread"] = True
+
+        self.ctx.inputs.parameters = orm.Dict(parameters)
+        self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
+
+        self.report_error_handled(calculation, action_taken)
+        return ProcessHandlerReport(True)
