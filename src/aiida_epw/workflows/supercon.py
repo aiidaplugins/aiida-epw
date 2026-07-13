@@ -8,6 +8,7 @@ from aiida.engine import WorkChain, while_, if_, append_
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
+from aiida_epw.calculations.epw import serialize_calculation_type
 from aiida_epw.workflows.base import EpwBaseWorkChain
 from aiida_epw.data import GapFunctionData
 
@@ -437,11 +438,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.kfpoints_factor = self.inputs.epw_interp.kfpoints_factor
         inputs.qfpoints_distance = self.ctx.interpolation_list.pop()
 
-        base_inputs = EpwBaseWorkChain.spec().inputs
-        if "calculation_type" in base_inputs:
-            from aiida_epw.calculations.epw import serialize_calculation_type
-
-            inputs.calculation_type = serialize_calculation_type("eliashberg")
+        inputs.calculation_type = serialize_calculation_type("eliashberg")
 
         if self.ctx.degaussq:
             parameters = inputs.parameters.get_dict()
@@ -511,11 +508,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.kfpoints = parent_folder_epw.creator.inputs.kfpoints
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
 
-        base_inputs = EpwBaseWorkChain.spec().inputs
-        if "calculation_type" in base_inputs:
-            from aiida_epw.calculations.epw import serialize_calculation_type
-
-            inputs.calculation_type = serialize_calculation_type("eliashberg")
+        inputs.calculation_type = serialize_calculation_type("eliashberg")
 
         if self.ctx.degaussq:
             parameters = inputs.parameters.get_dict()
@@ -559,11 +552,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.kfpoints = parent_folder_epw.creator.inputs.kfpoints
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
 
-        base_inputs = EpwBaseWorkChain.spec().inputs
-        if "calculation_type" in base_inputs:
-            from aiida_epw.calculations.epw import serialize_calculation_type
-
-            inputs.calculation_type = serialize_calculation_type("eliashberg")
+        inputs.calculation_type = serialize_calculation_type("eliashberg")
 
         inputs.metadata.call_link_label = "epw_final_aniso"
         workchain_node = self.submit(EpwBaseWorkChain, **inputs)
