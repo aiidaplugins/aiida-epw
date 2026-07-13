@@ -1,5 +1,6 @@
 """Parser for the EPW calculations."""
 
+import math
 import re
 from pathlib import Path
 
@@ -318,24 +319,43 @@ class EpwParser(BaseParser):
 
         parsed_data.update(parse_stdout_eliashberg(stdout))
 
+        def get_last_finite_deltai(deltai):
+            for value in reversed(deltai):
+                if isinstance(value, (int, float)) and math.isfinite(value):
+                    return value
+            return None
+
+        def has_non_finite_iteration(iterations):
+            return any(
+                isinstance(value, (int, float)) and not math.isfinite(value)
+                for values in iterations.values()
+                for value in values
+            )
+
+        has_gap_collapse = False
+        has_iteration_failure = False
+        for eliashberg_key in ("isotropic_eliashberg", "anisotropic_eliashberg"):
+            if eliashberg_key not in parsed_data:
+                continue
+            for temp_data in parsed_data[eliashberg_key].values():
+                iterations = temp_data.get("iterations", {})
+                deltai = iterations.get("deltai", [])
+                last_finite_deltai = get_last_finite_deltai(deltai)
+                if last_finite_deltai is not None and abs(last_finite_deltai) < 1e-10:
+                    has_gap_collapse = True
+                if iterations and has_non_finite_iteration(iterations):
+                    has_iteration_failure = True
+
         # Check for factorization / temperature out of range failure
-        if re.search(
+        has_factorization_error = re.search(
             r"Error in routine mix_broyden \(\d+\):\s*factorization",
             stdout,
             re.IGNORECASE,
-        ):
-            is_out_of_range = False
-            for eliashberg_key in ("isotropic_eliashberg", "anisotropic_eliashberg"):
-                if eliashberg_key in parsed_data:
-                    for temp_str, temp_data in parsed_data[eliashberg_key].items():
-                        deltai = temp_data.get("iterations", {}).get("deltai", [])
-                        if deltai and abs(deltai[-1]) < 1e-10:
-                            is_out_of_range = True
-                            break
-            if is_out_of_range:
-                logs.error.append("ERROR_TEMPERATURE_OUT_OF_RANGE")
-            else:
-                logs.error.append("ERROR_FACTORIZATION")
+        )
+        if has_gap_collapse and (has_factorization_error or has_iteration_failure):
+            logs.error.append("ERROR_TEMPERATURE_OUT_OF_RANGE")
+        elif has_factorization_error:
+            logs.error.append("ERROR_FACTORIZATION")
 
         return parsed_data, logs
 

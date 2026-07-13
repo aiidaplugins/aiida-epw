@@ -474,3 +474,25 @@ def test_epw_factorization_errors(aiida_localhost):
         calcfunction2.exit_status
         == EpwCalculation.exit_codes.ERROR_TEMPERATURE_OUT_OF_RANGE.status
     )
+
+    # 3. Temperature out of range where the gap collapses before later iterations become NaN
+    stdout_temp_out_of_range_nan = """
+     Program EPW v.6.0
+     EPW v6.0
+     temp(   1) =     6.00000 K
+     Solve full-bandwidth isotropic Eliashberg equations on imaginary-axis
+     Total number of frequency points nsiw(   1) =    154
+     Cutoff frequency wscut =     0.5000 eV
+     broyden mixing factor =      0.70000
+     startiw = 1, lastiw = 154, nsiw(itemp) = 154
+   iter      ethr          znormi      deltai [meV]   shifti [meV]    mu (eV)
+     1   2.012636E+00   2.017502E+00   8.075927E-01   6.275953E-01   1.130935E+01
+     2   5.312233E+00   1.907240E+00   8.809776E-23   3.834545E-01   1.130935E+01
+     3            NaN            NaN            NaN            NaN   1.130935E+01
+    """
+    _, calcfunction3 = run_parser(stdout_temp_out_of_range_nan)
+    assert calcfunction3.is_failed
+    assert (
+        calcfunction3.exit_status
+        == EpwCalculation.exit_codes.ERROR_TEMPERATURE_OUT_OF_RANGE.status
+    )
