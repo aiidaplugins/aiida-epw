@@ -3,6 +3,7 @@ from aiida import orm
 from aiida.common import AttributeDict
 from pathlib import Path
 
+
 from aiida.engine import (
     BaseRestartWorkChain,
     ProcessHandlerReport,
@@ -64,6 +65,56 @@ def validate_inputs(  # pylint: disable=unused-argument,inconsistent-return-stat
 
     if not any([_ in inputs for _ in ["qfpoints", "qfpoints_distance"]]):
         return "Either `qfpoints` or `qfpoints_distance` must be specified."
+
+    # Validation for new Eliashberg parameters
+    momentum_dependence = inputs.get("momentum_dependence", None)
+    full_bandwidth = inputs.get("full_bandwidth", None)
+    real_axis = inputs.get("real_axis", None)
+    analytical_continuation = inputs.get("analytical_continuation", None)
+
+    # 1. Validate analytical_continuation value
+    if analytical_continuation is not None:
+        ac_val = analytical_continuation.value
+        if ac_val.lower() not in ("pade", "acon", "none"):
+            return f"Invalid `analytical_continuation`: '{ac_val}' is not supported. Must be 'pade', 'acon', or 'none'."
+
+    # 2. Extract tc_linear from parameters
+    parameters = inputs.get("parameters", {})
+    if isinstance(parameters, orm.Dict):
+        parameters = parameters.get_dict()
+    inputepw = parameters.get("INPUTEPW", {})
+    tc_linear = inputepw.get("tc_linear", False)
+
+    # 3. Compatibility checks matching EPW's Fortran source code:
+    # - tc_linear cannot be used with lreal (real_axis=True) or laniso (momentum_dependence=True)
+    if tc_linear:
+        if real_axis is not None and real_axis.value:
+            return "Linearized Eliashberg (tc_linear=True) cannot be used with real_axis=True."
+        if momentum_dependence is not None and momentum_dependence.value:
+            return "Linearized Eliashberg (tc_linear=True) cannot be used with momentum_dependence=True (anisotropic)."
+        if full_bandwidth is not None and full_bandwidth.value:
+            return "Linearized Eliashberg (tc_linear=True) cannot be used with full_bandwidth=True."
+
+    # - lreal (real_axis=True) is implemented only for the isotropic case
+    if real_axis is not None and real_axis.value:
+        if momentum_dependence is not None and momentum_dependence.value:
+            return "Real axis solver (real_axis=True) is only implemented for the isotropic case (momentum_dependence=False)."
+
+    # - lpade (analytical_continuation) requires limag true (so real_axis must be False)
+    if real_axis is not None and real_axis.value:
+        if (
+            analytical_continuation is not None
+            and analytical_continuation.value.lower() != "none"
+        ):
+            return "Analytical continuation (analytical_continuation) cannot be used when solving on the real axis (real_axis=True)."
+
+    # - fbw (full_bandwidth=True) cannot be used with lacon (analytical_continuation="acon")
+    if full_bandwidth is not None and full_bandwidth.value:
+        if (
+            analytical_continuation is not None
+            and analytical_continuation.value.lower() == "acon"
+        ):
+            return "Analytic continuation method 'acon' is not implemented when full_bandwidth is True."
 
     return None
 
@@ -136,6 +187,8 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 "[80, 80, 80]."
                 )
             )
+
+
 
         spec.input(
             "w90_chk_to_ukk_script",
@@ -220,6 +273,10 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         w90_chk_to_ukk_script=None,
         quadrupole_dir=None,
         protocol_filename="base.yaml",
+        momentum_dependence=None,
+        full_bandwidth=None,
+        real_axis=None,
+        analytical_continuation=None,
         **_,
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -281,9 +338,74 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             else:
                 builder.quadrupole_dir = quadrupole_dir
 
+        if momentum_dependence is not None:
+            builder.momentum_dependence = to_aiida_type(momentum_dependence)
+        if full_bandwidth is not None:
+            builder.full_bandwidth = to_aiida_type(full_bandwidth)
+        if real_axis is not None:
+            builder.real_axis = to_aiida_type(real_axis)
+        if analytical_continuation is not None:
+            builder.analytical_continuation = to_aiida_type(analytical_continuation)
+
         # pylint: enable=no-member
 
         return builder
+
+    def get_additional_retrieve_list(self):
+        """Return additional files that should be retrieved for the configured EPW run."""
+        retrieve_list = []
+        parameters = self.ctx.inputs.parameters.get_dict()
+
+        if parameters.get("INPUTEPW", {}).get("band_plot"):
+            retrieve_list += [
+                self._process_class._output_elbands_file,
+                self._process_class._output_phbands_file,
+            ]
+
+        if parameters.get("INPUTEPW", {}).get("eliashberg", False):
+            retrieve_list.append(self._process_class._OUTPUT_A2F_FILE)
+            if not parameters.get("INPUTEPW", {}).get("restart", False):
+                retrieve_list.append(self._process_class._OUTPUT_A2F_PROJ_FILE)
+                retrieve_list.append(self._process_class._OUTPUT_PHDOS_FILE)
+                retrieve_list.append(self._process_class._OUTPUT_PHDOS_PROJ_FILE)
+                retrieve_list.append(
+                    Path(
+                        self._process_class._OUTPUT_SUBFOLDER,
+                        self._process_class._OUTPUT_DOS_FILE,
+                    ).as_posix()
+                )
+
+        # Determine whether anisotropic or isotropic files are produced
+        momentum_dependence = None
+        if "momentum_dependence" in self.inputs:
+            momentum_dependence = self.inputs.momentum_dependence.value
+        else:
+            momentum_dependence = parameters.get("INPUTEPW", {}).get("laniso", False)
+
+        # Retrieve files if Eliashberg calculations are enabled
+        eliashberg_enabled = False
+        if any(
+            f in self.inputs
+            for f in (
+                "momentum_dependence",
+                "full_bandwidth",
+                "real_axis",
+                "analytical_continuation",
+            )
+        ):
+            eliashberg_enabled = True
+        else:
+            eliashberg_enabled = parameters.get("INPUTEPW", {}).get("eliashberg", False)
+
+        if eliashberg_enabled:
+            if momentum_dependence:
+                retrieve_list.append(self._process_class._OUTPUT_LAMBDA_FS_FILE)
+                retrieve_list.append(self._process_class._OUTPUT_LAMBDA_K_PAIRS_FILE)
+                retrieve_list.append("aiida.imag_aniso*")
+            else:
+                retrieve_list.append("aiida.imag_iso_*")
+
+        return retrieve_list
 
     def setup(self):
         """Call the ``setup`` of the ``BaseRestartWorkChain`` and create the inputs dictionary in ``self.ctx.inputs``.
@@ -302,8 +424,6 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
 
         metadata["options"] = self.inputs.options.get_dict()
 
-        ## Didn't find the way to modify `metadata` in EpwCalculation.
-        ## It should be migrated into EpwCalculation in the future.
         if (
             "w90_chk_to_ukk_script" in self.inputs
             and "parent_folder_chk" in self.inputs
@@ -348,6 +468,16 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 )
 
         self.ctx.inputs.parameters = orm.Dict(parameters)
+
+        # Retrieve the additional files based on parameters and eliashberg_type
+        additional_retrieve = list(
+            metadata["options"].setdefault("additional_retrieve_list", [])
+        )
+        for item in self.get_additional_retrieve_list():
+            if item not in additional_retrieve:
+                additional_retrieve.append(item)
+        metadata["options"]["additional_retrieve_list"] = additional_retrieve
+        self.ctx.inputs.metadata = metadata
 
     # We should validate the kpoints and qpoints on the fly
     # because they are usually not determined at the creation of the inputs.

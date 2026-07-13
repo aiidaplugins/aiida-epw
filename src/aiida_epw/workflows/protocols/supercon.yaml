@@ -79,12 +79,8 @@ default_inputs:
         muc: 0.13
         nqstep: 500
         nsiter: 500
-        nstemp: 40
         restart: True
         selecqread:  False
-        tc_linear: True
-        tc_linear_solver: 'power'   
-        temps: 1 40
         vme: 'dipole'
         wannierize: False
         wscut: 0.5

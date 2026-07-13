@@ -8,7 +8,9 @@ from aiida.engine import WorkChain, while_, if_, append_
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
+from aiida_epw.calculations.epw import serialize_calculation_type
 from aiida_epw.workflows.base import EpwBaseWorkChain
+from aiida_epw.data import GapFunctionData
 
 from aiida.engine import calcfunction
 
@@ -119,6 +121,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "parent_folder_chk",
                 "qfpoints",
                 "kfpoints",
+                "calculation_type",
             ),
             namespace_options={
                 "help": (
@@ -137,12 +140,15 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "parent_folder_chk",
                 "qfpoints_distance",
                 "kfpoints_factor",
+                "calculation_type",
             ),
             namespace_options={
+                "required": False,
+                "populate_defaults": False,
                 "help": (
                     "Inputs forwarded to the final `EpwBaseWorkChain` for the isotropic "
                     "Migdal-Eliashberg calculation."
-                )
+                ),
             },
         )
         spec.expose_inputs(
@@ -155,12 +161,15 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "parent_folder_chk",
                 "qfpoints_distance",
                 "kfpoints_factor",
+                "calculation_type",
             ),
             namespace_options={
+                "required": False,
+                "populate_defaults": False,
                 "help": (
                     "Inputs forwarded to the final `EpwBaseWorkChain` for the anisotropic "
                     "Migdal-Eliashberg calculation."
-                )
+                ),
             },
         )
         spec.outline(
@@ -180,19 +189,51 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         spec.output(
             "parameters",
             valid_type=orm.Dict,
+            required=False,
             help="The `output_parameters` output node of the final EPW calculation.",
         )
         spec.output(
             "max_eigenvalue",
             valid_type=orm.XyData,
+            required=False,
             help="The temperature dependence of the max eigenvalue for the final EPW.",
         )
         spec.output(
             "a2f",
             valid_type=orm.XyData,
+            required=False,
             help="The contents of the `.a2f` file for the final EPW.",
         )
-        spec.output("Tc_iso", valid_type=orm.Float, help="The critical temperature.")
+        spec.output(
+            "Tc_iso",
+            valid_type=orm.Float,
+            required=False,
+            help="The critical temperature.",
+        )
+        spec.output(
+            "iso_gap_functions",
+            valid_type=GapFunctionData,
+            required=False,
+            help="The interpolated isotropic gap function.",
+        )
+        spec.output(
+            "aniso_gap_functions",
+            valid_type=GapFunctionData,
+            required=False,
+            help="The interpolated anisotropic gap function.",
+        )
+        spec.output(
+            "aniso_gap_FS",
+            valid_type=orm.ArrayData,
+            required=False,
+            help="The anisotropic gap on the Fermi surface.",
+        )
+        spec.output(
+            "aniso_gap_imag",
+            valid_type=orm.ArrayData,
+            required=False,
+            help="The anisotropic gap on the imaginary axis.",
+        )
 
         spec.exit_code(
             401,
@@ -270,14 +311,37 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             # TODO: Add check to make sure parent_folder_epw is on same computer as epw_code
             pass
 
-        for epw_namespace in ("epw_interp", "epw_final_iso", "epw_final_aniso"):
+        namespaces = ("epw_interp", "epw_final_iso", "epw_final_aniso")
+
+        for epw_namespace in namespaces:
             epw_inputs = inputs.get(epw_namespace, None)
+
+            # We replace eliashberg_type with individual flags
+            momentum_dependence = None
+            full_bandwidth = None
+            real_axis = None
+            if epw_namespace == "epw_final_iso":
+                momentum_dependence = False
+                full_bandwidth = True
+                real_axis = False
+                # Ensure tc_linear is False in parameters override (since full_bandwidth is True)
+                epw_inputs = epw_inputs or {}
+                params = epw_inputs.setdefault("parameters", {})
+                inputepw = params.setdefault("INPUTEPW", {})
+                inputepw["tc_linear"] = False
+            elif epw_namespace == "epw_final_aniso":
+                momentum_dependence = True
+                full_bandwidth = True
+                real_axis = False
 
             epw_builder = EpwBaseWorkChain.get_builder_from_protocol(
                 code=epw_code,
                 structure=structure,
                 protocol=protocol,
                 overrides=epw_inputs,
+                momentum_dependence=momentum_dependence,
+                full_bandwidth=full_bandwidth,
+                real_axis=real_axis,
             )
 
             if epw_namespace == "epw_interp" and scon_epw_code is not None:
@@ -374,6 +438,8 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.kfpoints_factor = self.inputs.epw_interp.kfpoints_factor
         inputs.qfpoints_distance = self.ctx.interpolation_list.pop()
 
+        inputs.calculation_type = serialize_calculation_type("eliashberg")
+
         if self.ctx.degaussq:
             parameters = inputs.parameters.get_dict()
             parameters["INPUTEPW"]["degaussq"] = self.ctx.degaussq
@@ -429,6 +495,9 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
 
     def run_final_epw_iso(self):
         """Run the final EpwBaseWorkChain in isotropic mode."""
+        if "epw_final_iso" not in self.inputs:
+            return
+
         inputs = AttributeDict(
             self.exposed_inputs(EpwBaseWorkChain, namespace="epw_final_iso")
         )
@@ -438,6 +507,8 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.parent_folder_epw = parent_folder_epw
         inputs.kfpoints = parent_folder_epw.creator.inputs.kfpoints
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
+
+        inputs.calculation_type = serialize_calculation_type("eliashberg")
 
         if self.ctx.degaussq:
             parameters = inputs.parameters.get_dict()
@@ -455,6 +526,9 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
 
     def inspect_final_epw_iso(self):
         """Verify that the final EpwBaseWorkChain in isotropic mode finished successfully."""
+        if "final_epw_iso" not in self.ctx:
+            return
+
         workchain = self.ctx.final_epw_iso
 
         if not workchain.is_finished_ok:
@@ -465,6 +539,9 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
 
     def run_final_epw_aniso(self):
         """Run the EpwBaseWorkChain in anisotropic mode for the current interpolation distance."""
+        if "epw_final_aniso" not in self.inputs:
+            return
+
         inputs = AttributeDict(
             self.exposed_inputs(EpwBaseWorkChain, namespace="epw_final_aniso")
         )
@@ -474,6 +551,8 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.parent_folder_epw = parent_folder_epw
         inputs.kfpoints = parent_folder_epw.creator.inputs.kfpoints
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
+
+        inputs.calculation_type = serialize_calculation_type("eliashberg")
 
         inputs.metadata.call_link_label = "epw_final_aniso"
         workchain_node = self.submit(EpwBaseWorkChain, **inputs)
@@ -485,6 +564,9 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
 
     def inspect_final_epw_aniso(self):
         """Verify that the final EpwBaseWorkChain in anisotropic mode finished successfully."""
+        if "final_epw_aniso" not in self.ctx:
+            return
+
         workchain = self.ctx.final_epw_aniso
 
         if not workchain.is_finished_ok:
@@ -494,11 +576,37 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             return self.exit_codes.ERROR_SUB_PROCESS_EPW_ANISO
 
     def results(self):
-        """TODO"""
-        self.out("Tc_iso", calculate_tc(self.ctx.final_epw_iso.outputs.max_eigenvalue))
-        self.out("parameters", self.ctx.final_epw_iso.outputs.output_parameters)
-        self.out("max_eigenvalue", self.ctx.final_epw_iso.outputs.max_eigenvalue)
-        self.out("a2f", self.ctx.final_epw_iso.outputs.a2f)
+        """Expose the outputs of the final EPW calculations."""
+        # Isotropic results
+        if "final_epw_iso" in self.ctx:
+            final_iso = self.ctx.final_epw_iso
+            if "max_eigenvalue" in final_iso.outputs:
+                self.out("Tc_iso", calculate_tc(final_iso.outputs.max_eigenvalue))
+                self.out("max_eigenvalue", final_iso.outputs.max_eigenvalue)
+            if "output_parameters" in final_iso.outputs:
+                self.out("parameters", final_iso.outputs.output_parameters)
+            if "a2f" in final_iso.outputs:
+                self.out("a2f", final_iso.outputs.a2f)
+            if "iso_gap_functions" in final_iso.outputs:
+                self.out("iso_gap_functions", final_iso.outputs.iso_gap_functions)
+
+        # Anisotropic results
+        if "final_epw_aniso" in self.ctx:
+            final_aniso = self.ctx.final_epw_aniso
+            # If isotropic wasn't run, we can still output parameters, max_eigenvalue, and a2f from anisotropic
+            if "final_epw_iso" not in self.ctx:
+                if "output_parameters" in final_aniso.outputs:
+                    self.out("parameters", final_aniso.outputs.output_parameters)
+                if "max_eigenvalue" in final_aniso.outputs:
+                    self.out("max_eigenvalue", final_aniso.outputs.max_eigenvalue)
+                if "a2f" in final_aniso.outputs:
+                    self.out("a2f", final_aniso.outputs.a2f)
+            if "aniso_gap_functions" in final_aniso.outputs:
+                self.out("aniso_gap_functions", final_aniso.outputs.aniso_gap_functions)
+            if "aniso_gap_FS" in final_aniso.outputs:
+                self.out("aniso_gap_FS", final_aniso.outputs.aniso_gap_FS)
+            if "aniso_gap_imag" in final_aniso.outputs:
+                self.out("aniso_gap_imag", final_aniso.outputs.aniso_gap_imag)
 
     def on_terminated(self):
         """Clean the working directories of all child calculations if `clean_workdir=True` in the inputs."""
