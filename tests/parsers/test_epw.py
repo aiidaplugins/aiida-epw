@@ -96,6 +96,55 @@ def test_epw_failed_pade_approximation(parse_from_files, data_regression):
     )
 
 
+def test_epw_iteration_nan_without_pade_is_not_pade_failure(aiida_localhost):
+    """Test that NaN values in imaginary-axis iterations do not imply a Pade failure."""
+    import io
+
+    stdout_content = textwrap.dedent(
+        """\
+        Program EPW v.6.0
+        EPW v6.0
+        temp(   1) =     6.00000 K
+        Solve full-bandwidth isotropic Eliashberg equations on imaginary-axis
+        Total number of frequency points nsiw(   1) =    154
+        Cutoff frequency wscut =     0.5000 eV
+        broyden mixing factor =      0.70000
+        startiw = 1, lastiw = 154, nsiw(itemp) = 154
+        iter      ethr          znormi      deltai [meV]   shifti [meV]    mu (eV)
+          1   2.012636E+00   2.017502E+00   8.075927E-01   6.275953E-01   1.130935E+01
+          2   5.312233E+00   1.907240E+00   8.809776E-23   3.834545E-01   1.130935E+01
+          3            NaN            NaN            NaN            NaN   1.130935E+01
+        """
+    )
+
+    parser_entry_point = get_entry_point_string_from_class(
+        class_module=EpwParser.__module__, class_name=EpwParser.__name__
+    )
+    calc_entry_point = format_entry_point_string(
+        group="aiida.calculations", name=parser_entry_point.split(":")[1]
+    )
+
+    node = orm.CalcJobNode(computer=aiida_localhost, process_type=calc_entry_point)
+    node.base.attributes.set("output_filename", "aiida.out")
+    node.store()
+
+    retrieved = orm.FolderData()
+    retrieved.base.repository.put_object_from_filelike(
+        io.BytesIO(stdout_content.encode("utf-8")), "aiida.out"
+    )
+    retrieved.base.links.add_incoming(
+        node, link_type=LinkType.CREATE, link_label="retrieved"
+    )
+    retrieved.store()
+
+    _, calcfunction = EpwParser.parse_from_node(node, store_provenance=False)
+
+    assert (
+        calcfunction.exit_status
+        != EpwCalculation.exit_codes.ERROR_PADE_APPROXIMANTS.status
+    )
+
+
 def test_epw_reads_dos_from_output_subfolder(aiida_localhost, files_path):
     """Test that DOS data is parsed even when retrieved inside the EPW output folder."""
     parser_entry_point = get_entry_point_string_from_class(
