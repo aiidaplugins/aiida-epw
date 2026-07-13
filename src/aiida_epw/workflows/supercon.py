@@ -174,6 +174,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 cls.run_conv,
                 cls.inspect_conv,
             ),
+            cls.inspect_interpolation,
             if_(cls.should_run_final)(
                 cls.run_final_epw_iso,
                 cls.inspect_final_epw_iso,
@@ -443,19 +444,21 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 frequency = workchain.outputs.a2f.get_array("frequency")
                 self.ctx.degaussq = frequency[-1] / 100
 
-    def should_run_final(self):
-        """Check if the final EpwBaseWorkChain should be run."""
+    def inspect_interpolation(self):
+        """Verify that the interpolation stage produced a usable result."""
         if not self.ctx.epw_interp:
             self.report(
                 "Allen-Dynes interpolation was not successful, epw_interp list is empty."
             )
             return self.exit_codes.ERROR_SUB_PROCESS_EPW_INTERP
 
-        if self.ctx.is_converged or self.inputs.always_run_final.value:
-            return True
-        else:
+        if not (self.ctx.is_converged or self.inputs.always_run_final.value):
             self.report("Allen-Dynes Tc is not converged.")
             return self.exit_codes.ERROR_ALLEN_DYNES_NOT_CONVERGED
+
+    def should_run_final(self):
+        """Check if the final EpwBaseWorkChain should be run."""
+        return self.ctx.is_converged or self.inputs.always_run_final.value
 
     def run_final_epw_iso(self):
         """Run the final EpwBaseWorkChain in isotropic mode."""
