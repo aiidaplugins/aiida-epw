@@ -103,7 +103,8 @@ class GapFunctionData(orm.ArrayData):
     def from_files(cls, file_contents_or_paths, prefix="aiida", kind="iso"):
         """Instantiate and populate a `GapFunctionData` node from multiple files.
 
-        :param file_contents_or_paths: list of filepaths or a dict mapping filenames to string contents.
+        :param file_contents_or_paths: list of filepaths, a dict mapping filenames to string contents,
+                                       a folder path/object, or FolderData.
         :param prefix: prefix of the files (e.g. 'aiida').
         :param kind: kind of gap function ('iso' or 'aniso').
         """
@@ -111,20 +112,13 @@ class GapFunctionData(orm.ArrayData):
             parse_epw_imag_iso,
             parse_epw_imag_aniso_gap0,
         )
-        from pathlib import Path
-
-        file_contents = {}
-        if isinstance(file_contents_or_paths, dict):
-            file_contents = file_contents_or_paths
-        else:
-            for filepath in file_contents_or_paths:
-                path = Path(filepath)
-                file_contents[path.name] = path.read_text(encoding="utf-8")
 
         if kind == "iso":
-            gap_functions = parse_epw_imag_iso(file_contents, prefix=prefix)
+            gap_functions = parse_epw_imag_iso(file_contents_or_paths, prefix=prefix)
         elif kind == "aniso":
-            gap_functions = parse_epw_imag_aniso_gap0(file_contents, prefix=prefix)
+            gap_functions = parse_epw_imag_aniso_gap0(
+                file_contents_or_paths, prefix=prefix
+            )
         else:
             raise ValueError(f"Unknown kind '{kind}': Must be either 'iso' or 'aniso'.")
 
