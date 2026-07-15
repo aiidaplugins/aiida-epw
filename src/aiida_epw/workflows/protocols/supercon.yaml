@@ -24,31 +24,17 @@ default_inputs:
         conv_thr_iaxis: 0.01
         degaussq: 0.5
         degaussw: 0.1
-        eliashberg: True
-        elph: True
-        ep_coupling: True
-        epbread: False
-        epbwrite: False
-        ephwrite: True
         eps_acoustic: 1
-        epwread: True
-        epwwrite: False
         etf_mem: 1
         fsthick: 0.8
-        liso: True
-        laniso: False
-        limag: True
-        lpade: True
         mp_mesh_k: True
         muc: 0.13
         nqstep: 500
         nsiter: 1
         nstemp: 1
-        restart: False
         selecqread: False
         temps: 10.0
         vme: 'dipole'
-        wannierize: False
         wscut: 0.5
   epw_final_iso:
     options:
@@ -62,31 +48,15 @@ default_inputs:
         degaussq: 0.5
         degaussw: 0.1
         elecselfen: False
-        eliashberg: True
-        ep_coupling: False
-        epbread: False
-        epbwrite: False
-        ephwrite: False  
-        epwread: True
-        epwwrite: False
         eps_acoustic: 0.1  # cm^{-1}
         etf_mem: 1
         fsthick: 0.8
-        laniso: False
-        limag: True
-        liso: True
         mp_mesh_k: True
         muc: 0.13
         nqstep: 500
         nsiter: 500
-        nstemp: 40
-        restart: True
         selecqread:  False
-        tc_linear: True
-        tc_linear_solver: 'power'   
-        temps: 1 40
         vme: 'dipole'
-        wannierize: False
         wscut: 0.5
   epw_final_aniso:
     options:
@@ -100,29 +70,15 @@ default_inputs:
         degaussq: 0.5
         degaussw: 0.1
         elecselfen: False
-        eliashberg: True
-        ep_coupling: False
-        epbread: False
-        epbwrite: False
-        ephwrite: False
-        epwread: True
-        epwwrite: False
         eps_acoustic: 0.1  # cm^{-1}
         etf_mem: 1
         fsthick: 0.8
-        laniso: True
-        limag: True
-        liso: False
         # mp_mesh_k: True
         muc: 0.13
         nqstep: 500
         nsiter: 500
-        nstemp: 20
-        restart: True
         selecqread:  False
-        temps: 5 43
         vme: 'dipole'
-        wannierize: False
         wscut: 0.5
 default_protocol: moderate
 protocols:

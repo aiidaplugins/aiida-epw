@@ -10,7 +10,6 @@ default_inputs:
       degaussw: 0.04
       eps_acoustic: 0.1
       muc: 0.13
-      temps: 300
       vme: 'dipole'
       use_ws: True
 
