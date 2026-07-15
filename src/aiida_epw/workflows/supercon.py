@@ -10,6 +10,7 @@ from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
 from aiida_epw.calculations.epw import serialize_restart_type
 from aiida_epw.workflows.base import EpwBaseWorkChain
+from aiida_epw.data import A2fData
 
 from aiida.engine import calcfunction
 
@@ -193,7 +194,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         )
         spec.output(
             "a2f",
-            valid_type=orm.XyData,
+            valid_type=A2fData,
             help="The contents of the `.a2f` file for the final EPW.",
         )
         spec.output("Tc_iso", valid_type=orm.Float, help="The critical temperature.")
