@@ -1,0 +1,73 @@
+codes:
+  pw_code: qe-7.5-pw@localhost
+  ph_code: qe-7.5-ph@localhost
+  projwfc_code: qe-7.5-projwfc@localhost
+  pw2wannier90_code: qe-7.5-pw2wannier90@localhost
+  wannier90_code: wannier90-jq@localhost
+  epw_code: qe-7.5-epw@localhost
+
+groups:
+  structures: &structures structures
+  workchain_epw_prep: &workchain_epw_prep workchain/epw_prep
+  calculation_epw_bands: &calculation_epw_bands calculation/epw_bands
+
+# Other defaults
+max_wallclock_seconds: &default_walltime 86400
+pseudo_family: &pseudo_family "PseudoDojo/0.5/PBE/SR/standard/upf"
+resources: &default_resources
+  num_machines: 1
+  num_mpiprocs_per_machine: 1
+  num_cores_per_machine: 1
+
+epw_prep:
+  max_concurrent: 1
+  parent_group_label: *structures
+  group_label: *workchain_epw_prep
+  chk2ukk_path: &chk2ukk_path julia --project=/users/mbercx/code/chk2ukk /users/mbercx/code/chk2ukk/chk2ukk.jl
+  overrides: &overrides_epw
+    clean_workdir: True
+    qpoints_distance: 0.5
+    kpoints_distance_scf: 0.15
+    kpoints_factor_nscf: 2
+    epw:
+      options:
+        max_wallclock_seconds: *default_walltime
+        resources: *default_resources
+      parameters:
+        INPUTEPW:
+          use_ws: True
+    ph_base:
+      max_iterations: 1
+      ph:
+        metadata: &default_metadata
+          options:
+            max_wallclock_seconds: *default_walltime
+            resources: *default_resources
+    w90_bands:
+      pseudo_family: *pseudo_family
+      scf: &scf
+        pw:
+          metadata: *default_metadata
+      nscf: *scf
+      projwfc:
+        projwfc:
+          metadata:  &pp_metadata
+            options:
+              max_wallclock_seconds: 7200
+              resources: *default_resources
+      pw2wannier90:
+        pw2wannier90:
+          metadata: *pp_metadata
+      wannier90:
+        wannier90:
+          metadata: *pp_metadata
+
+bands_int:
+  max_concurrent: 1
+  parent_group_label: *workchain_epw_prep
+  group_label: *calculation_epw_bands
+  overrides:
+    metadata:
+        options:
+            resources: *default_resources
+            max_wallclock_seconds: *default_walltime
