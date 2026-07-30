@@ -1,0 +1,5 @@
+output_parameters:
+  allen_dynes: 0.005139
+  code_version: '5.7'
+  fermi_energy_coarse: 9.290638
+  wall_time_seconds: 0.03
