@@ -23,6 +23,7 @@ classifiers = [
 dependencies = [
     "aiida-core~=2.5",
     "aiida-quantumespresso~=4.10",
+    "aiida-wannier90>=2.2",
     "aiida_wannier90_workflows",
     "numpy",
 ]
@@ -68,6 +69,10 @@ pre-commit = [
 dev = [
   "aiida-epw[docs,tests,pre-commit]",
 ]
+
+[tool.uv.sources]
+aiida-wannier90 = { git = "https://github.com/aiidateam/aiida-wannier90.git", rev = "5b9436943fa04643ed44c7f6fd48b361e5470ef4" }
+aiida-wannier90-workflows = { git = "https://github.com/aiidateam/aiida-wannier90-workflows.git", rev = "8b79e5ad9c06f9e9008c3bf5003932e8a9cca2f3" }
 
 [tool.hatch.version]
 path = "src/aiida_epw/__about__.py"
