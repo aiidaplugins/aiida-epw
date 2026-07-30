@@ -1,13 +1,24 @@
 """Regular expression schemas and parsers for EPW stdout files."""
 
+from dataclasses import dataclass
 import re
+from typing import Any, Callable, Optional
+
+
+@dataclass(frozen=True)
+class OutputPattern:
+    """A regular expression pattern with a key, parsing/cast function, and version constraints."""
+
+    key: str
+    type_func: Callable[[str], Any]
+    pattern: re.Pattern
+    min_version: Optional[str] = None
+    max_version: Optional[str] = None
 
 
 def parse_fortran_float(value: str) -> float:
     """Parse a Fortran-style double float (e.g. 1.23D-04) into a Python float."""
-    value = value.replace("D", "E").replace("d", "E")
-    value = re.sub(r"([0-9\.]+)([\+\-]\d+)$", r"\1E\2", value)
-    return float(value)
+    return float(value.replace("D", "E").replace("d", "E"))
 
 
 def parse_space_separated_ints(value: str) -> list[int]:
@@ -96,10 +107,11 @@ _PATTERNS_MODERN = [
     ),
 ]
 
-# Precompile all regular expressions for maximum performance
-REGEX_PATTERNS_LEGACY = [
-    (key, type_func, re.compile(pat)) for key, type_func, pat in _PATTERNS_LEGACY
-]
-REGEX_PATTERNS_MODERN = [
-    (key, type_func, re.compile(pat)) for key, type_func, pat in _PATTERNS_MODERN
+# Compile list of schemas with declarative version constraints
+REGEX_SCHEMAS = [
+    OutputPattern(key, type_func, re.compile(pat), max_version="5.9")
+    for key, type_func, pat in _PATTERNS_LEGACY
+] + [
+    OutputPattern(key, type_func, re.compile(pat), min_version="5.9")
+    for key, type_func, pat in _PATTERNS_MODERN
 ]
