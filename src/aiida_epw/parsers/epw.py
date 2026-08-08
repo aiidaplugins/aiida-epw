@@ -71,7 +71,15 @@ class EpwParser(BaseParser):
         if base_exit_code:
             return self.exit(base_exit_code, logs)
 
-        parsed_epw, logs = self.parse_stdout(stdout, logs)
+        from packaging.version import Version
+
+        code_version_str = parsed_data.get("code_version", None)
+        try:
+            code_version = Version(code_version_str) if code_version_str else None
+        except Exception:
+            code_version = None
+
+        parsed_epw, logs = self.parse_stdout(stdout, logs, code_version=code_version)
         parsed_data.update(parsed_epw)
 
         elbands_contents = self.get_retrieved_content(
@@ -208,7 +216,7 @@ class EpwParser(BaseParser):
         return self.exit(logs=logs)
 
     @staticmethod
-    def parse_stdout(stdout, logs):
+    def parse_stdout(stdout, logs, code_version=None):
         """Parse the ``stdout``."""
 
         def parse_max_eigenvalue(stdout_block):
@@ -312,18 +320,18 @@ class EpwParser(BaseParser):
 
             return parsed
 
-        data_type_regex = (
-            (
-                "allen_dynes",
-                float,
-                re.compile(r"\s+Estimated Allen-Dynes Tc =\s+([\d\.]+) K"),
-            ),
-            (
-                "fermi_energy_coarse",
-                float,
-                re.compile(r"\s+Fermi energy coarse grid =\s+([\d\.-]+)\seV"),
-            ),
-        )
+        from packaging.version import Version
+        from aiida_epw.parsers.schemas import REGEX_SCHEMAS
+
+        patterns = []
+        for entry in REGEX_SCHEMAS:
+            if code_version is not None:
+                if entry.min_version and code_version < Version(entry.min_version):
+                    continue
+                if entry.max_version and code_version >= Version(entry.max_version):
+                    continue
+            patterns.append(entry)
+
         data_block_marker_parser = (
             (
                 "max_eigenvalue",
@@ -335,14 +343,16 @@ class EpwParser(BaseParser):
         stdout_lines = stdout.split("\n")
 
         for line_number, line in enumerate(stdout_lines):
-            for data_key, type, re_pattern in data_type_regex:
-                match = re_pattern.search(line)
+            for entry in patterns:
+                match = entry.pattern.search(line)
                 if match:
-                    parsed_data[data_key] = type(match.group(1))
+                    parsed_data[entry.key] = entry.type_func(match.group(1))
 
             for data_key, data_marker, block_parser in data_block_marker_parser:
                 if data_marker in line:
-                    parsed_data[data_key] = block_parser(stdout[line_number:])
+                    parsed_data[data_key] = block_parser(
+                        "\n".join(stdout_lines[line_number:])
+                    )
 
         # Parse carrier mobility matrices (SERTA and iBTE)
         # Identify SERTA block

@@ -1,4 +1,5 @@
 output_parameters:
+  Allen_Dynes_Tc: 0.005139
   allen_dynes: 0.005139
   code_version: '5.7'
   fermi_energy_coarse: 9.290638
