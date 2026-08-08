@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida import orm
-from aiida.common import AttributeDict
+from aiida.common import AttributeDict, exceptions
 from pathlib import Path
 
 from aiida.engine import (
@@ -64,6 +64,16 @@ def validate_inputs(  # pylint: disable=unused-argument,inconsistent-return-stat
 
     if not any([_ in inputs for _ in ["qfpoints", "qfpoints_distance"]]):
         return "Either `qfpoints` or `qfpoints_distance` must be specified."
+
+    parameters = inputs.get("parameters", {})
+    if isinstance(parameters, orm.Dict):
+        parameters = parameters.get_dict()
+    try:
+        EpwCalculation.validate_eliashberg_inputs(
+            parameters.get("INPUTEPW", {}), inputs
+        )
+    except exceptions.InputValidationError as exception:
+        return str(exception)
 
     return None
 
@@ -220,6 +230,10 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         w90_chk_to_ukk_script=None,
         quadrupole_dir=None,
         protocol_filename="base.yaml",
+        momentum_dependence=None,
+        full_bandwidth=None,
+        real_axis=None,
+        analytical_continuation=None,
         **_,
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
@@ -280,6 +294,15 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 builder.quadrupole_dir = orm.Str(str(quadrupole_dir))
             else:
                 builder.quadrupole_dir = quadrupole_dir
+
+        if momentum_dependence is not None:
+            builder.momentum_dependence = to_aiida_type(momentum_dependence)
+        if full_bandwidth is not None:
+            builder.full_bandwidth = to_aiida_type(full_bandwidth)
+        if real_axis is not None:
+            builder.real_axis = to_aiida_type(real_axis)
+        if analytical_continuation is not None:
+            builder.analytical_continuation = to_aiida_type(analytical_continuation)
 
         # pylint: enable=no-member
 
