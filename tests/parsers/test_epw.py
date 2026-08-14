@@ -24,7 +24,9 @@ from aiida_epw.parsers.epw import EpwParser
     "test_name",
     (
         "default",
-        "isotropic_eliashberg",
+        "isotropic/fbw/imag",
+        "anisotropic/fsr/pade",
+        "anisotropic/fbw/pade",
         "bands",
     ),
 )
@@ -45,10 +47,11 @@ def test_epw(parse_from_files, data_regression, test_name):
         data_regression_dict["degaussq"] = results["a2f"].get_array("degaussq").tolist()
         assert results["a2f"].get_spectrum().shape[1] == 10
         assert results["a2f"].get_cumulative_lambda().shape[1] == 10
-    if test_name == "isotropic_eliashberg":
-        data_regression_dict["max_eigenvalue"] = (
-            results["max_eigenvalue"].get_array("max_eigenvalue").tolist()
-        )
+    if test_name == "isotropic/fbw/imag":
+        if "max_eigenvalue" in results:
+            data_regression_dict["max_eigenvalue"] = (
+                results["max_eigenvalue"].get_array("max_eigenvalue").tolist()
+            )
     if test_name == "bands":
         data_regression_dict["kpoints"] = (
             results["el_band_structure"].get_kpoints().tolist()
@@ -68,7 +71,9 @@ def test_epw(parse_from_files, data_regression, test_name):
 
 def test_epw_failed_broyden_factor(parse_from_files, data_regression):
     """Test a `epw.x` that failed due to an error in routine `mix_broyden`."""
-    results, calcfunction = parse_from_files(EpwParser, "failed_broyden_factor")
+    results, calcfunction = parse_from_files(
+        EpwParser, "isotropic/fsr/failed_broyden_factor"
+    )
     expected_exit_status = (
         EpwCalculation.exit_codes.ERROR_OUTPUT_STDOUT_INCOMPLETE.status
     )

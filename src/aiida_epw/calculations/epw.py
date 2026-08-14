@@ -308,6 +308,19 @@ class EpwCalculation(NamelistsCalculation):
             required=False,
             help="The interpolated anisotropic gap function.",
         )
+        spec.output(
+            "aniso_gap_FS",
+            valid_type=orm.ArrayData,
+            required=False,
+            help="The anisotropic gap on the Fermi surface.",
+        )
+        spec.output(
+            "aniso_gap_imag",
+            valid_type=orm.ArrayData,
+            required=False,
+            help="The anisotropic gap on the imaginary axis.",
+        )
+
         spec.exit_code(
             300,
             "ERROR_NO_RETRIEVED_FOLDER",
