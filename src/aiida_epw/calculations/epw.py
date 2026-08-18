@@ -36,6 +36,27 @@ def _lowercase_dict(dictionary, dict_name):
     return _case_transform_dict(dictionary, dict_name, "_lowercase_dict", str.lower)
 
 
+def serialize_restart_type(value):
+    """Serialize a restart mode to the ``RestartType`` AiiDA enum input."""
+    from aiida.orm import EnumData
+
+    from aiida_epw.common.types import RestartType
+
+    if isinstance(value, EnumData):
+        return value
+    if isinstance(value, RestartType):
+        return EnumData(value)
+    if isinstance(value, str):
+        try:
+            return EnumData(RestartType(value.lower()))
+        except ValueError as exception:
+            raise ValueError(
+                f"Invalid restart type '{value}'. Supported values: "
+                f"{[member.value for member in RestartType]}"
+            ) from exception
+    raise TypeError(f"Cannot serialize {value} to EnumData of RestartType")
+
+
 class EpwCalculation(NamelistsCalculation):
     """`CalcJob` implementation for the epw.x code of Quantum ESPRESSO."""
 
@@ -110,6 +131,16 @@ class EpwCalculation(NamelistsCalculation):
             "parameters",
             valid_type=orm.Dict,
             help="Parameters for the `epw.x` input file.",
+        )
+        spec.input(
+            "restart_type",
+            valid_type=orm.EnumData,
+            required=False,
+            serializer=serialize_restart_type,
+            help=(
+                "EPW run/restart mode: none, ephwrite, ephread, "
+                "ephwrite_restart, ephread_restart, or epwread."
+            ),
         )
         spec.input(
             "momentum_dependence",
@@ -396,22 +427,45 @@ class EpwCalculation(NamelistsCalculation):
     @classmethod
     def validate_restart_inputs(cls, parameters, inputs):
         """Validate restart-related input combinations against the EPW parameters."""
+        from aiida_epw.common.types import RestartType
+
         inputepw = parameters["INPUTEPW"]
-
-        if not inputepw.get("wannierize", False):
-            return
-
-        for input_name in ("parent_folder_epw", "parent_folder_chk"):
-            if input_name in inputs:
+        if inputepw.get("wannierize", False):
+            for input_name in ("parent_folder_epw", "parent_folder_chk"):
+                if input_name in inputs:
+                    raise exceptions.InputValidationError(
+                        f"`{input_name}` cannot be specified when "
+                        "`parameters.INPUTEPW.wannierize` is true."
+                    )
+            if "parent_folder_nscf" not in inputs:
                 raise exceptions.InputValidationError(
-                    f"`{input_name}` cannot be specified when "
+                    "`parent_folder_nscf` must be specified when "
                     "`parameters.INPUTEPW.wannierize` is true."
                 )
+            return
 
-        if "parent_folder_nscf" not in inputs:
+        restart_type = (
+            inputs["restart_type"].get_member() if "restart_type" in inputs else None
+        )
+        parent_restart_types = (
+            RestartType.EPHWRITE,
+            RestartType.EPHREAD,
+            RestartType.EPHWRITE_RESTART,
+            RestartType.EPHREAD_RESTART,
+            RestartType.EPWREAD,
+        )
+        uses_parent = restart_type in parent_restart_types
+        has_parent = "parent_folder_epw" in inputs
+
+        if uses_parent != has_parent:
+            if uses_parent:
+                raise exceptions.InputValidationError(
+                    f"`parent_folder_epw` must be specified when "
+                    f"restart_type is '{restart_type.value}'."
+                )
             raise exceptions.InputValidationError(
-                "`parent_folder_nscf` must be specified when "
-                "`parameters.INPUTEPW.wannierize` is true."
+                "`restart_type` must be set to a mode that reads an EPW parent "
+                "when `parent_folder_epw` is provided."
             )
 
     @staticmethod
@@ -718,6 +772,58 @@ class EpwCalculation(NamelistsCalculation):
                 elif ac_method == "none":
                     inputepw_parameters["lpade"] = False
                     inputepw_parameters["lacon"] = False
+
+        if "restart_type" in self.inputs:
+            from aiida_epw.common.types import RestartType
+
+            restart_type = self.inputs.restart_type.get_member()
+            if restart_type is RestartType.NONE:
+                inputepw_parameters.update(
+                    {
+                        "epwread": False,
+                        "epwwrite": True,
+                        "restart": False,
+                        "ep_coupling": True,
+                        "elph": True,
+                        "epbwrite": True,
+                        "epbread": False,
+                    }
+                )
+            elif restart_type in (RestartType.EPHWRITE, RestartType.EPHWRITE_RESTART):
+                inputepw_parameters.update(
+                    {
+                        "epwread": True,
+                        "epwwrite": False,
+                        "restart": restart_type is RestartType.EPHWRITE_RESTART,
+                        "ep_coupling": True,
+                        "elph": True,
+                        "ephwrite": True,
+                    }
+                )
+            elif restart_type in (RestartType.EPHREAD, RestartType.EPHREAD_RESTART):
+                inputepw_parameters.update(
+                    {
+                        "epwread": True,
+                        "restart": restart_type is RestartType.EPHREAD_RESTART,
+                        "ep_coupling": False,
+                        "elph": False,
+                        "ephwrite": False,
+                    }
+                )
+                if inputepw_parameters.get("scattering", False):
+                    inputepw_parameters["epmatkqread"] = True
+            elif restart_type is RestartType.EPWREAD:
+                inputepw_parameters.update(
+                    {
+                        "epwread": True,
+                        "epwwrite": False,
+                        "epbwrite": False,
+                        "epbread": False,
+                        "ep_coupling": True,
+                        "elph": True,
+                    }
+                )
+                inputepw_parameters.setdefault("restart", False)
 
         inputepw_parameters["outdir"] = self._OUTPUT_SUBFOLDER
         inputepw_parameters["dvscf_dir"] = self._FOLDER_SAVE
