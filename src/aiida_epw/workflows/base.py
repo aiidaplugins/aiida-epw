@@ -609,5 +609,21 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             parameters.setdefault("INPUTEPW", {})["epwread"] = True
         self.ctx.inputs.parameters = orm.Dict(parameters)
         self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
+
+        self.report_error_handled(calculation, action_taken)
+        return ProcessHandlerReport(True)
+
+    @process_handler(
+        priority=450,
+        exit_codes=[EpwCalculation.exit_codes.ERROR_TEMPERATURE_OUT_OF_RANGE],
+    )
+    def handle_temperature_out_of_range(self, calculation):
+        """Handle exit code 323 (Temperature out of range / phase transition reached).
+
+        Since the gap has converged to zero, we consider the physical calculation complete
+        and exit the workchain successfully.
+        """
+        action_taken = supercon_error_handling.get_temperature_out_of_range_action()
+        self.ctx.is_finished = True
         self.report_error_handled(calculation, action_taken)
         return ProcessHandlerReport(True)

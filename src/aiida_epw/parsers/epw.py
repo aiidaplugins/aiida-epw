@@ -1,3 +1,6 @@
+"""Parser for the EPW calculations."""
+
+import math
 import re
 from pathlib import Path
 
@@ -206,6 +209,14 @@ class EpwParser(BaseParser):
 
         if "ERROR_PADE_APPROXIMANTS" in logs.error:
             return self.exit(self.exit_codes.get("ERROR_PADE_APPROXIMANTS"), logs)
+
+        if "ERROR_TEMPERATURE_OUT_OF_RANGE" in logs.error:
+            return self.exit(
+                self.exit_codes.get("ERROR_TEMPERATURE_OUT_OF_RANGE"), logs
+            )
+
+        if "ERROR_FACTORIZATION" in logs.error:
+            return self.exit(self.exit_codes.get("ERROR_FACTORIZATION"), logs)
 
         for exit_code in list(self.get_error_map().values()):
             if exit_code in logs.error:
@@ -429,6 +440,44 @@ class EpwParser(BaseParser):
                 first_line = remaining.split("\n", 1)[0]
                 if "nan" in first_line.lower():
                     logs.error.append("ERROR_PADE_APPROXIMANTS")
+
+        def get_last_finite_deltai(deltai):
+            for value in reversed(deltai):
+                if isinstance(value, (int, float)) and math.isfinite(value):
+                    return value
+            return None
+
+        def has_non_finite_iteration(iterations):
+            return any(
+                isinstance(value, (int, float)) and not math.isfinite(value)
+                for values in iterations.values()
+                for value in values
+            )
+
+        has_gap_collapse = False
+        has_iteration_failure = False
+        for eliashberg_key in ("isotropic_eliashberg", "anisotropic_eliashberg"):
+            if eliashberg_key not in parsed_data:
+                continue
+            for temp_data in parsed_data[eliashberg_key].values():
+                iterations = temp_data.get("iterations", {})
+                deltai = iterations.get("deltai", [])
+                last_finite_deltai = get_last_finite_deltai(deltai)
+                if last_finite_deltai is not None and abs(last_finite_deltai) < 1e-10:
+                    has_gap_collapse = True
+                if iterations and has_non_finite_iteration(iterations):
+                    has_iteration_failure = True
+
+        # Check for factorization / temperature out of range failure
+        has_factorization_error = re.search(
+            r"Error in routine mix_broyden \(\d+\):\s*factorization",
+            stdout,
+            re.IGNORECASE,
+        )
+        if has_gap_collapse and (has_factorization_error or has_iteration_failure):
+            logs.error.append("ERROR_TEMPERATURE_OUT_OF_RANGE")
+        elif has_factorization_error:
+            logs.error.append("ERROR_FACTORIZATION")
 
         return parsed_data, logs
 

@@ -176,3 +176,11 @@ def _get_target_npade(
     if target_npade == current_npade and current_npade > 1:
         return max(1, current_npade - 5)
     return target_npade
+
+
+def get_temperature_out_of_range_action():
+    """Return the action for a superconducting phase transition."""
+    return (
+        "Temperature reached phase transition (delta converged to zero). "
+        "Finishing workchain successfully."
+    )
