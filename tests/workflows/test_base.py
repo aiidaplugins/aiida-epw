@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiida import orm
+
 try:
     from aiida_epw.common.types import RestartType
 
