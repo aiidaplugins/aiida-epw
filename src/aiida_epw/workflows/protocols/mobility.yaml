@@ -21,6 +21,8 @@ default_inputs:
       withmpi: True
     parameters:
       INPUTEPW:
+        elph: True
+        restart: true
         restart_step: 1000
         etf_mem: 3
         # I/O Settings
