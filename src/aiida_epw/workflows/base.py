@@ -20,6 +20,7 @@ from aiida.orm.nodes.data.base import to_aiida_type
 
 from aiida_epw.tools.kpoints import check_kpoints_qpoints_compatibility
 from aiida_epw.tools.error_handling import supercon as supercon_error_handling
+from aiida_epw.tools.error_handling import transport as transport_error_handling
 
 EpwCalculation = CalculationFactory("epw.epw")
 
@@ -513,7 +514,6 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         # Try to read output to diagnose
         stdout_content = ""
         scheduler_stderr = ""
-
         if "retrieved" in calculation.outputs:
             retrieved = calculation.outputs.retrieved
             try:
@@ -532,98 +532,53 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             except Exception:
                 pass
 
-        is_lu_failure = "LU factorization failed" in stdout_content
-        is_oom = any(
-            x in scheduler_stderr.upper()
-            for x in ["KILLED", "SIGKILL", "OOM", "OUT OF MEMORY"]
+        kfpoints_factor = (
+            self.ctx.inputs.kfpoints_factor.value
+            if "kfpoints_factor" in self.ctx.inputs
+            else None
         )
-
-        action_taken = None
-
-        if is_lu_failure:
-            # Mesh too coarse - need finer mesh
-            if "kfpoints_factor" in self.ctx.inputs:
-                current_factor = self.ctx.inputs.kfpoints_factor.value
-                if current_factor == 1:
-                    # Increase factor from 1 to 2
-                    self.ctx.inputs.kfpoints_factor = orm.Int(2)
-                    action_taken = f"Increased kfpoints_factor from {current_factor} to 2 due to LU factorization failure."
-                else:
-                    # Factor already > 1, refine qfpoints_distance instead
-                    if "qfpoints_distance" in self.ctx.inputs:
-                        current_dist = self.ctx.inputs.qfpoints_distance.value
-                        new_dist = current_dist * 0.8
-                        if new_dist >= 0.03:  # Don't go below minimum
-                            self.ctx.inputs.qfpoints_distance = orm.Float(new_dist)
-                            action_taken = f"Decreased qfpoints_distance from {current_dist:.3f} to {new_dist:.3f} due to LU factorization failure."
-            elif "qfpoints_distance" in self.ctx.inputs:
-                current_dist = self.ctx.inputs.qfpoints_distance.value
-                new_dist = current_dist * 0.8
-                if new_dist >= 0.03:
-                    self.ctx.inputs.qfpoints_distance = orm.Float(new_dist)
-                    action_taken = f"Decreased qfpoints_distance from {current_dist:.3f} to {new_dist:.3f} due to LU factorization failure."
-
-        elif is_oom:
-            # Mesh too dense - need coarser mesh
-            if "qfpoints_distance" in self.ctx.inputs:
-                current_dist = self.ctx.inputs.qfpoints_distance.value
-                new_dist = current_dist * 1.25
-                if new_dist <= 0.15:  # Don't go above maximum
-                    self.ctx.inputs.qfpoints_distance = orm.Float(new_dist)
-                    action_taken = f"Increased qfpoints_distance from {current_dist:.3f} to {new_dist:.3f} due to OOM."
-            elif "kfpoints_factor" in self.ctx.inputs:
-                current_factor = self.ctx.inputs.kfpoints_factor.value
-                if current_factor > 1:
-                    new_factor = current_factor - 1
-                    self.ctx.inputs.kfpoints_factor = orm.Int(new_factor)
-                    action_taken = f"Decreased kfpoints_factor from {current_factor} to {new_factor} due to OOM."
-
-        if action_taken:
-            # Regenerate kfpoints/qfpoints with updated parameters
-            if "qfpoints_distance" in self.ctx.inputs:
-                qf_inputs = {
-                    "structure": self.inputs.structure,
-                    "distance": self.ctx.inputs.qfpoints_distance,
-                    "force_parity": self.inputs.get(
-                        "qfpoints_force_parity", orm.Bool(False)
-                    ),
-                    "metadata": {
-                        "call_link_label": "create_qfpoints_from_distance_retry"
-                    },
-                }
-                qfpoints = create_kpoints_from_distance(**qf_inputs)
-                self.ctx.inputs.qfpoints = qfpoints
-
-                # Regenerate kfpoints based on qfpoints
-                if "kfpoints_factor" in self.ctx.inputs:
-                    qfpoints_mesh = qfpoints.get_kpoints_mesh()[0]
-                    kfpoints = orm.KpointsData()
-                    kfpoints.set_kpoints_mesh(
-                        [
-                            v * self.ctx.inputs.kfpoints_factor.value
-                            for v in qfpoints_mesh
-                        ]
-                    )
-                    self.ctx.inputs.kfpoints = kfpoints
-            elif "kfpoints_factor" in self.ctx.inputs and "qfpoints" in self.ctx.inputs:
-                # Just regenerate kfpoints from existing qfpoints with new factor
-                qfpoints_mesh = self.ctx.inputs.qfpoints.get_kpoints_mesh()[0]
-                kfpoints = orm.KpointsData()
-                kfpoints.set_kpoints_mesh(
-                    [v * self.ctx.inputs.kfpoints_factor.value for v in qfpoints_mesh]
-                )
-                self.ctx.inputs.kfpoints = kfpoints
-
-            self.report_error_handled(calculation, action_taken)
-            return ProcessHandlerReport(True)
-
-        # Could not diagnose or fix - let it fail
-        self.report_error_handled(
-            calculation, "Could not diagnose cause of exit code 312. Aborting."
+        qfpoints_distance = (
+            self.ctx.inputs.qfpoints_distance.value
+            if "qfpoints_distance" in self.ctx.inputs
+            else None
         )
-        return ProcessHandlerReport(
-            True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+        updates, action_taken = transport_error_handling.prepare_mesh_refinement(
+            stdout_content, scheduler_stderr, kfpoints_factor, qfpoints_distance
         )
+        if updates is None:
+            self.report_error_handled(
+                calculation, "Could not diagnose cause of exit code 312. Aborting."
+            )
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+            )
+        if "kfpoints_factor" in updates:
+            self.ctx.inputs.kfpoints_factor = orm.Int(updates["kfpoints_factor"])
+        if "qfpoints_distance" in updates:
+            self.ctx.inputs.qfpoints_distance = orm.Float(updates["qfpoints_distance"])
+
+        if "qfpoints_distance" in self.ctx.inputs:
+            qfpoints = create_kpoints_from_distance(
+                structure=self.inputs.structure,
+                distance=self.ctx.inputs.qfpoints_distance,
+                force_parity=self.inputs.get("qfpoints_force_parity", orm.Bool(False)),
+                metadata={"call_link_label": "create_qfpoints_from_distance_retry"},
+            )
+            self.ctx.inputs.qfpoints = qfpoints
+        else:
+            qfpoints = self.ctx.inputs.qfpoints
+        if "kfpoints_factor" in self.ctx.inputs:
+            qfpoints_mesh = qfpoints.get_kpoints_mesh()[0]
+            kfpoints = orm.KpointsData()
+            kfpoints.set_kpoints_mesh(
+                [
+                    value * self.ctx.inputs.kfpoints_factor.value
+                    for value in qfpoints_mesh
+                ]
+            )
+            self.ctx.inputs.kfpoints = kfpoints
+        self.report_error_handled(calculation, action_taken)
+        return ProcessHandlerReport(True)
 
     @process_handler(
         priority=400,
