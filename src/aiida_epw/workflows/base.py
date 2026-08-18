@@ -23,7 +23,6 @@ from aiida_epw.tools.error_handling import epw as epw_error_handling
 from aiida_epw.tools.error_handling import supercon as supercon_error_handling
 from aiida_epw.tools.error_handling import transport as transport_error_handling
 
-
 EpwCalculation = CalculationFactory("epw.epw")
 
 
@@ -669,5 +668,51 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         """
         action_taken = supercon_error_handling.get_temperature_out_of_range_action()
         self.ctx.is_finished = True
+        self.report_error_handled(calculation, action_taken)
+        return ProcessHandlerReport(True)
+
+    @process_handler(
+        priority=650,
+        exit_codes=[
+            EpwCalculation.exit_codes.ERROR_OUT_OF_WALLTIME,
+            EpwCalculation.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME,
+        ],
+    )
+    def handle_out_of_walltime(self, calculation):
+        """Handle exit code 120 (scheduler walltime timeout) and 400 (software walltime timeout)."""
+        from aiida_epw.common.types import RestartType
+
+        parameters = self.ctx.inputs.parameters.get_dict()
+        input_epw = parameters.get("INPUTEPW", {})
+        is_eliashberg = input_epw.get("eliashberg", False) or any(
+            name in self.ctx.inputs
+            for name in (
+                "momentum_dependence",
+                "full_bandwidth",
+                "real_axis",
+                "analytical_continuation",
+            )
+        )
+        restart_type = (
+            self.ctx.inputs.restart_type.get_member()
+            if "restart_type" in self.ctx.inputs
+            else None
+        )
+        parameters, next_restart, action_taken = (
+            supercon_error_handling.prepare_walltime_recovery(
+                parameters,
+                calculation.outputs.output_parameters.get_dict(),
+                restart_type.name if restart_type else None,
+                is_eliashberg,
+            )
+        )
+        if parameters is None:
+            self.report_error_handled(calculation, action_taken)
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+            )
+        self.ctx.inputs.parameters = orm.Dict(parameters)
+        self.ctx.inputs.restart_type = RestartType[next_restart]
+        self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
         self.report_error_handled(calculation, action_taken)
         return ProcessHandlerReport(True)

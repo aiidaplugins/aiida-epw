@@ -77,6 +77,16 @@ class EpwCalculation(NamelistsCalculation):
         ("INPUTEPW", "nkf1"),
         ("INPUTEPW", "nkf2"),
         ("INPUTEPW", "nkf3"),
+        ("INPUTEPW", "wannierize"),
+        ("INPUTEPW", "epwread"),
+        ("INPUTEPW", "epwwrite"),
+        ("INPUTEPW", "epbread"),
+        ("INPUTEPW", "epbwrite"),
+        ("INPUTEPW", "restart"),
+        ("INPUTEPW", "ep_coupling"),
+        ("INPUTEPW", "elph"),
+        ("INPUTEPW", "ephwrite"),
+        ("INPUTEPW", "epmatkqread"),
         ("INPUTEPW", "eliashberg"),
         ("INPUTEPW", "liso"),
         ("INPUTEPW", "laniso"),
@@ -463,10 +473,10 @@ class EpwCalculation(NamelistsCalculation):
             inputs["restart_type"].get_member() if "restart_type" in inputs else None
         )
         parent_restart_types = (
+            RestartType.FROM_EPB,
+            RestartType.FROM_EPMATWP,
             RestartType.EPHWRITE,
-            RestartType.EPHREAD,
-            RestartType.EPHWRITE_RESTART,
-            RestartType.EPHREAD_RESTART,
+            RestartType.FROM_EPH,
             RestartType.EPWREAD,
         )
         uses_parent = restart_type in parent_restart_types
@@ -746,6 +756,53 @@ class EpwCalculation(NamelistsCalculation):
 
         self.cap_nstemp(inputepw_parameters)
 
+        if "restart_type" in self.inputs:
+            restart_val = self.inputs.restart_type.get_member()
+            from aiida_epw.common import RestartType
+
+            if restart_val is RestartType.NONE:
+                inputepw_parameters["epwread"] = False
+                inputepw_parameters["epwwrite"] = True
+                inputepw_parameters["restart"] = False
+                inputepw_parameters["ep_coupling"] = True
+                inputepw_parameters["elph"] = True
+                inputepw_parameters["epbwrite"] = True
+                inputepw_parameters["epbread"] = False
+            elif restart_val is RestartType.EPHWRITE:
+                inputepw_parameters["epwread"] = True
+                inputepw_parameters["epwwrite"] = False
+                inputepw_parameters["restart"] = False
+                inputepw_parameters["ep_coupling"] = True
+                inputepw_parameters["elph"] = True
+                inputepw_parameters["ephwrite"] = True
+            elif restart_val is RestartType.EPHWRITE_RESTART:
+                inputepw_parameters["epwread"] = True
+                inputepw_parameters["epwwrite"] = False
+                inputepw_parameters["restart"] = True
+                inputepw_parameters["ep_coupling"] = True
+                inputepw_parameters["elph"] = True
+                inputepw_parameters["ephwrite"] = True
+            elif restart_val in (
+                RestartType.EPHREAD,
+                RestartType.EPHREAD_RESTART,
+            ):
+                inputepw_parameters["epwread"] = True
+                inputepw_parameters["restart"] = (
+                    restart_val is RestartType.EPHREAD_RESTART
+                )
+                inputepw_parameters["ep_coupling"] = False
+                inputepw_parameters["elph"] = False
+                inputepw_parameters["ephwrite"] = False
+                if inputepw_parameters.get("scattering", False):
+                    inputepw_parameters["epmatkqread"] = True
+            elif restart_val is RestartType.EPWREAD:
+                inputepw_parameters["epwread"] = True
+                inputepw_parameters["epwwrite"] = False
+                inputepw_parameters["epbwrite"] = False
+                inputepw_parameters["epbread"] = False
+                inputepw_parameters.setdefault("restart", False)
+                inputepw_parameters["ep_coupling"] = True
+                inputepw_parameters["elph"] = True
         # Override Eliashberg settings in parameters if inputs are specified
         eliashberg_any = any(
             f in self.inputs

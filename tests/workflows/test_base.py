@@ -614,3 +614,276 @@ def test_handle_cannot_bracket_ef_does_not_repeat_unchanged_input():
         report.exit_code.status
         == EpwBaseWorkChain.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE.status
     )
+
+
+def test_handle_out_of_walltime(aiida_localhost):
+    """Test that handle_out_of_walltime works correctly when Eliashberg and EPHWRITE are configured."""
+
+    class MockWorkChain:
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = MagicMock()
+            self.report_messages = []
+
+        def report(self, msg):
+            self.report_messages.append(msg)
+
+        def report_error_handled(self, calculation, action):
+            self.report(f"Calculation failed: {action}")
+
+        handle_out_of_walltime = EpwBaseWorkChain.handle_out_of_walltime
+
+    workchain = MockWorkChain()
+
+    calc = MagicMock()
+    calc.outputs = MagicMock()
+    calc.outputs.remote_folder = orm.RemoteData(
+        computer=aiida_localhost, remote_path="/tmp"
+    )
+    calc.outputs.output_parameters = orm.Dict(dict={})
+
+    initial_params = {"INPUTEPW": {"eliashberg": True}}
+    workchain.ctx.inputs = MagicMock()
+    workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
+    restart_type_mock = MagicMock()
+    restart_type_mock.get_member.return_value = RestartType.EPHWRITE
+    workchain.ctx.inputs.restart_type = restart_type_mock
+    workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
+        "restart_type",
+        "parameters",
+    )
+
+    report = workchain.handle_out_of_walltime.__wrapped__(calc)
+
+    assert report.do_break is True
+    assert report.exit_code.status == 0
+    assert workchain.ctx.inputs.restart_type == RestartType.EPHWRITE
+    assert workchain.ctx.inputs.parent_folder_epw == calc.outputs.remote_folder
+
+
+def test_handle_out_of_walltime_unsupported(aiida_localhost):
+    """Test that handle_out_of_walltime aborts for unsupported calculation/restart configurations."""
+
+    class MockWorkChain:
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = MagicMock()
+            self.report_messages = []
+
+        def report(self, msg):
+            self.report_messages.append(msg)
+
+        def report_error_handled(self, calculation, action):
+            self.report(f"Calculation failed: {action}")
+
+        handle_out_of_walltime = EpwBaseWorkChain.handle_out_of_walltime
+
+    workchain = MockWorkChain()
+
+    calc = MagicMock()
+    calc.outputs = MagicMock()
+    calc.outputs.remote_folder = orm.RemoteData(
+        computer=aiida_localhost, remote_path="/tmp"
+    )
+    calc.outputs.output_parameters = orm.Dict(dict={})
+
+    initial_params = {"INPUTEPW": {"band_plot": True}}
+    workchain.ctx.inputs = MagicMock()
+    workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
+    workchain.ctx.inputs.__contains__.side_effect = lambda key: key == "parameters"
+
+    report = workchain.handle_out_of_walltime.__wrapped__(calc)
+
+    assert report.do_break is True
+    assert (
+        report.exit_code.status
+        == EpwBaseWorkChain.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE.status
+    )
+
+
+def test_handle_out_of_walltime_from_eph_success(aiida_localhost):
+    """Test that handle_out_of_walltime FROM_EPH mode correctly pops succeeded temperatures and restarts."""
+
+    class MockWorkChain:
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = MagicMock()
+            self.report_messages = []
+
+        def report(self, msg):
+            self.report_messages.append(msg)
+
+        def report_error_handled(self, calculation, action):
+            self.report(f"Calculation failed: {action}")
+
+        handle_out_of_walltime = EpwBaseWorkChain.handle_out_of_walltime
+
+    workchain = MockWorkChain()
+
+    calc = MagicMock()
+    calc.outputs = MagicMock()
+    calc.outputs.remote_folder = orm.RemoteData(
+        computer=aiida_localhost, remote_path="/tmp"
+    )
+
+    calc.outputs.output_parameters = orm.Dict(
+        dict={
+            "isotropic_eliashberg": {
+                "2.0": {
+                    "nsiw": 400,
+                    "iterations": {"ethr": [1e-8], "znormi": [1.2], "deltai": [2.5]},
+                    "pade": {"delta": 2.4, "znorm": 1.2},
+                },
+                "1.0": {
+                    "nsiw": 800,
+                    "iterations": {"ethr": [None], "znormi": [None], "deltai": [None]},
+                    "pade": {"delta": None, "znorm": None},
+                },
+            }
+        }
+    )
+
+    initial_params = {
+        "INPUTEPW": {
+            "eliashberg": True,
+            "temps": [1.0, 2.0],
+            "nstemp": 2,
+        }
+    }
+    workchain.ctx.inputs = MagicMock()
+    workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
+    restart_type_mock = MagicMock()
+    restart_type_mock.get_member.return_value = RestartType.FROM_EPH
+    workchain.ctx.inputs.restart_type = restart_type_mock
+    workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
+        "restart_type",
+        "parameters",
+    )
+
+    report = workchain.handle_out_of_walltime.__wrapped__(calc)
+
+    assert report.do_break is True
+    assert report.exit_code.status == 0
+    assert workchain.ctx.inputs.parent_folder_epw == calc.outputs.remote_folder
+
+    updated_params = workchain.ctx.inputs.parameters.get_dict()
+    assert updated_params["INPUTEPW"]["temps"] == [1.0]
+    assert updated_params["INPUTEPW"]["nstemp"] == 1
+
+
+def test_handle_out_of_walltime_from_eph_failure(aiida_localhost):
+    """Test that handle_out_of_walltime FROM_EPH mode aborts if no temperatures succeeded."""
+
+    class MockWorkChain:
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = MagicMock()
+            self.report_messages = []
+
+        def report(self, msg):
+            self.report_messages.append(msg)
+
+        def report_error_handled(self, calculation, action):
+            self.report(f"Calculation failed: {action}")
+
+        handle_out_of_walltime = EpwBaseWorkChain.handle_out_of_walltime
+
+    workchain = MockWorkChain()
+
+    calc = MagicMock()
+    calc.outputs = MagicMock()
+    calc.outputs.remote_folder = orm.RemoteData(
+        computer=aiida_localhost, remote_path="/tmp"
+    )
+
+    calc.outputs.output_parameters = orm.Dict(
+        dict={
+            "isotropic_eliashberg": {
+                "1.0": {
+                    "nsiw": 800,
+                    "iterations": {"ethr": [None], "znormi": [None], "deltai": [None]},
+                    "pade": {"delta": None, "znorm": None},
+                },
+            }
+        }
+    )
+
+    initial_params = {
+        "INPUTEPW": {
+            "eliashberg": True,
+            "temps": [1.0],
+            "nstemp": 1,
+        }
+    }
+    workchain.ctx.inputs = MagicMock()
+    workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
+    restart_type_mock = MagicMock()
+    restart_type_mock.get_member.return_value = RestartType.FROM_EPH
+    workchain.ctx.inputs.restart_type = restart_type_mock
+    workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
+        "restart_type",
+        "parameters",
+    )
+
+    report = workchain.handle_out_of_walltime.__wrapped__(calc)
+
+    assert report.do_break is True
+    assert (
+        report.exit_code.status
+        == EpwBaseWorkChain.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE.status
+    )
+
+
+def test_handle_out_of_walltime_fresh_eliashberg(aiida_localhost):
+    """Test that a fresh Eliashberg run aborts without a restart checkpoint."""
+
+    class MockWorkChain:
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = MagicMock()
+            self.report_messages = []
+
+        def report(self, msg):
+            self.report_messages.append(msg)
+
+        def report_error_handled(self, calculation, action):
+            self.report(f"Calculation failed: {action}")
+
+        handle_out_of_walltime = EpwBaseWorkChain.handle_out_of_walltime
+
+    workchain = MockWorkChain()
+
+    calc = MagicMock()
+    calc.outputs = MagicMock()
+    calc.outputs.remote_folder = orm.RemoteData(
+        computer=aiida_localhost, remote_path="/tmp"
+    )
+
+    initial_params = {"INPUTEPW": {"temps": [10.0]}}
+    workchain.ctx.inputs = MagicMock()
+    workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
+    restart_type_mock = MagicMock()
+    restart_type_mock.get_member.return_value = RestartType.FROM_SCRATCH
+    workchain.ctx.inputs.restart_type = restart_type_mock
+    workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
+        "restart_type",
+        "parameters",
+        "momentum_dependence",
+    )
+
+    report = workchain.handle_out_of_walltime.__wrapped__(calc)
+
+    assert report.do_break is True
+    assert (
+        report.exit_code.status
+        == EpwBaseWorkChain.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE.status
+    )
+    assert any(
+        "Automatic recovery requires an ephwrite checkpoint" in msg
+        for msg in workchain.report_messages
+    )
