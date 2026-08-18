@@ -23,12 +23,13 @@ default_inputs:
     analytical_continuation: pade
     parameters:
       INPUTEPW:
+        eliashberg: True
+        elph: True
+        ep_coupling: True
         broyden_beta: 0.4
         conv_thr_iaxis: 0.01
         degaussq: 0.5
         degaussw: 0.1
-        epbread: False
-        epbwrite: False
         eps_acoustic: 1
         etf_mem: 1
         fsthick: 0.8
@@ -41,6 +42,7 @@ default_inputs:
         temps: 10.0
         vme: 'dipole'
         wscut: 0.5
+        wannierize: False
   epw_final_iso:
     options:
       resources:
@@ -50,12 +52,13 @@ default_inputs:
     restart_type: ephread
     parameters:
       INPUTEPW:
+        eliashberg: True
+        elph: True
+        ep_coupling: True
         conv_thr_iaxis: 0.01
         degaussq: 0.5
         degaussw: 0.1
         elecselfen: False
-        epbread: False
-        epbwrite: False
         eps_acoustic: 0.1  # cm^{-1}
         etf_mem: 1
         fsthick: 0.8
@@ -70,6 +73,7 @@ default_inputs:
         temps: 1 40
         vme: 'dipole'
         wscut: 0.5
+        wannierize: False
   epw_final_aniso:
     options:
       resources:
@@ -79,12 +83,13 @@ default_inputs:
     restart_type: ephread
     parameters:
       INPUTEPW:
+        eliashberg: True
+        elph: True
+        ep_coupling: True
         conv_thr_iaxis: 0.01
         degaussq: 0.5
         degaussw: 0.1
         elecselfen: False
-        epbread: False
-        epbwrite: False
         eps_acoustic: 0.1  # cm^{-1}
         etf_mem: 1
         fsthick: 0.8
@@ -97,6 +102,7 @@ default_inputs:
         temps: 5 43
         vme: 'dipole'
         wscut: 0.5
+        wannierize: False
 default_protocol: moderate
 protocols:
   moderate:

@@ -24,6 +24,11 @@ default_inputs:
         restart_step: 1000
         etf_mem: 3
         # I/O Settings
+        epbwrite: false
+        epbread: false
+        epwwrite: false
+        epwread: true
+        epmatkqread: false
         selecqread: false
         vme: 'wannier' #'wannier' or 'dipole'
         use_ws: true
@@ -54,6 +59,7 @@ default_inputs:
         bfieldx: 0.0
         bfieldy: 0.0
         bfieldz: 1.0e-10
+        wannierize: False
 
 default_protocol: moderate
 protocols:

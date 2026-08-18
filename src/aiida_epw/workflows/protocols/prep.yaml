@@ -55,12 +55,12 @@ default_inputs:
         a2f: False
         degaussq: 0.05
         degaussw: 0.2
-        epbread: False
-        epbwrite: True
+        elph: True
         fsthick: 100
         phonselfen: False
         temps: 300
         vme: 'dipole'
+        wannierize: False
     restart_type: wannierize
   epw_bands:
     options:
@@ -70,9 +70,7 @@ default_inputs:
     parameters:
       INPUTEPW:
         band_plot: True
-        epbread: False
-        epbwrite: False
-    restart_type: ephread
+    restart_type: epwread
 default_protocol: moderate
 protocols:
   moderate:
