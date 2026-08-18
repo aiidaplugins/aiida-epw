@@ -777,9 +777,18 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
         re.IGNORECASE,
     )
 
+    def include_preceding_temperature(match_start: int) -> int:
+        """Include a nearby temperature line that EPW may print before the solver header."""
+        window_start = max(0, match_start - 1000)
+        prefix = stdout[window_start:match_start]
+        matches = list(
+            re.finditer(r"temp\(\s*\d+\)\s*=\s*[\d.]+\s*K", prefix, re.IGNORECASE)
+        )
+        return window_start + matches[-1].start() if matches else match_start
+
     iso_match = isotropic_pattern.search(stdout)
     if iso_match:
-        iso_content = stdout[iso_match.start() :]
+        iso_content = stdout[include_preceding_temperature(iso_match.start()) :]
         aniso_match_in_iso = anisotropic_pattern.search(iso_content)
         if aniso_match_in_iso:
             iso_content = iso_content[: aniso_match_in_iso.start()]
@@ -793,7 +802,7 @@ def parse_stdout_eliashberg(stdout: str) -> dict:
 
     aniso_match = anisotropic_pattern.search(stdout)
     if aniso_match:
-        aniso_content = stdout[aniso_match.start() :]
+        aniso_content = stdout[include_preceding_temperature(aniso_match.start()) :]
         iso_match_in_aniso = isotropic_pattern.search(aniso_content)
         if iso_match_in_aniso:
             aniso_content = aniso_content[: iso_match_in_aniso.start()]

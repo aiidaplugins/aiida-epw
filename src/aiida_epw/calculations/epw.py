@@ -379,6 +379,16 @@ class EpwCalculation(NamelistsCalculation):
         )
         # yapf: enable
         spec.exit_code(
+            321,
+            "ERROR_FACTORIZATION",
+            message="Error in routine mix_broyden (5): factorization.",
+        )
+        spec.exit_code(
+            323,
+            "ERROR_TEMPERATURE_OUT_OF_RANGE",
+            message="Temperature is out of range (reached phase transition, delta converged to zero).",
+        )
+        spec.exit_code(
             314,
             "ERROR_PARAMETERS_NOT_VALID",
             message="The parameters are not valid.",

@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiida import orm
-
 try:
     from aiida_epw.common.types import RestartType
 
@@ -14,8 +13,38 @@ except ImportError:
 from aiida_epw.workflows.base import EpwBaseWorkChain
 
 
+def test_handle_temperature_out_of_range(aiida_localhost):
+    """Test the temperature-range handler terminates successfully."""
+
+    class MockWorkChain:
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = MagicMock()
+            self.ctx.is_finished = False
+            self.report_messages = []
+
+        def report(self, msg):
+            self.report_messages.append(msg)
+
+        def report_error_handled(self, calculation, action):
+            self.report(f"Calculation failed: {action}")
+
+        handle_temperature_out_of_range = (
+            EpwBaseWorkChain.handle_temperature_out_of_range
+        )
+
+    workchain = MockWorkChain()
+    report = workchain.handle_temperature_out_of_range.__wrapped__(MagicMock())
+
+    assert report.do_break is True
+    assert report.exit_code.status == 0
+    assert workchain.ctx.is_finished is True
+    assert any("phase transition" in msg for msg in workchain.report_messages)
+
+
 def test_handle_pade_approximants(aiida_localhost):
-    """Test the handle_pade_approximants error handler with successful/failed temperatures and nsiw reduction."""
+    """Test the Pade handler with successful and failed temperatures."""
 
     class MockWorkChain:
         _MAX_NSIW = EpwBaseWorkChain._MAX_NSIW
@@ -72,7 +101,6 @@ def test_handle_pade_approximants(aiida_localhost):
     # Assertions
     assert report.do_break is True
     assert report.exit_code.status == 0
-
     updated_params = workchain.ctx.inputs.parameters.get_dict()
     input_epw = updated_params["INPUTEPW"]
 
