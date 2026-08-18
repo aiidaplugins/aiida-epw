@@ -12,11 +12,13 @@ from aiida_quantumespresso.utils.mapping import get_logging_container
 from aiida_epw.calculations.epw import EpwCalculation
 from aiida_epw.data import (
     A2fData,
+    AnisoGap0Data,
     PA2fData,
     DosData,
     PDosData,
     PhDosData,
     GapFunctionData,
+    IsoGapData,
     LambdaFSData,
 )
 from aiida_epw.tools.parsers import (
@@ -174,6 +176,30 @@ class EpwParser(BaseParser):
             self.out(
                 "aniso_gap_functions",
                 self.parse_aniso_gap_functions(self.retrieved),
+            )
+
+        iso_gap_data_pattern = re.compile(
+            rf"^{EpwCalculation._PREFIX}\.(imag|pade)_iso_\d+\.\d+$"
+        )
+        iso_gap_contents = self.get_retrieved_contents_matching(iso_gap_data_pattern)
+        if iso_gap_contents:
+            self.out(
+                "iso_gap_data",
+                IsoGapData.from_files(iso_gap_contents, prefix=EpwCalculation._PREFIX),
+            )
+
+        aniso_gap_data_pattern = re.compile(
+            rf"^{EpwCalculation._PREFIX}\.(imag|pade)_aniso_gap0_\d+\.\d+$"
+        )
+        aniso_gap_contents = self.get_retrieved_contents_matching(
+            aniso_gap_data_pattern
+        )
+        if aniso_gap_contents:
+            self.out(
+                "aniso_gap0_data",
+                AnisoGap0Data.from_files(
+                    aniso_gap_contents, prefix=EpwCalculation._PREFIX
+                ),
             )
 
         aniso_gap_fs_pattern = re.compile(
