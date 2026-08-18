@@ -477,3 +477,80 @@ def test_validate_real_axis_without_continuation():
     }
 
     assert EpwBaseWorkChain.spec().inputs.validator(inputs) is None
+
+
+def test_handle_cannot_bracket_ef_updates_fermi_energy():
+    """Test retrying with the Fermi energy parsed from the coarse grid."""
+
+    class MockWorkChain:
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = type("Context", (), {})()
+            self.ctx.inputs = type("Inputs", (), {})()
+            self.report_messages = []
+
+        def report(self, message):
+            self.report_messages.append(message)
+
+        def report_error_handled(self, calculation, action):
+            self.report(action)
+
+        handle_cannot_bracket_ef = EpwBaseWorkChain.handle_cannot_bracket_ef
+
+    workchain = MockWorkChain()
+    workchain.ctx.inputs.parameters = orm.Dict(
+        dict={"INPUTEPW": {"fermi_energy": 14.8}}
+    )
+    calculation = type("Calculation", (), {})()
+    calculation.outputs = type("Outputs", (), {})()
+    calculation.outputs.output_parameters = orm.Dict(
+        dict={"fermi_energy_coarse": 14.85363}
+    )
+
+    report = workchain.handle_cannot_bracket_ef.__wrapped__(calculation)
+
+    assert report.do_break is True
+    assert report.exit_code.status == 0
+    assert workchain.ctx.inputs.parameters.get_dict()["INPUTEPW"] == {
+        "efermi_read": True,
+        "fermi_energy": 14.85363,
+    }
+
+
+def test_handle_cannot_bracket_ef_does_not_repeat_unchanged_input():
+    """Test that an already-correct Fermi energy does not cause an endless retry."""
+
+    class MockWorkChain:
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = type("Context", (), {})()
+            self.ctx.inputs = type("Inputs", (), {})()
+            self.report_messages = []
+
+        def report(self, message):
+            self.report_messages.append(message)
+
+        def report_error_handled(self, calculation, action):
+            self.report(action)
+
+        handle_cannot_bracket_ef = EpwBaseWorkChain.handle_cannot_bracket_ef
+
+    workchain = MockWorkChain()
+    workchain.ctx.inputs.parameters = orm.Dict(
+        dict={"INPUTEPW": {"efermi_read": True, "fermi_energy": 14.85363}}
+    )
+    calculation = type("Calculation", (), {})()
+    calculation.outputs = type("Outputs", (), {})()
+    calculation.outputs.output_parameters = orm.Dict(
+        dict={"fermi_energy_coarse": 14.85363}
+    )
+
+    report = workchain.handle_cannot_bracket_ef.__wrapped__(calculation)
+
+    assert report.do_break is True
+    assert (
+        report.exit_code.status
+        == EpwBaseWorkChain.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE.status
+    )

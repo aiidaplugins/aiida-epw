@@ -19,8 +19,10 @@ from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida.orm.nodes.data.base import to_aiida_type
 
 from aiida_epw.tools.kpoints import check_kpoints_qpoints_compatibility
+from aiida_epw.tools.error_handling import epw as epw_error_handling
 from aiida_epw.tools.error_handling import supercon as supercon_error_handling
 from aiida_epw.tools.error_handling import transport as transport_error_handling
+
 
 EpwCalculation = CalculationFactory("epw.epw")
 
@@ -488,6 +490,27 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         ]
         self.report("{}<{}> failed with exit status {}: {}".format(*arguments))
         self.report(f"Action taken: {action}")
+
+    @process_handler(
+        priority=700,
+        exit_codes=[EpwCalculation.exit_codes.ERROR_CANNOT_BRACKET_EF],
+    )
+    def handle_cannot_bracket_ef(self, calculation):
+        """Retry with the coarse-grid Fermi energy explicitly fixed."""
+        parameters, action_taken = epw_error_handling.prepare_bracket_ef_recovery(
+            self.ctx.inputs.parameters.get_dict(),
+            calculation.outputs.output_parameters.get_dict().get("fermi_energy_coarse"),
+        )
+        if action_taken is None:
+            self.report_error_handled(
+                calculation, "Fermi energy could not be recovered"
+            )
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+            )
+        self.ctx.inputs.parameters = orm.Dict(parameters)
+        self.report_error_handled(calculation, action_taken)
+        return ProcessHandlerReport(True)
 
     @process_handler(priority=10)
     def handle_unrecoverable_failure(self, calculation):
