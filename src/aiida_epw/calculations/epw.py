@@ -26,7 +26,6 @@ from aiida_epw.data import (
     DosData,
     PDosData,
     PhDosData,
-    GapFunctionData,
     IsoGapData,
     LambdaFSData,
 )
@@ -328,18 +327,6 @@ class EpwCalculation(NamelistsCalculation):
             valid_type=orm.BandsData,
             required=False,
             help="The interpolated phonon band structure.",
-        )
-        spec.output(
-            "iso_gap_functions",
-            valid_type=GapFunctionData,
-            required=False,
-            help="The interpolated isotropic gap function.",
-        )
-        spec.output(
-            "aniso_gap_functions",
-            valid_type=GapFunctionData,
-            required=False,
-            help="The interpolated anisotropic gap function.",
         )
         spec.output(
             "iso_gap_data",

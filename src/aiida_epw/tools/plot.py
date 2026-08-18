@@ -11,7 +11,6 @@ import numpy as numpy
 from aiida import orm
 from scipy.optimize import curve_fit
 
-from aiida_epw.data import GapFunctionData
 from aiida_epw.tools.calculators import bcs_gap_function
 
 
@@ -63,11 +62,7 @@ def plot_max_eigenvalue(temps, evs, ax=None, **kwargs):
 
 
 def _iter_gap_functions(gap_functions):
-    """Yield `(temperature, table)` pairs from typed or legacy gap-function data."""
-    if isinstance(gap_functions, GapFunctionData):
-        yield from gap_functions.get_itergap_functions()
-        return
-
+    """Yield `(temperature, table)` pairs from an ``ArrayData`` node."""
     for arrayname, array in gap_functions.get_iterarrays():
         yield float(arrayname.replace("_", ".")), array
 
