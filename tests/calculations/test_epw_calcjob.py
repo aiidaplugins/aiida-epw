@@ -10,6 +10,7 @@ from aiida_quantumespresso.calculations.ph import PhCalculation
 from aiida_quantumespresso.calculations.pw import PwCalculation
 
 from aiida_epw.calculations.epw import EpwCalculation
+from aiida_epw.common import RestartType
 
 
 def generate_kpoints_mesh(mesh):
@@ -435,7 +436,8 @@ def test_epw_stages_epw_restart_files_without_copying_epmatwp(
     """Test that EPW restart staging links the large `epmatwp` file and copies metadata files."""
     parent_folder = generate_remote_data(fixture_localhost, "/remote/epw")
     inputs = generate_inputs_epw(
-        parameters={"INPUTEPW": {"epwread": True, "elph": True}},
+        restart_type=RestartType.EPWREAD,
+        parameters={"INPUTEPW": {}},
         parent_folder_epw=parent_folder,
     )
 
@@ -543,3 +545,60 @@ def test_epw_eliashberg_parameters_continuation_none(
     assert "limag = .false." in input_contents
     assert "lpade = .false." in input_contents
     assert "lacon = .false." in input_contents
+
+
+@pytest.mark.parametrize(
+    ("restart_type", "parameters", "expected_entries"),
+    [
+        (
+            RestartType.NONE,
+            {},
+            ("epwread = .false.", "epwwrite = .true.", "epbwrite = .true."),
+        ),
+        (
+            RestartType.EPHWRITE_RESTART,
+            {},
+            ("epwread = .true.", "restart = .true.", "ephwrite = .true."),
+        ),
+        (
+            RestartType.EPHREAD,
+            {"scattering": True},
+            ("epwread = .true.", "ep_coupling = .false.", "epmatkqread = .true."),
+        ),
+        (
+            RestartType.EPWREAD,
+            {},
+            ("epwread = .true.", "epwwrite = .false.", "epbwrite = .false."),
+        ),
+    ],
+)
+def test_epw_restart_type_parameter(
+    fixture_sandbox,
+    fixture_localhost,
+    generate_calc_job,
+    generate_inputs_epw,
+    generate_remote_data,
+    restart_type,
+    parameters,
+    expected_entries,
+):
+    """Restart modes write the plugin-managed EPW input keywords."""
+    inputs = generate_inputs_epw(
+        restart_type=restart_type,
+        parameters={"INPUTEPW": parameters},
+        **(
+            {}
+            if restart_type is RestartType.NONE
+            else {
+                "parent_folder_epw": generate_remote_data(
+                    fixture_localhost, "/remote/epw"
+                )
+            }
+        ),
+    )
+
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+
+    for entry in expected_entries:
+        assert entry in input_contents

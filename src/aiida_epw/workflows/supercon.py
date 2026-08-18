@@ -8,6 +8,7 @@ from aiida.engine import WorkChain, while_, if_, append_
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
+from aiida_epw.calculations.epw import serialize_restart_type
 from aiida_epw.workflows.base import EpwBaseWorkChain
 from aiida_epw.data import A2fData
 
@@ -120,6 +121,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "parent_folder_chk",
                 "qfpoints",
                 "kfpoints",
+                "restart_type",
             ),
             namespace_options={
                 "help": (
@@ -138,6 +140,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "parent_folder_chk",
                 "qfpoints_distance",
                 "kfpoints_factor",
+                "restart_type",
             ),
             namespace_options={
                 "help": (
@@ -156,6 +159,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "parent_folder_chk",
                 "qfpoints_distance",
                 "kfpoints_factor",
+                "restart_type",
             ),
             namespace_options={
                 "help": (
@@ -375,6 +379,8 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.kfpoints_factor = self.inputs.epw_interp.kfpoints_factor
         inputs.qfpoints_distance = self.ctx.interpolation_list.pop()
 
+        inputs.restart_type = serialize_restart_type("ephwrite")
+
         if self.ctx.degaussq:
             parameters = inputs.parameters.get_dict()
             parameters["INPUTEPW"]["degaussq"] = self.ctx.degaussq
@@ -440,6 +446,8 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.kfpoints = parent_folder_epw.creator.inputs.kfpoints
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
 
+        inputs.restart_type = serialize_restart_type("ephread")
+
         if self.ctx.degaussq:
             parameters = inputs.parameters.get_dict()
             parameters["INPUTEPW"]["degaussq"] = self.ctx.degaussq
@@ -475,6 +483,8 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.parent_folder_epw = parent_folder_epw
         inputs.kfpoints = parent_folder_epw.creator.inputs.kfpoints
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
+
+        inputs.restart_type = serialize_restart_type("ephread")
 
         inputs.metadata.call_link_label = "epw_final_aniso"
         workchain_node = self.submit(EpwBaseWorkChain, **inputs)
