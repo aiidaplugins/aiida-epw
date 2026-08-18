@@ -202,7 +202,10 @@ class EpwParser(BaseParser):
         if "Allen_Dynes_Tc" in parsed_data:
             parsed_data.setdefault("allen_dynes", parsed_data["Allen_Dynes_Tc"])
 
-        self.out("output_parameters", orm.Dict(parsed_data))
+        self.out("output_parameters", orm.Dict(self.clean_nans(parsed_data)))
+
+        if "ERROR_PADE_APPROXIMANTS" in logs.error:
+            return self.exit(self.exit_codes.get("ERROR_PADE_APPROXIMANTS"), logs)
 
         for exit_code in list(self.get_error_map().values()):
             if exit_code in logs.error:
@@ -214,6 +217,23 @@ class EpwParser(BaseParser):
             )
 
         return self.exit(logs=logs)
+
+    @staticmethod
+    def clean_nans(value):
+        """Recursively replace float('nan'), float('inf'), and float('-inf') in dictionaries/lists with None."""
+        import math
+
+        if isinstance(value, float):
+            if math.isnan(value) or math.isinf(value):
+                return None
+            return value
+        if isinstance(value, dict):
+            return {k: EpwParser.clean_nans(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [EpwParser.clean_nans(v) for v in value]
+        if isinstance(value, tuple):
+            return tuple(EpwParser.clean_nans(v) for v in value)
+        return value
 
     @staticmethod
     def parse_stdout(stdout, logs, code_version=None):
@@ -396,6 +416,19 @@ class EpwParser(BaseParser):
         from aiida_epw.tools.parsers import parse_stdout_eliashberg
 
         parsed_data.update(parse_stdout_eliashberg(stdout))
+
+        # Check for Pade approximation failure (NaN values under the pade table header)
+        pade_header_match = re.search(
+            r"pade\s+Re\[znorm\]\s+Re\[delta\]\s+\[meV\]\s+Re\[shift\]\s+\[meV\]",
+            stdout,
+        )
+        if pade_header_match:
+            start_idx = pade_header_match.end()
+            remaining = stdout[start_idx:].lstrip()
+            if remaining:
+                first_line = remaining.split("\n", 1)[0]
+                if "nan" in first_line.lower():
+                    logs.error.append("ERROR_PADE_APPROXIMANTS")
 
         return parsed_data, logs
 

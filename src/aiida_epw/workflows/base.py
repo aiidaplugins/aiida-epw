@@ -19,6 +19,7 @@ from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida.orm.nodes.data.base import to_aiida_type
 
 from aiida_epw.tools.kpoints import check_kpoints_qpoints_compatibility
+from aiida_epw.tools.error_handling import supercon as supercon_error_handling
 
 EpwCalculation = CalculationFactory("epw.epw")
 
@@ -80,6 +81,9 @@ def validate_inputs(  # pylint: disable=unused-argument,inconsistent-return-stat
 
 class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
     """BaseWorkchain to run a epw.x calculation."""
+
+    _MAX_NSIW = 200
+    _MIN_NSIW = 20
 
     _process_class = EpwCalculation
 
@@ -484,7 +488,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         self.report("{}<{}> failed with exit status {}: {}".format(*arguments))
         self.report(f"Action taken: {action}")
 
-    @process_handler(priority=600)
+    @process_handler(priority=10)
     def handle_unrecoverable_failure(self, calculation):
         """Handle calculations with an exit status below 400 which are unrecoverable, so abort the work chain."""
         if calculation.is_failed and calculation.exit_status < 400:
@@ -620,3 +624,35 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         return ProcessHandlerReport(
             True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
         )
+
+    @process_handler(
+        priority=400,
+        exit_codes=[EpwCalculation.exit_codes.ERROR_PADE_APPROXIMANTS],
+    )
+    def handle_pade_approximants(self, calculation):
+        """Handle exit code 322 (Pade NaN failure) by reducing nsiw and popping successful temperatures."""
+        parameters, action_taken = supercon_error_handling.prepare_pade_recovery(
+            self.ctx.inputs.parameters.get_dict(),
+            calculation.outputs.output_parameters.get_dict(),
+            self._MAX_NSIW,
+            self._MIN_NSIW,
+        )
+        if action_taken is None:
+            self.report_error_handled(
+                calculation,
+                "Cannot reduce npade further or pop temperatures. Aborting.",
+            )
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+            )
+
+        try:
+            from aiida_epw.common.types import RestartType
+
+            self.ctx.inputs.restart_type = RestartType.EPHREAD
+        except ImportError:
+            parameters.setdefault("INPUTEPW", {})["epwread"] = True
+        self.ctx.inputs.parameters = orm.Dict(parameters)
+        self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
+        self.report_error_handled(calculation, action_taken)
+        return ProcessHandlerReport(True)
