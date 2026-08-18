@@ -116,6 +116,25 @@ def test_epw_rejects_plugin_managed_keywords(
         generate_calc_job(fixture_sandbox, "epw.epw", inputs)
 
 
+@pytest.mark.parametrize(
+    "key",
+    [
+        "epwread",
+        "epwwrite",
+        "epbread",
+        "epbwrite",
+        "restart",
+        "ep_coupling",
+        "elph",
+        "ephwrite",
+        "epmatkqread",
+    ],
+)
+def test_epw_allows_user_restart_keywords(key):
+    """Test that restart-related parameters are not rejected as plugin-managed."""
+    EpwCalculation.validate_blocked_keywords({"INPUTEPW": {key: True}})
+
+
 def test_epw_accepts_user_filkf_filqf(
     fixture_sandbox, generate_calc_job, generate_inputs_epw
 ):

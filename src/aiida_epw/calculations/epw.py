@@ -85,15 +85,6 @@ class EpwCalculation(NamelistsCalculation):
         ("INPUTEPW", "limag"),
         ("INPUTEPW", "lpade"),
         ("INPUTEPW", "lacon"),
-        ("INPUTEPW", "epwread"),
-        ("INPUTEPW", "epwwrite"),
-        ("INPUTEPW", "epbread"),
-        ("INPUTEPW", "epbwrite"),
-        ("INPUTEPW", "restart"),
-        ("INPUTEPW", "ep_coupling"),
-        ("INPUTEPW", "elph"),
-        ("INPUTEPW", "ephwrite"),
-        ("INPUTEPW", "epmatkqread"),
     ]
 
     _use_kpoints = True
