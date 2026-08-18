@@ -509,6 +509,27 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
             )
         self.ctx.inputs.parameters = orm.Dict(parameters)
+
+        # A recovered Fermi level must be read from the failed calculation on
+        # the next attempt.  Preserve the available coarse-grid data by
+        # changing writer restarts to their corresponding reader modes.
+        restart_type_node = getattr(self.ctx.inputs, "restart_type", None)
+        restart_type = (
+            restart_type_node.get_member() if restart_type_node is not None else None
+        )
+        next_restart_type = {
+            "NONE": "EPWREAD",
+            "EPHWRITE": "EPHREAD",
+            "EPHWRITE_RESTART": "EPHREAD",
+        }.get(getattr(restart_type, "name", None))
+        if next_restart_type is not None:
+            self.ctx.inputs.restart_type = restart_type.__class__[next_restart_type]
+            self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
+            action_taken = (
+                f"{action_taken} Switched restart type from "
+                f"{restart_type.name} to {next_restart_type}."
+            )
+
         self.report_error_handled(calculation, action_taken)
         return ProcessHandlerReport(True)
 

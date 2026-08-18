@@ -166,7 +166,6 @@ def test_epw_cannot_bracket_ef(parse_from_files):
     ] == pytest.approx(14.85363)
 
 
-
 def test_epw_reads_dos_from_output_subfolder(aiida_localhost, files_path):
     """Test that DOS data is parsed even when retrieved inside the EPW output folder."""
     parser_entry_point = get_entry_point_string_from_class(

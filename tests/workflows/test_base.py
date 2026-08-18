@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock
 
+import enum
+
 import pytest
 from aiida import orm
 
@@ -516,6 +518,64 @@ def test_handle_cannot_bracket_ef_updates_fermi_energy():
         "efermi_read": True,
         "fermi_energy": 14.85363,
     }
+
+
+@pytest.mark.parametrize(
+    ("restart_type", "expected_restart_type"),
+    (
+        ("NONE", "EPWREAD"),
+        ("EPHWRITE", "EPHREAD"),
+        ("EPHWRITE_RESTART", "EPHREAD"),
+    ),
+)
+def test_handle_cannot_bracket_ef_switches_writer_restart_to_reader(
+    restart_type, expected_restart_type
+):
+    """Test that Fermi-level recovery reuses files from the failed calculation."""
+
+    class MockRestartType(enum.Enum):
+        NONE = "none"
+        EPHWRITE = "ephwrite"
+        EPHREAD = "ephread"
+        EPHWRITE_RESTART = "ephwrite_restart"
+        EPWREAD = "epwread"
+
+    class RestartTypeNode:
+        def get_member(self):
+            return MockRestartType[restart_type]
+
+    class MockWorkChain:
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = type("Context", (), {})()
+            self.ctx.inputs = type("Inputs", (), {})()
+            self.report_messages = []
+
+        def report(self, message):
+            self.report_messages.append(message)
+
+        def report_error_handled(self, calculation, action):
+            self.report(action)
+
+        handle_cannot_bracket_ef = EpwBaseWorkChain.handle_cannot_bracket_ef
+
+    workchain = MockWorkChain()
+    workchain.ctx.inputs.parameters = orm.Dict(dict={"INPUTEPW": {}})
+    workchain.ctx.inputs.restart_type = RestartTypeNode()
+    calculation = type("Calculation", (), {})()
+    calculation.outputs = type("Outputs", (), {})()
+    calculation.outputs.output_parameters = orm.Dict(
+        dict={"fermi_energy_coarse": 14.85363}
+    )
+    calculation.outputs.remote_folder = object()
+
+    report = workchain.handle_cannot_bracket_ef.__wrapped__(calculation)
+
+    assert report.exit_code.status == 0
+    assert workchain.ctx.inputs.restart_type == MockRestartType[expected_restart_type]
+    assert workchain.ctx.inputs.parent_folder_epw is calculation.outputs.remote_folder
+    assert expected_restart_type in workchain.report_messages[-1]
 
 
 def test_handle_cannot_bracket_ef_does_not_repeat_unchanged_input():
