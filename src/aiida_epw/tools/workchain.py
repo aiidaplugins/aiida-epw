@@ -344,32 +344,21 @@ def get_default_target_basepath(computer):
     return target_basepath
 
 
-def set_auto_temps(inputs, last_conv_calc):
+def set_auto_temps(
+    parameters, allen_dynes_tc, lower_bound=0.5, upper_bound=2.0, nstemp=10
+):
     """Automatically set EPW calculation temps parameter from Allen-Dynes critical temperature of a previous calculation.
 
     If `temps` is not specified or is None in inputs.parameters['INPUTEPW'],
-    it sets `nstemp` to 10 and `temps` to be a range between 0.5 * Tc and 2.0 * Tc,
-    using the Allen_Dynes_Tc output of the `last_conv_calc`.
+    it sets `nstemp` to 10 and `temps` to be a range between 0.5 * Tc and 2.0 * Tc.
     """
-    from aiida.orm import Dict
-
-    # Safe access to inputs.parameters
-    parameters = inputs.parameters.get_dict() if hasattr(inputs, "parameters") else {}
     inputepw = parameters.setdefault("INPUTEPW", {})
 
     if "temps" not in inputepw or inputepw.get("temps") is None:
-        try:
-            allen_dynes_tc = last_conv_calc.outputs.output_parameters["Allen_Dynes_Tc"]
-        except (AttributeError, KeyError) as exc:
-            raise ValueError(
-                "Could not find `Allen_Dynes_Tc` in the output parameters of the last convergence calculation."
-            ) from exc
+        tmin = lower_bound * allen_dynes_tc
+        tmax = upper_bound * allen_dynes_tc
 
-        tmin = 0.5 * allen_dynes_tc
-        tmax = 2.0 * allen_dynes_tc
-
-        inputepw["nstemp"] = 10
+        inputepw["nstemp"] = nstemp
         inputepw["temps"] = f"{tmin:.4f} {tmax:.4f}"
 
-        # Write back to inputs.parameters
-        inputs.parameters = Dict(parameters)
+    return parameters

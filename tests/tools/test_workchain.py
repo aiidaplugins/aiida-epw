@@ -223,28 +223,20 @@ def test_get_default_target_basepath():
 def test_set_auto_temps():
     """Test set_auto_temps correctly parses Allen_Dynes_Tc and configures input parameters."""
     from aiida_epw.tools.workchain import set_auto_temps
-    from aiida.orm import Dict
 
-    # 1. Mock inputs and last_conv_calc
-    inputs = SimpleNamespace(parameters=Dict(dict={"INPUTEPW": {}}))
-
-    last_conv_calc = SimpleNamespace(
-        outputs=SimpleNamespace(output_parameters={"Allen_Dynes_Tc": 12.0})
-    )
+    # 1. Mock parameters and tc
+    parameters = {"INPUTEPW": {}}
+    allen_dynes_tc = 12.0
 
     # 2. Run set_auto_temps
-    set_auto_temps(inputs, last_conv_calc)
+    result = set_auto_temps(parameters, allen_dynes_tc)
 
     # 3. Assert outputs
-    params = inputs.parameters.get_dict()
-    assert params["INPUTEPW"]["nstemp"] == 10
-    assert params["INPUTEPW"]["temps"] == "6.0000 24.0000"
+    assert result["INPUTEPW"]["nstemp"] == 10
+    assert result["INPUTEPW"]["temps"] == "6.0000 24.0000"
 
     # 4. Assert that if temps is already defined, it is not overwritten
-    inputs_predefined = SimpleNamespace(
-        parameters=Dict(dict={"INPUTEPW": {"temps": "5.0000 45.0000", "nstemp": 40}})
-    )
-    set_auto_temps(inputs_predefined, last_conv_calc)
-    params_predefined = inputs_predefined.parameters.get_dict()
-    assert params_predefined["INPUTEPW"]["nstemp"] == 40
-    assert params_predefined["INPUTEPW"]["temps"] == "5.0000 45.0000"
+    params_predefined = {"INPUTEPW": {"temps": "5.0000 45.0000", "nstemp": 40}}
+    result_predefined = set_auto_temps(params_predefined, allen_dynes_tc)
+    assert result_predefined["INPUTEPW"]["nstemp"] == 40
+    assert result_predefined["INPUTEPW"]["temps"] == "5.0000 45.0000"
