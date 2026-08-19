@@ -53,13 +53,10 @@ default_inputs:
     parameters:
       INPUTEPW:
         a2f: False
-        degaussq: 0.05
-        degaussw: 0.2
         elph: True
         fsthick: 100
         phonselfen: False
         temps: 300
-        vme: 'dipole'
     restart_type: wannierize
   epw_bands:
     options:
@@ -79,4 +76,4 @@ protocols:
     qpoints_distance: 0.3
   fast:
     description: 'Protocol to perform a electron-phonon calculation at low precision at minimal computational cost for testing purposes.'
-    qpoints_distance: 1.1
+    qpoints_distance: 1

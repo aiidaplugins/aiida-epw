@@ -28,9 +28,6 @@ default_inputs:
         ep_coupling: True
         broyden_beta: 0.4
         conv_thr_iaxis: 0.01
-        degaussq: 0.5
-        degaussw: 0.1
-        eps_acoustic: 1
         etf_mem: 1
         fsthick: 0.8
         mp_mesh_k: True
@@ -56,10 +53,7 @@ default_inputs:
         elph: True
         ep_coupling: True
         conv_thr_iaxis: 0.01
-        degaussq: 0.5
-        degaussw: 0.1
         elecselfen: False
-        eps_acoustic: 0.1  # cm^{-1}
         etf_mem: 1
         fsthick: 0.8
         mp_mesh_k: True
@@ -68,8 +62,6 @@ default_inputs:
         nsiter: 500
         nstemp: 40
         selecqread:  False
-        tc_linear: True
-        tc_linear_solver: 'power'   
         temps: 1 40
         vme: 'dipole'
         wscut: 0.5
@@ -87,10 +79,7 @@ default_inputs:
         elph: True
         ep_coupling: True
         conv_thr_iaxis: 0.01
-        degaussq: 0.5
-        degaussw: 0.1
         elecselfen: False
-        eps_acoustic: 0.1  # cm^{-1}
         etf_mem: 1
         fsthick: 0.8
         # mp_mesh_k: True
@@ -110,6 +99,8 @@ protocols:
   precise:
     description: 'Protocol to perform a electron-phonon calculation at high precision at higher computational cost.'
     interpolation_distance: 0.05
+    convergence_threshold: 0.02
   fast:
     description: 'Protocol to perform a electron-phonon calculation at low precision at minimal computational cost for testing purposes.'
-    interpolation_distance: 0.5
+    interpolation_distance: 0.1
+    convergence_threshold: 0.1
