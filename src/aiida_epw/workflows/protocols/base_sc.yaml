@@ -1,16 +1,15 @@
 default_inputs:
   clean_workdir: True
   max_iterations: 5
-  qfpoints_distance: 0.1
-  kfpoints_factor: 2
+  qfpoints_distance: 0.08
+  kfpoints_factor: 1
   options:
     withmpi: True
   parameters:
     INPUTEPW:
-      degaussw: 0.04
+      degaussw: 0.025 # eV
+      degaussq: 0.05 # meV
       eps_acoustic: 0.1
-      muc: 0.13
-      temps: 300
       vme: 'dipole'
       use_ws: True
 
@@ -20,9 +19,9 @@ protocols:
     description: 'Protocol to perform a electron-phonon calculation at normal precision at moderate computational cost.'
   precise:
     description: 'Protocol to perform a electron-phonon calculation at high precision at higher computational cost.'
-    qfpoints_distance: 0.06
+    qfpoints_distance: 0.05
     kfpoints_factor: 2
   fast:
     description: 'Protocol to perform a electron-phonon calculation at low precision at minimal computational cost for testing purposes.'
-    qfpoints_distance: 0.2
+    qfpoints_distance: 0.1
     kfpoints_factor: 1
