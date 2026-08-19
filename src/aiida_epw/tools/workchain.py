@@ -342,3 +342,23 @@ def get_default_target_basepath(computer):
     else:
         raise ValueError(f"Unsupported transport type: {computer.transport_type}")
     return target_basepath
+
+
+def set_auto_temps(
+    parameters, allen_dynes_tc, lower_bound=0.5, upper_bound=2.0, nstemp=10
+):
+    """Automatically set EPW calculation temps parameter from Allen-Dynes critical temperature of a previous calculation.
+
+    If `temps` is not specified or is None in inputs.parameters['INPUTEPW'],
+    it sets `nstemp` to 10 and `temps` to be a range between 0.5 * Tc and 2.0 * Tc.
+    """
+    inputepw = parameters.setdefault("INPUTEPW", {})
+
+    if "temps" not in inputepw or inputepw.get("temps") is None:
+        tmin = lower_bound * allen_dynes_tc
+        tmax = upper_bound * allen_dynes_tc
+
+        inputepw["nstemp"] = nstemp
+        inputepw["temps"] = f"{tmin:.4f} {tmax:.4f}"
+
+    return parameters

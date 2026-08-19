@@ -11,6 +11,7 @@ from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida_epw.calculations.epw import serialize_restart_type
 from aiida_epw.workflows.base import EpwBaseWorkChain
 from aiida_epw.data import A2fData
+from aiida_epw.tools.workchain import set_auto_temps
 
 from aiida.engine import calcfunction
 
@@ -462,6 +463,10 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs = AttributeDict(
             self.exposed_inputs(EpwBaseWorkChain, namespace="epw_final_iso")
         )
+        allen_dynes_tc = self.ctx.epw_interp[-1].outputs.output_parameters[
+            "Allen_Dynes_Tc"
+        ]
+        new_parameters = set_auto_temps(inputs.parameters.get_dict(), allen_dynes_tc)
 
         inputs.structure = self.inputs.structure
         parent_folder_epw = self.ctx.epw_interp[-1].outputs.remote_folder
@@ -472,9 +477,9 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.restart_type = serialize_restart_type("ephread")
 
         if self.ctx.degaussq:
-            parameters = inputs.parameters.get_dict()
-            parameters["INPUTEPW"]["degaussq"] = self.ctx.degaussq
-            inputs.parameters = orm.Dict(parameters)
+            new_parameters["INPUTEPW"]["degaussq"] = self.ctx.degaussq
+
+        inputs.parameters = orm.Dict(new_parameters)
 
         inputs.metadata.call_link_label = "epw_final_iso"
 
@@ -501,6 +506,11 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             self.exposed_inputs(EpwBaseWorkChain, namespace="epw_final_aniso")
         )
 
+        allen_dynes_tc = self.ctx.epw_interp[-1].outputs.output_parameters[
+            "Allen_Dynes_Tc"
+        ]
+        new_parameters = set_auto_temps(inputs.parameters.get_dict(), allen_dynes_tc)
+
         inputs.structure = self.inputs.structure
         parent_folder_epw = self.ctx.epw_interp[-1].outputs.remote_folder
         inputs.parent_folder_epw = parent_folder_epw
@@ -508,6 +518,8 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
 
         inputs.restart_type = serialize_restart_type("ephread")
+
+        inputs.parameters = orm.Dict(new_parameters)
 
         inputs.metadata.call_link_label = "epw_final_aniso"
         workchain_node = self.submit(EpwBaseWorkChain, **inputs)
