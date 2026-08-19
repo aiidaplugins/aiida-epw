@@ -40,6 +40,9 @@ class EpwParser(BaseParser):
     """``Parser`` implementation for the ``EpwCalculation`` calculation job."""
 
     success_string = "EPW.bib"
+    class_error_map = {
+        r"internal error,\s*cannot bracket Ef": "ERROR_CANNOT_BRACKET_EF",
+    }
 
     @staticmethod
     def get_parser_settings_key():

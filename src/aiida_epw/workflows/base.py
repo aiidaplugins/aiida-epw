@@ -19,8 +19,10 @@ from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida.orm.nodes.data.base import to_aiida_type
 
 from aiida_epw.tools.kpoints import check_kpoints_qpoints_compatibility
+from aiida_epw.tools.error_handling import epw as epw_error_handling
 from aiida_epw.tools.error_handling import supercon as supercon_error_handling
 from aiida_epw.tools.error_handling import transport as transport_error_handling
+
 
 EpwCalculation = CalculationFactory("epw.epw")
 
@@ -488,6 +490,48 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         ]
         self.report("{}<{}> failed with exit status {}: {}".format(*arguments))
         self.report(f"Action taken: {action}")
+
+    @process_handler(
+        priority=700,
+        exit_codes=[EpwCalculation.exit_codes.ERROR_CANNOT_BRACKET_EF],
+    )
+    def handle_cannot_bracket_ef(self, calculation):
+        """Retry with the coarse-grid Fermi energy explicitly fixed."""
+        parameters, action_taken = epw_error_handling.prepare_bracket_ef_recovery(
+            self.ctx.inputs.parameters.get_dict(),
+            calculation.outputs.output_parameters.get_dict().get("fermi_energy_coarse"),
+        )
+        if action_taken is None:
+            self.report_error_handled(
+                calculation, "Fermi energy could not be recovered"
+            )
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+            )
+        self.ctx.inputs.parameters = orm.Dict(parameters)
+
+        # A recovered Fermi level must be read from the failed calculation on
+        # the next attempt.  Preserve the available coarse-grid data by
+        # changing writer restarts to their corresponding reader modes.
+        restart_type_node = getattr(self.ctx.inputs, "restart_type", None)
+        restart_type = (
+            restart_type_node.get_member() if restart_type_node is not None else None
+        )
+        next_restart_type = {
+            "NONE": "EPWREAD",
+            "EPHWRITE": "EPHREAD",
+            "EPHWRITE_RESTART": "EPHREAD",
+        }.get(getattr(restart_type, "name", None))
+        if next_restart_type is not None:
+            self.ctx.inputs.restart_type = restart_type.__class__[next_restart_type]
+            self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
+            action_taken = (
+                f"{action_taken} Switched restart type from "
+                f"{restart_type.name} to {next_restart_type}."
+            )
+
+        self.report_error_handled(calculation, action_taken)
+        return ProcessHandlerReport(True)
 
     @process_handler(priority=10)
     def handle_unrecoverable_failure(self, calculation):

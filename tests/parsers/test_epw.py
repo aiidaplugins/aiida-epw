@@ -152,6 +152,20 @@ def test_epw_iteration_nan_without_pade_is_not_pade_failure(aiida_localhost):
     )
 
 
+def test_epw_cannot_bracket_ef(parse_from_files):
+    """Test parsing the Fermi-level bracketing failure and coarse Fermi energy."""
+    results, calcfunction = parse_from_files(EpwParser, "failed_cannot_bracket_ef")
+
+    assert calcfunction.is_failed
+    assert (
+        calcfunction.exit_status
+        == EpwCalculation.exit_codes.ERROR_CANNOT_BRACKET_EF.status
+    )
+    assert results["output_parameters"].get_dict()[
+        "fermi_energy_coarse"
+    ] == pytest.approx(14.85363)
+
+
 def test_epw_reads_dos_from_output_subfolder(aiida_localhost, files_path):
     """Test that DOS data is parsed even when retrieved inside the EPW output folder."""
     parser_entry_point = get_entry_point_string_from_class(
