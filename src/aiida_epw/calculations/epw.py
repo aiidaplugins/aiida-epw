@@ -21,11 +21,12 @@ from aiida_quantumespresso.utils.convert import convert_input_to_namelist_entry
 
 from aiida_epw.data import (
     A2fData,
+    AnisoGap0Data,
     PA2fData,
     DosData,
     PDosData,
     PhDosData,
-    GapFunctionData,
+    IsoGapData,
     LambdaFSData,
 )
 
@@ -328,16 +329,16 @@ class EpwCalculation(NamelistsCalculation):
             help="The interpolated phonon band structure.",
         )
         spec.output(
-            "iso_gap_functions",
-            valid_type=GapFunctionData,
+            "iso_gap_data",
+            valid_type=IsoGapData,
             required=False,
-            help="The interpolated isotropic gap function.",
+            help="Typed isotropic imaginary-axis and Pade gap data.",
         )
         spec.output(
-            "aniso_gap_functions",
-            valid_type=GapFunctionData,
+            "aniso_gap0_data",
+            valid_type=AnisoGap0Data,
             required=False,
-            help="The interpolated anisotropic gap function.",
+            help="Typed anisotropic gap-zero imaginary-axis and Pade data.",
         )
         spec.output(
             "aniso_gap_FS",
@@ -919,11 +920,15 @@ class EpwCalculation(NamelistsCalculation):
             "tc_linear", False
         ):
             retrieve_list.append("aiida.imag_iso_*")
+            if parameters["INPUTEPW"].get("lpade", False):
+                retrieve_list.append("aiida.pade_iso_*")
 
         if parameters["INPUTEPW"].get("laniso", False):
             retrieve_list.append(self._OUTPUT_LAMBDA_FS_FILE)
             retrieve_list.append(self._OUTPUT_LAMBDA_K_PAIRS_FILE)
             retrieve_list.append("aiida.imag_aniso_gap*")
+            if parameters["INPUTEPW"].get("lpade", False):
+                retrieve_list.append("aiida.pade_aniso_gap*")
 
         return retrieve_list
 

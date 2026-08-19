@@ -16,7 +16,6 @@ from aiida_epw.data import (
     PA2fData,
     DosData,
     PDosData,
-    GapFunctionData,
     LambdaFSData,
 )
 from aiida_epw.parsers.epw import EpwParser
@@ -301,40 +300,6 @@ def test_parse_lambda_k_pairs_returns_typed_data():
     assert isinstance(lambda_k_pairs, DosData)
     assert lambda_k_pairs.get_energy().tolist() == [0.1, 0.2]
     assert lambda_k_pairs.get_dos().tolist() == [1.5, 2.5]
-
-
-def test_parse_iso_gap_functions_returns_typed_data(files_path):
-    """Test isotropic gap-function files are wrapped in `GapFunctionData`."""
-    iso_dir = files_path / "tools" / "parsers" / "full_iso_eliashberg"
-    file_contents = {
-        path.name: path.read_text()
-        for path in sorted(iso_dir.iterdir())
-        if path.is_file()
-    }
-
-    gap_functions = EpwParser.parse_iso_gap_functions(file_contents)
-
-    assert isinstance(gap_functions, GapFunctionData)
-    assert gap_functions.kind == "iso"
-    assert gap_functions.get_temperatures().tolist() == [3.0, 4.0, 5.0]
-    assert gap_functions.get_gap_function(3.0).shape[1] == 3
-
-
-def test_parse_aniso_gap_functions_returns_typed_data(files_path):
-    """Test anisotropic gap-function files are wrapped in `GapFunctionData`."""
-    aniso_dir = files_path / "tools" / "parsers" / "fsr_aniso_eliashberg"
-    file_contents = {
-        path.name: path.read_text()
-        for path in sorted(aniso_dir.iterdir())
-        if path.is_file()
-    }
-
-    gap_functions = EpwParser.parse_aniso_gap_functions(file_contents)
-
-    assert isinstance(gap_functions, GapFunctionData)
-    assert gap_functions.kind == "aniso"
-    assert gap_functions.get_temperatures().tolist() == [3.0, 4.0, 5.0]
-    assert gap_functions.get_gap_function(3.0).shape[1] == 5
 
 
 def test_parse_aniso_gap_fs_returns_typed_data():

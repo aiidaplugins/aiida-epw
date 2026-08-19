@@ -27,6 +27,16 @@ def generate_kpoints_list(points):
     return kpoints
 
 
+def test_epw_exposes_only_typed_gap_data_outputs():
+    """Test that legacy raw gap-function outputs are no longer exposed."""
+    output_names = EpwCalculation.spec().outputs.keys()
+
+    assert "iso_gap_data" in output_names
+    assert "aniso_gap0_data" in output_names
+    assert "iso_gap_functions" not in output_names
+    assert "aniso_gap_functions" not in output_names
+
+
 @pytest.fixture
 def generate_inputs_epw(fixture_code):
     """Return basic inputs for `EpwCalculation`."""

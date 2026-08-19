@@ -12,11 +12,12 @@ from aiida_quantumespresso.utils.mapping import get_logging_container
 from aiida_epw.calculations.epw import EpwCalculation
 from aiida_epw.data import (
     A2fData,
+    AnisoGap0Data,
     PA2fData,
     DosData,
     PDosData,
     PhDosData,
-    GapFunctionData,
+    IsoGapData,
     LambdaFSData,
 )
 from aiida_epw.tools.parsers import (
@@ -24,8 +25,6 @@ from aiida_epw.tools.parsers import (
     parse_epw_a2f_proj,
     parse_epw_bands,
     parse_epw_dos,
-    parse_epw_imag_aniso_gap0,
-    parse_epw_imag_iso,
     parse_epw_lambda_fs,
     parse_epw_lambda_k_pairs,
     parse_epw_max_eigenvalue,
@@ -156,24 +155,28 @@ class EpwParser(BaseParser):
                 self.parse_lambda_k_pairs(lambda_k_pairs_contents),
             )
 
-        iso_gap_pattern = re.compile(rf"^{EpwCalculation._PREFIX}\.imag_iso_\d+\.\d+$")
-        if self.retrieved and any(
-            iso_gap_pattern.match(name) for name in self.retrieved.list_object_names()
-        ):
+        iso_gap_data_pattern = re.compile(
+            rf"^{EpwCalculation._PREFIX}\.(imag|pade)_iso_\d+\.\d+$"
+        )
+        iso_gap_contents = self.get_retrieved_contents_matching(iso_gap_data_pattern)
+        if iso_gap_contents:
             self.out(
-                "iso_gap_functions",
-                self.parse_iso_gap_functions(self.retrieved),
+                "iso_gap_data",
+                IsoGapData.from_files(iso_gap_contents, prefix=EpwCalculation._PREFIX),
             )
 
-        aniso_gap_pattern = re.compile(
-            rf"^{EpwCalculation._PREFIX}\.imag_aniso_gap0_\d+\.\d+$"
+        aniso_gap_data_pattern = re.compile(
+            rf"^{EpwCalculation._PREFIX}\.(imag|pade)_aniso_gap0_\d+\.\d+$"
         )
-        if self.retrieved and any(
-            aniso_gap_pattern.match(name) for name in self.retrieved.list_object_names()
-        ):
+        aniso_gap_contents = self.get_retrieved_contents_matching(
+            aniso_gap_data_pattern
+        )
+        if aniso_gap_contents:
             self.out(
-                "aniso_gap_functions",
-                self.parse_aniso_gap_functions(self.retrieved),
+                "aniso_gap0_data",
+                AnisoGap0Data.from_files(
+                    aniso_gap_contents, prefix=EpwCalculation._PREFIX
+                ),
             )
 
         aniso_gap_fs_pattern = re.compile(
@@ -506,24 +509,6 @@ class EpwParser(BaseParser):
             "fsthick": parsed_a2f["fermi_window"],
         }
         return a2f_data, parsed_data
-
-    @staticmethod
-    def parse_iso_gap_functions(file_contents):
-        """Parse isotropic gap-function files into a typed datatype."""
-        gap_functions = parse_epw_imag_iso(file_contents, prefix=EpwCalculation._PREFIX)
-        gap_function_data = GapFunctionData()
-        gap_function_data.set_gap_functions(gap_functions, kind="iso")
-        return gap_function_data
-
-    @staticmethod
-    def parse_aniso_gap_functions(file_contents):
-        """Parse anisotropic gap-function files into a typed datatype."""
-        gap_functions = parse_epw_imag_aniso_gap0(
-            file_contents, prefix=EpwCalculation._PREFIX
-        )
-        gap_function_data = GapFunctionData()
-        gap_function_data.set_gap_functions(gap_functions, kind="aniso")
-        return gap_function_data
 
     @staticmethod
     def parse_aniso_gap_fs(folder):

@@ -1,144 +1,249 @@
-"""Domain-specific data type for EPW gap-function tables."""
+"""Domain-specific data types for typed EPW gap data."""
+
+from pathlib import Path
 
 import numpy
 from aiida import orm
 from aiida.common import exceptions
 
 
-class GapFunctionData(orm.ArrayData):
-    """Store a temperature-indexed collection of EPW gap-function tables."""
+def _temperature_label(temperature):
+    """Return a stable array-name fragment for a temperature value."""
+    return f"{float(temperature):06.2f}".replace(".", "_")
 
-    ATTRIBUTE_TEMPERATURES = "temperatures"
-    ATTRIBUTE_ARRAY_NAMES = "array_names"
-    ATTRIBUTE_KIND = "kind"
-    ARRAY_NAME_TEMPLATE = "gap_function_{index:03d}"
 
-    def set_gap_functions(self, gap_functions, *, kind=None):
-        """Store gap-function tables keyed by temperature."""
-        if not gap_functions:
-            raise exceptions.ValidationError("`gap_functions` cannot be empty.")
+def _read_file_contents(file_contents_or_paths):
+    """Return a filename-to-content mapping from paths or an existing mapping."""
+    if isinstance(file_contents_or_paths, dict):
+        return file_contents_or_paths
 
-        normalized = []
-        for temperature, gap_function in sorted(
-            gap_functions.items(), key=lambda item: float(item[0])
-        ):
-            table = numpy.array(gap_function, dtype=float)
-            if table.ndim != 2:
-                raise exceptions.ValidationError(
-                    "Each gap-function entry must be a two-dimensional array."
-                )
-            normalized.append((float(temperature), table))
+    contents = {}
+    for filepath in file_contents_or_paths:
+        path = Path(filepath)
+        contents[path.name] = path.read_text(encoding="utf-8")
+    return contents
 
-        self._delete_gap_function_arrays()
 
+class _RaggedGapData(orm.ArrayData):
+    """Store gap-data tables without requiring equal temperature grids."""
+
+    ATTRIBUTE_ENTRIES = "entries"
+    ARRAY_TEMPERATURES = "temperatures"
+
+    def set_gap_data(self, gap_data):
+        """Store a mapping keyed by ``(source, temperature)``."""
+        if not gap_data:
+            raise exceptions.ValidationError("`gap_data` cannot be empty.")
+
+        self._delete_gap_arrays()
+        entries = []
         temperatures = []
-        array_names = []
-        for index, (temperature, table) in enumerate(normalized):
-            array_name = self.ARRAY_NAME_TEMPLATE.format(index=index)
-            self.set_array(array_name, table)
+        for (source, temperature), columns in sorted(
+            gap_data.items(), key=lambda item: (item[0][0], float(item[0][1]))
+        ):
+            if not columns:
+                raise exceptions.ValidationError(
+                    "Gap-data column mappings cannot be empty."
+                )
+
+            source = str(source)
+            temperature = float(temperature)
+            label = _temperature_label(temperature)
+            row_count = None
+            column_names = []
+            column_arrays = []
+            for column_name, values in columns.items():
+                array = numpy.array(values, dtype=float)
+                if array.ndim != 1:
+                    raise exceptions.ValidationError(
+                        f"Column `{column_name}` for {source}_{label} must be one-dimensional."
+                    )
+                if row_count is None:
+                    row_count = array.shape[0]
+                elif array.shape[0] != row_count:
+                    raise exceptions.ValidationError(
+                        f"Columns for {source}_{label} must have the same length."
+                    )
+
+                column_names.append(column_name)
+                column_arrays.append(array)
+
+            self.set_array(f"{source}_{label}", numpy.column_stack(column_arrays))
+
+            entries.append(
+                {
+                    "source": source,
+                    "temperature": temperature,
+                    "array_name": f"{source}_{label}",
+                    "columns": column_names,
+                }
+            )
             temperatures.append(temperature)
-            array_names.append(array_name)
 
-        self.base.attributes.set(self.ATTRIBUTE_TEMPERATURES, temperatures)
-        self.base.attributes.set(self.ATTRIBUTE_ARRAY_NAMES, array_names)
-        self._set_optional_attribute(self.ATTRIBUTE_KIND, kind)
+        self.set_array(self.ARRAY_TEMPERATURES, numpy.array(temperatures, dtype=float))
+        self.base.attributes.set(self.ATTRIBUTE_ENTRIES, entries)
 
-    def get_temperatures(self):
-        """Return the stored temperatures in Kelvin."""
+    def get_temperatures(self, source=None):
+        """Return temperatures, optionally restricted to one source."""
         return numpy.array(
-            self.base.attributes.get(self.ATTRIBUTE_TEMPERATURES, []), dtype=float
+            [entry["temperature"] for entry in self._get_entries(source)], dtype=float
         )
 
-    def get_gap_functions(self):
-        """Return all stored gap-function tables keyed by temperature."""
+    def get_data(self, temperature, *, source=None, atol=1.0e-8):
+        """Return named arrays for one temperature/source entry."""
+        entry = self._find_entry(temperature, source=source, atol=atol)
+        table = self.get_array(entry["array_name"])
         return {
-            temperature: self.get_array(array_name)
-            for temperature, array_name in self._get_temperature_array_pairs()
+            column: table[:, index] for index, column in enumerate(entry["columns"])
         }
 
-    def get_gap_function(self, temperature, *, atol=1e-8):
-        """Return the gap-function table for a specific temperature."""
-        target = float(temperature)
+    def get_table(self, temperature, *, source=None, atol=1.0e-8):
+        """Return the stored two-dimensional table for one entry."""
+        entry = self._find_entry(temperature, source=source, atol=atol)
+        return self.get_array(entry["array_name"])
 
-        for stored_temperature, array_name in self._get_temperature_array_pairs():
-            if numpy.isclose(stored_temperature, target, atol=atol, rtol=0.0):
-                return self.get_array(array_name)
+    def get_iterdata(self, source=None):
+        """Yield ``(source, temperature, columns)`` in stored order."""
+        for entry in self._get_entries(source):
+            yield (
+                entry["source"],
+                entry["temperature"],
+                self.get_data(entry["temperature"], source=entry["source"]),
+            )
 
-        raise KeyError(f"No gap function stored for temperature {target}.")
-
-    def get_itergap_functions(self):
-        """Yield `(temperature, table)` pairs in ascending temperature order."""
-        for temperature, array_name in self._get_temperature_array_pairs():
-            yield temperature, self.get_array(array_name)
+    def to_dict(self, source=None):
+        """Return entries as plain dictionaries suitable for plotting utilities."""
+        data = {}
+        for entry in self._get_entries(source):
+            table = self.get_array(entry["array_name"])
+            columns = list(entry["columns"])
+            data.setdefault(entry["source"], {})[entry["temperature"]] = {
+                "columns": columns,
+                "table": table,
+                "data": {
+                    column: table[:, index] for index, column in enumerate(columns)
+                },
+            }
+        return data
 
     @property
-    def kind(self):
-        """Return the optional gap-function kind, e.g. `iso` or `aniso`."""
-        return self.base.attributes.get(self.ATTRIBUTE_KIND, None)
+    def sources(self):
+        """Return available source labels, such as ``imag`` and ``pade``."""
+        return sorted({entry["source"] for entry in self._get_entries()})
 
-    def _get_temperature_array_pairs(self):
-        """Return the stored temperature-to-array mapping."""
-        temperatures = self.base.attributes.get(self.ATTRIBUTE_TEMPERATURES, [])
-        array_names = self.base.attributes.get(self.ATTRIBUTE_ARRAY_NAMES, [])
-        return list(zip(temperatures, array_names, strict=True))
+    def _get_entries(self, source=None):
+        entries = self.base.attributes.get(self.ATTRIBUTE_ENTRIES, [])
+        return [
+            entry for entry in entries if source is None or entry["source"] == source
+        ]
 
-    def _delete_gap_function_arrays(self):
-        """Delete previously stored gap-function tables."""
-        for array_name in self.base.attributes.get(self.ATTRIBUTE_ARRAY_NAMES, []):
+    def _find_entry(self, temperature, *, source=None, atol=1.0e-8):
+        matches = [
+            entry
+            for entry in self._get_entries(source)
+            if numpy.isclose(
+                entry["temperature"], float(temperature), atol=atol, rtol=0.0
+            )
+        ]
+        if not matches:
+            raise KeyError(f"No gap data stored for temperature {float(temperature)}.")
+        if len(matches) > 1:
+            raise KeyError("Multiple gap data entries found; pass `source`.")
+        return matches[0]
+
+    def _delete_gap_arrays(self):
+        for entry in self._get_entries():
+            array_name = entry.get(
+                "array_name",
+                f"{entry['source']}_{_temperature_label(entry['temperature'])}",
+            )
             if array_name in self.get_arraynames():
                 self.delete_array(array_name)
+        if self.ARRAY_TEMPERATURES in self.get_arraynames():
+            self.delete_array(self.ARRAY_TEMPERATURES)
 
-    def _set_optional_attribute(self, key, value):
-        """Set or clear an optional scalar attribute."""
-        if value is None:
-            try:
-                self.base.attributes.delete(key)
-            except AttributeError:
-                pass
-            return
 
-        self.base.attributes.set(key, value)
+class IsoGapData(_RaggedGapData):
+    """Typed data for isotropic imaginary-axis and Pade gap functions."""
+
+    def get_gap_fs(self, source="imag", component=None, unit="meV", drop_nan=True):
+        """Return the first-frequency gap as a temperature series."""
+        factor = {"eV": 1.0, "meV": 1000.0}[unit]
+        temperatures = []
+        gaps = []
+        for _, temperature, columns in self.get_iterdata(source=source):
+            column = component
+            if column is None:
+                column = "deltaw" if "deltaw" in columns else "deltaw_real"
+            gap = float(columns[column][0]) * factor
+            if drop_nan and numpy.isnan(gap):
+                continue
+            temperatures.append(float(temperature))
+            gaps.append(gap)
+        return {"T": temperatures, "gap": gaps, "unit": unit, "source": source}
 
     @classmethod
-    def from_files(cls, file_contents_or_paths, prefix="aiida", kind="iso"):
-        """Instantiate and populate a `GapFunctionData` node from multiple files.
-
-        :param file_contents_or_paths: list of filepaths, a dict mapping filenames to string contents,
-                                       a folder path/object, or FolderData.
-        :param prefix: prefix of the files (e.g. 'aiida').
-        :param kind: kind of gap function ('iso' or 'aniso').
-        """
-        from aiida_epw.tools.parsers import (
-            parse_epw_imag_iso,
-            parse_epw_imag_aniso_gap0,
-        )
-
-        if kind == "iso":
-            gap_functions = parse_epw_imag_iso(file_contents_or_paths, prefix=prefix)
-        elif kind == "aniso":
-            gap_functions = parse_epw_imag_aniso_gap0(
-                file_contents_or_paths, prefix=prefix
-            )
-        else:
-            raise ValueError(f"Unknown kind '{kind}': Must be either 'iso' or 'aniso'.")
+    def from_files(cls, file_contents_or_paths, prefix="aiida"):
+        """Build a node from ``imag_iso`` and ``pade_iso`` files."""
+        from aiida_epw.tools.parsers import parse_epw_iso_gap_files
 
         node = cls()
-        node.set_gap_functions(gap_functions, kind=kind)
+        node.set_gap_data(
+            parse_epw_iso_gap_files(
+                _read_file_contents(file_contents_or_paths), prefix=prefix
+            )
+        )
         return node
 
-    @classmethod
-    def from_directory(cls, dirpath, prefix="aiida", kind="iso"):
-        """Instantiate and populate a `GapFunctionData` node from gap files in a directory."""
-        from pathlib import Path
 
-        path = Path(dirpath)
-        pattern = (
-            f"{prefix}.imag_iso_*" if kind == "iso" else f"{prefix}.imag_aniso_gap0_*"
-        )
-        filepaths = list(path.glob(pattern))
-        if not filepaths:
-            raise FileNotFoundError(
-                f"No files matching '{pattern}' in directory '{dirpath}'"
+class AnisoGap0Data(_RaggedGapData):
+    """Typed data for anisotropic gap-zero distributions."""
+
+    def get_averaged_gap(self, source="imag", bandwidth_factor=1.5):
+        """Return representative anisotropic gap values for each temperature."""
+        temperatures = []
+        gaps = []
+        for _, temperature, _ in self.get_iterdata(source=source):
+            temperatures.append(float(temperature))
+            gaps.append(
+                self._find_averaged_gap(
+                    self.get_table(temperature, source=source), bandwidth_factor
+                )
             )
+        return {"T": temperatures, "gap": gaps, "source": source}
 
-        return cls.from_files(filepaths, prefix=prefix, kind=kind)
+    @staticmethod
+    def _find_averaged_gap(data, bandwidth_factor):
+        """Find gap peaks from a smoothed distribution."""
+        from scipy.signal import find_peaks
+
+        data = numpy.array(data, dtype=float)
+        gaps = data[:, 1]
+        signal = data[:, 0] - numpy.min(data[:, 0])
+        maximum = numpy.max(signal)
+        if maximum == 0:
+            return [float(numpy.mean(gaps))]
+
+        window = max(3, int(len(signal) * 0.03 * bandwidth_factor))
+        if window % 2 == 0:
+            window += 1
+        density = numpy.convolve(
+            signal / maximum, numpy.ones(window) / window, mode="same"
+        )
+        peaks, _ = find_peaks(density, prominence=numpy.max(density) * 0.1)
+        if len(peaks) == 0:
+            return [float(gaps[numpy.argmax(density)])]
+        return sorted(float(gaps[index]) for index in peaks)
+
+    @classmethod
+    def from_files(cls, file_contents_or_paths, prefix="aiida"):
+        """Build a node from ``imag_aniso_gap0`` and Pade equivalents."""
+        from aiida_epw.tools.parsers import parse_epw_aniso_gap0_files
+
+        node = cls()
+        node.set_gap_data(
+            parse_epw_aniso_gap0_files(
+                _read_file_contents(file_contents_or_paths), prefix=prefix
+            )
+        )
+        return node

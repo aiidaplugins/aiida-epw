@@ -328,6 +328,83 @@ def _parse_epw_lambda_distribution(file_content, file_label, *, x_key, y_key):
     }
 
 
+def parse_epw_iso_gap_files(file_contents, prefix="aiida"):
+    """Parse isotropic imaginary-axis and Pade gap files into named columns."""
+    parsed_data = {}
+    pattern = re.compile(rf"^{prefix}\.(imag|pade)_iso_(\d{{3}}\.\d{{2}})$")
+    for filename, content in file_contents.items():
+        match = pattern.match(filename)
+        if not match:
+            continue
+        try:
+            table = _load_numeric_table(content, comments="#", skiprows=1)
+        except Exception as exc:
+            raise ValueError(
+                f"Failed to parse gap function file {filename}: {exc}"
+            ) from exc
+        parsed_data[(match.group(1), float(match.group(2)))] = (
+            _columns_from_iso_gap_table(table, filename)
+        )
+    if not parsed_data:
+        raise ValueError(f"No {prefix} isotropic imag/Pade gap files were parsed.")
+    return parsed_data
+
+
+def parse_epw_aniso_gap0_files(file_contents, prefix="aiida"):
+    """Parse anisotropic gap-zero distributions into named columns."""
+    parsed_data = {}
+    pattern = re.compile(rf"^{prefix}\.(imag|pade)_aniso_gap0_(\d{{3}}\.\d{{2}})$")
+    for filename, content in file_contents.items():
+        match = pattern.match(filename)
+        if not match:
+            continue
+        try:
+            table = _load_numeric_table(content, comments="#")
+        except Exception as exc:
+            raise ValueError(
+                f"Failed to parse gap function file {filename}: {exc}"
+            ) from exc
+        if table.shape[1] < 5:
+            raise ValueError(
+                f"Malformed gap function file {filename}: expected at least 5 columns."
+            )
+        parsed_data[(match.group(1), float(match.group(2)))] = {
+            "T_dist_scaled": table[:, 0],
+            "delta_nk": table[:, 1],
+            "T": table[:, 2],
+            "dist_scaled": table[:, 3],
+            "dist_not_scaled": table[:, 4],
+        }
+    if not parsed_data:
+        raise ValueError(f"No {prefix} anisotropic imag/Pade gap files were parsed.")
+    return parsed_data
+
+
+def _columns_from_iso_gap_table(table, filename):
+    """Return named columns for supported isotropic gap table layouts."""
+    columns_by_count = {
+        3: ("omega", "znorm", "deltaw"),
+        4: ("omega", "znorm", "deltaw", "shift"),
+        5: ("omega", "znorm_real", "znorm_imag", "deltaw_real", "deltaw_imag"),
+        7: (
+            "omega",
+            "znorm_real",
+            "znorm_imag",
+            "deltaw_real",
+            "deltaw_imag",
+            "shift_real",
+            "shift_imag",
+        ),
+    }
+    try:
+        column_names = columns_by_count[table.shape[1]]
+    except KeyError as exc:
+        raise ValueError(
+            f"Malformed gap function file {filename}: expected 3, 4, 5 or 7 columns."
+        ) from exc
+    return {name: table[:, index] for index, name in enumerate(column_names)}
+
+
 def _get_files_from_folder(folder):
     """Yield tuples of (filename, open_callable) from pathlib.Path, FolderData, or dict."""
     if isinstance(folder, (str, pathlib.Path)):
