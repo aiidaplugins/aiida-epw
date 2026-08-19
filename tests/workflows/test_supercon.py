@@ -151,18 +151,16 @@ def test_supercon_get_builder_from_protocol_base_failure(
         )
 
 
-def test_supercon_should_run_final():
-    """Test should_run_final with different states of epw_interp and convergence."""
+def test_supercon_inspect_interpolation():
+    """Test interpolation inspection before final workchains are considered."""
     from aiida_epw.workflows.supercon import SuperConWorkChain
     from types import SimpleNamespace
     from aiida.common.extendeddicts import AttributeDict
 
-    # Mock exit codes
     class FakeExitCodes:
         ERROR_SUB_PROCESS_EPW_INTERP = "ERROR_SUB_PROCESS_EPW_INTERP"
         ERROR_ALLEN_DYNES_NOT_CONVERGED = "ERROR_ALLEN_DYNES_NOT_CONVERGED"
 
-    # Define fake workchain helper
     def make_fake_workchain(epw_interp_list, is_converged, always_run_final):
         reports = []
         ctx = SimpleNamespace(
@@ -182,30 +180,57 @@ def test_supercon_should_run_final():
             reports=reports,
         )
 
-    # 1. epw_interp is empty -> should return ERROR_SUB_PROCESS_EPW_INTERP
     wc1 = make_fake_workchain(
         epw_interp_list=[], is_converged=True, always_run_final=True
     )
-    assert SuperConWorkChain.should_run_final(wc1) == "ERROR_SUB_PROCESS_EPW_INTERP"
+    assert (
+        SuperConWorkChain.inspect_interpolation(wc1) == "ERROR_SUB_PROCESS_EPW_INTERP"
+    )
     assert "empty" in wc1.reports[0]
 
-    # 2. epw_interp is not empty, converged -> should return True
     wc2 = make_fake_workchain(
         epw_interp_list=[object()], is_converged=True, always_run_final=False
     )
-    assert SuperConWorkChain.should_run_final(wc2) is True
+    assert SuperConWorkChain.inspect_interpolation(wc2) is None
 
-    # 3. epw_interp is not empty, not converged but always_run_final is True -> should return True
     wc3 = make_fake_workchain(
         epw_interp_list=[object()], is_converged=False, always_run_final=True
     )
-    assert SuperConWorkChain.should_run_final(wc3) is True
+    assert SuperConWorkChain.inspect_interpolation(wc3) is None
 
-    # 4. epw_interp is not empty, not converged, always_run_final is False -> should return ERROR_ALLEN_DYNES_NOT_CONVERGED
     wc4 = make_fake_workchain(
         epw_interp_list=[object()], is_converged=False, always_run_final=False
     )
-    assert SuperConWorkChain.should_run_final(wc4) == "ERROR_ALLEN_DYNES_NOT_CONVERGED"
+    assert (
+        SuperConWorkChain.inspect_interpolation(wc4)
+        == "ERROR_ALLEN_DYNES_NOT_CONVERGED"
+    )
+    assert "not converged" in wc4.reports[0]
+
+
+def test_supercon_should_run_final():
+    """Test final-workchain gating after interpolation inspection."""
+    from aiida_epw.workflows.supercon import SuperConWorkChain
+    from types import SimpleNamespace
+    from aiida.common.extendeddicts import AttributeDict
+
+    def make_fake_workchain(is_converged, always_run_final):
+        ctx = SimpleNamespace(is_converged=is_converged)
+        inputs = AttributeDict(
+            {
+                "always_run_final": SimpleNamespace(value=always_run_final),
+            }
+        )
+        return SimpleNamespace(inputs=inputs, ctx=ctx)
+
+    wc1 = make_fake_workchain(is_converged=True, always_run_final=False)
+    assert SuperConWorkChain.should_run_final(wc1) is True
+
+    wc2 = make_fake_workchain(is_converged=False, always_run_final=True)
+    assert SuperConWorkChain.should_run_final(wc2) is True
+
+    wc3 = make_fake_workchain(is_converged=False, always_run_final=False)
+    assert SuperConWorkChain.should_run_final(wc3) is False
 
 
 def test_epw_base_restart_types(fixture_code, generate_structure):
