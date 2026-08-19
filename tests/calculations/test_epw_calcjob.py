@@ -621,3 +621,52 @@ def test_epw_restart_type_parameter(
 
     for entry in expected_entries:
         assert entry in input_contents
+
+
+def test_epw_filirobj_parameter(
+    fixture_sandbox, generate_calc_job, generate_inputs_epw
+):
+    """Test that `filirobj` input is correctly staged and configured in epw.x input."""
+    import io
+
+    # 1. Test using a packaged file
+    inputs_packaged = generate_inputs_epw(
+        filirobj=orm.Str("ir_nlambda6_ndigit8.dat"),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs_packaged)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "filirobj = 'ir_nlambda6_ndigit8.dat'" in input_contents
+    assert Path(fixture_sandbox.abspath, "ir_nlambda6_ndigit8.dat").exists()
+
+    # 2. Test using a custom SinglefileData
+    file_content = b"custom ir basis data content"
+    custom_file = orm.SinglefileData(
+        io.BytesIO(file_content), filename="custom_basis.dat"
+    )
+    inputs_custom = generate_inputs_epw(
+        filirobj=custom_file,
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs_custom)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "filirobj = 'custom_basis.dat'" in input_contents
+    assert (
+        Path(fixture_sandbox.abspath, "custom_basis.dat").read_bytes() == file_content
+    )
+
+    # 3. Test invalid packaged file raises ValueError
+    inputs_invalid = generate_inputs_epw(
+        filirobj=orm.Str("nonexistent_file.dat"),
+    )
+    with pytest.raises(
+        ValueError, match="Built-in basis file 'nonexistent_file.dat' not found"
+    ):
+        generate_calc_job(fixture_sandbox, "epw.epw", inputs_invalid)
+
+    # 4. momentum_dependence alone should not imply a sparse-IR basis file
+    inputs_md = generate_inputs_epw(
+        momentum_dependence=orm.Bool(True),
+    )
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs_md)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+    assert "filirobj" not in input_contents
+    assert "gridsamp" not in input_contents
