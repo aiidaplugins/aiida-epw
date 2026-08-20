@@ -445,49 +445,114 @@ def test_epw_stages_chk_parent_into_requested_transport_list(
     assert not expected.intersection(set(calc_info.remote_copy_list))
 
 
-def test_epw_stages_epw_restart_files_without_copying_epmatwp(
+def test_epw_stages_from_epb(
     fixture_sandbox,
     fixture_localhost,
     generate_calc_job,
     generate_inputs_epw,
     generate_remote_data,
 ):
-    """Test that EPW restart staging links the large `epmatwp` file and copies metadata files."""
+    """Test that FROM_EPB stages prefix.epb*, save folder, and prefix.ukk."""
     parent_folder = generate_remote_data(fixture_localhost, "/remote/epw")
     inputs = generate_inputs_epw(
-        restart_type=RestartType.EPWREAD,
-        parameters={"INPUTEPW": {}},
+        restart_type=RestartType.FROM_EPB,
         parent_folder_epw=parent_folder,
     )
 
     calc_info = generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    copied = [(entry[1], entry[2]) for entry in calc_info.remote_copy_list]
 
     assert (
-        parent_folder.computer.uuid,
-        Path(
-            parent_folder.get_remote_path(),
-            f"{EpwCalculation._OUTPUT_SUBFOLDER}/{EpwCalculation._PREFIX}.epmatwp",
-        ).as_posix(),
-        Path(
-            f"{EpwCalculation._OUTPUT_SUBFOLDER}/{EpwCalculation._PREFIX}.epmatwp"
-        ).as_posix(),
-    ) in calc_info.remote_symlink_list
+        Path(parent_folder.get_remote_path(), "aiida.epb*").as_posix(),
+        ".",
+    ) in copied
+    assert (
+        Path(parent_folder.get_remote_path(), "save").as_posix(),
+        "save",
+    ) in copied
+    assert (
+        Path(parent_folder.get_remote_path(), "aiida.ukk").as_posix(),
+        "aiida.ukk",
+    ) in copied
+
+
+def test_epw_stages_from_epmatwp(
+    fixture_sandbox,
+    fixture_localhost,
+    generate_calc_job,
+    generate_inputs_epw,
+    generate_remote_data,
+):
+    """Test that FROM_EPMATWP / EPHWRITE stages all required EPW metadata files, out, and save."""
+    parent_folder = generate_remote_data(fixture_localhost, "/remote/epw")
+    inputs = generate_inputs_epw(
+        restart_type=RestartType.FROM_EPMATWP,
+        parameters={"INPUTEPW": {"eliashberg": True}},
+        parent_folder_epw=parent_folder,
+    )
+
+    calc_info = generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    copied_targets = {entry[2] for entry in calc_info.remote_copy_list}
 
     expected_copied = {
-        "crystal.fmt",
-        "epwdata.fmt",
-        "vmedata.fmt",
-        "dmedata.fmt",
+        "aiida.bvec",
         "aiida.kgmap",
         "aiida.kmap",
-        "aiida.ukk",
         "aiida.mmn",
-        "aiida.bvec",
+        "aiida.ukk",
+        "crystal.fmt",
+        "dmedata.fmt",
+        "epwdata.fmt",
+        "out/aiida.epmatwp",
+        "save",
+        "selecq.fmt",
+        "vmedata.fmt",
     }
-    copied_targets = {entry[2] for entry in calc_info.remote_copy_list}
     assert expected_copied.issubset(copied_targets)
-    assert EpwCalculation._OUTPUT_SUBFOLDER not in copied_targets
-    assert Path(EpwCalculation._OUTPUT_SUBFOLDER).as_posix() not in copied_targets
+    assert "out" not in copied_targets
+
+
+def test_epw_stages_from_eph(
+    fixture_sandbox,
+    fixture_localhost,
+    generate_calc_job,
+    generate_inputs_epw,
+    generate_remote_data,
+):
+    """Test that FROM_EPH stages out/prefix.ephmat and prefix.a2f."""
+    parent_folder = generate_remote_data(fixture_localhost, "/remote/epw")
+    inputs = generate_inputs_epw(
+        restart_type=RestartType.FROM_EPH,
+        parent_folder_epw=parent_folder,
+    )
+
+    calc_info = generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    copied = [(entry[1], entry[2]) for entry in calc_info.remote_copy_list]
+
+    assert (
+        Path(parent_folder.get_remote_path(), "out/aiida.ephmat").as_posix(),
+        "out/aiida.ephmat",
+    ) in copied
+    assert (
+        Path(parent_folder.get_remote_path(), "aiida.a2f").as_posix(),
+        "aiida.a2f",
+    ) in copied
+    assert len(calc_info.remote_copy_list) == 2
+
+    # With restart = True
+    inputs_restart = generate_inputs_epw(
+        restart_type=RestartType.FROM_EPH,
+        parameters={"INPUTEPW": {"restart": True}},
+        parent_folder_epw=parent_folder,
+    )
+    calc_info_restart = generate_calc_job(fixture_sandbox, "epw.epw", inputs_restart)
+    copied_restart = [
+        (entry[1], entry[2]) for entry in calc_info_restart.remote_copy_list
+    ]
+    assert (
+        Path(parent_folder.get_remote_path(), "restart.fmt").as_posix(),
+        "restart.fmt",
+    ) in copied_restart
 
 
 def test_epw_stages_ph_stash_folder_by_target_basepath(
@@ -570,24 +635,35 @@ def test_epw_eliashberg_parameters_continuation_none(
     ("restart_type", "parameters", "expected_entries"),
     [
         (
-            RestartType.NONE,
+            RestartType.FROM_SCRATCH,
             {},
             ("epwread = .false.", "epwwrite = .true.", "epbwrite = .true."),
         ),
         (
-            RestartType.EPHWRITE_RESTART,
+            RestartType.FROM_EPB,
             {},
-            ("epwread = .true.", "restart = .true.", "ephwrite = .true."),
+            ("epbread = .true.", "epbwrite = .false.", "epwwrite = .true."),
         ),
         (
-            RestartType.EPHREAD,
-            {"scattering": True},
-            ("epwread = .true.", "ep_coupling = .false.", "epmatkqread = .true."),
-        ),
-        (
-            RestartType.EPWREAD,
+            RestartType.FROM_EPMATWP,
             {},
             ("epwread = .true.", "epwwrite = .false.", "epbwrite = .false."),
+        ),
+        (
+            RestartType.EPHWRITE,
+            {},
+            (
+                "epwread = .true.",
+                "ep_coupling = .true.",
+                "elph = .true.",
+                "ephwrite = .true.",
+                "restart = .true.",
+            ),
+        ),
+        (
+            RestartType.FROM_EPH,
+            {},
+            ("epwread = .true.", "ep_coupling = .false.", "elph = .false."),
         ),
     ],
 )
@@ -607,7 +683,7 @@ def test_epw_restart_type_parameter(
         parameters={"INPUTEPW": parameters},
         **(
             {}
-            if restart_type is RestartType.NONE
+            if restart_type is RestartType.FROM_SCRATCH
             else {
                 "parent_folder_epw": generate_remote_data(
                     fixture_localhost, "/remote/epw"
@@ -621,3 +697,29 @@ def test_epw_restart_type_parameter(
 
     for entry in expected_entries:
         assert entry in input_contents
+
+
+def test_epw_parent_folder_without_restart_type(
+    fixture_sandbox,
+    fixture_localhost,
+    generate_calc_job,
+    generate_inputs_epw,
+    generate_remote_data,
+):
+    """Test that parent_folder_epw can be provided without specifying restart_type."""
+    inputs = generate_inputs_epw(
+        parameters={
+            "INPUTEPW": {
+                "epwread": True,
+                "elph": False,
+                "ep_coupling": False,
+            }
+        },
+        parent_folder_epw=generate_remote_data(fixture_localhost, "/remote/epw"),
+    )
+
+    generate_calc_job(fixture_sandbox, "epw.epw", inputs)
+    input_contents = Path(fixture_sandbox.abspath, "aiida.in").read_text()
+
+    assert "epwread = .true." in input_contents
+    assert "elph = .false." in input_contents
