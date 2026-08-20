@@ -2,17 +2,11 @@
 
 from unittest.mock import MagicMock
 
-import enum
 
 import pytest
 from aiida import orm
 
-try:
-    from aiida_epw.common.types import RestartType
-
-    HAS_RESTART_TYPE = True
-except ImportError:
-    HAS_RESTART_TYPE = False
+from aiida_epw.common.types import RestartType
 from aiida_epw.workflows.base import EpwBaseWorkChain
 
 
@@ -115,10 +109,7 @@ def test_handle_pade_approximants(aiida_localhost):
     assert input_epw["npade"] == 25
 
     # Restart settings should be set
-    if HAS_RESTART_TYPE:
-        assert workchain.ctx.inputs.restart_type == RestartType.EPHREAD
-    else:
-        assert input_epw.get("epwread") is True
+    assert workchain.ctx.inputs.restart_type == RestartType.FROM_EPH
     assert workchain.ctx.inputs.parent_folder_epw == calc.outputs.remote_folder
 
 
@@ -522,27 +513,16 @@ def test_handle_cannot_bracket_ef_updates_fermi_energy():
 
 @pytest.mark.parametrize(
     ("restart_type", "expected_restart_type"),
-    (
-        ("NONE", "EPWREAD"),
-        ("EPHWRITE", "EPHREAD"),
-        ("EPHWRITE_RESTART", "EPHREAD"),
-    ),
+    (("FROM_SCRATCH", "FROM_EPB"),),
 )
 def test_handle_cannot_bracket_ef_switches_writer_restart_to_reader(
     restart_type, expected_restart_type
 ):
     """Test that Fermi-level recovery reuses files from the failed calculation."""
 
-    class MockRestartType(enum.Enum):
-        NONE = "none"
-        EPHWRITE = "ephwrite"
-        EPHREAD = "ephread"
-        EPHWRITE_RESTART = "ephwrite_restart"
-        EPWREAD = "epwread"
-
     class RestartTypeNode:
         def get_member(self):
-            return MockRestartType[restart_type]
+            return RestartType[restart_type]
 
     class MockWorkChain:
         exit_codes = EpwBaseWorkChain.exit_codes
@@ -573,7 +553,7 @@ def test_handle_cannot_bracket_ef_switches_writer_restart_to_reader(
     report = workchain.handle_cannot_bracket_ef.__wrapped__(calculation)
 
     assert report.exit_code.status == 0
-    assert workchain.ctx.inputs.restart_type == MockRestartType[expected_restart_type]
+    assert workchain.ctx.inputs.restart_type == RestartType[expected_restart_type]
     assert workchain.ctx.inputs.parent_folder_epw is calculation.outputs.remote_folder
     assert expected_restart_type in workchain.report_messages[-1]
 
