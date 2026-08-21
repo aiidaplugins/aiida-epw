@@ -1021,38 +1021,13 @@ class EpwCalculation(NamelistsCalculation):
             else restart_node
         )
 
-        if restart_type is None:
-            inputepw = parameters.get("INPUTEPW", {})
-            if inputepw.get("epbread", False):
-                restart_type = RestartType.FROM_EPB
-            elif inputepw.get("epwread", False):
-                if not inputepw.get("elph", True) and not inputepw.get(
-                    "ep_coupling", True
-                ):
-                    restart_type = RestartType.FROM_EPH
-                elif inputepw.get("ephwrite", False):
-                    restart_type = RestartType.EPHWRITE
-                else:
-                    restart_type = RestartType.FROM_EPMATWP
-            else:
-                restart_type = RestartType.FROM_SCRATCH
-
-        if restart_type is RestartType.FROM_SCRATCH:
+        if restart_type is None or restart_type is RestartType.FROM_SCRATCH:
             return
 
         folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
 
         parent_folder_epw = self.inputs.parent_folder_epw
         epw_path = self.get_parent_folder_path(parent_folder_epw)
-
-        if parameters.get("INPUTEPW", {}).get("restart", False):
-            remote_list.append(
-                (
-                    parent_folder_epw.computer.uuid,
-                    Path(epw_path, "restart.fmt").as_posix(),
-                    "restart.fmt",
-                )
-            )
 
         if restart_type is RestartType.FROM_EPB:
             file_list = [
