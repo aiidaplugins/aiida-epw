@@ -658,7 +658,7 @@ def test_handle_out_of_walltime(aiida_localhost):
 
     assert report.do_break is True
     assert report.exit_code.status == 0
-    assert workchain.ctx.inputs.restart_type == RestartType.EPHWRITE
+    assert workchain.ctx.inputs.restart_type == RestartType.EPHWRITE_RESTART
     assert workchain.ctx.inputs.parent_folder_epw == calc.outputs.remote_folder
 
 
@@ -756,7 +756,7 @@ def test_handle_out_of_walltime_from_eph_success(aiida_localhost):
     workchain.ctx.inputs = MagicMock()
     workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
     restart_type_mock = MagicMock()
-    restart_type_mock.get_member.return_value = RestartType.FROM_EPH
+    restart_type_mock.get_member.return_value = RestartType.EPHREAD
     workchain.ctx.inputs.restart_type = restart_type_mock
     workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
         "restart_type",
@@ -822,7 +822,7 @@ def test_handle_out_of_walltime_from_eph_failure(aiida_localhost):
     workchain.ctx.inputs = MagicMock()
     workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
     restart_type_mock = MagicMock()
-    restart_type_mock.get_member.return_value = RestartType.FROM_EPH
+    restart_type_mock.get_member.return_value = RestartType.EPHREAD
     workchain.ctx.inputs.restart_type = restart_type_mock
     workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
         "restart_type",
@@ -868,7 +868,7 @@ def test_handle_out_of_walltime_fresh_eliashberg(aiida_localhost):
     workchain.ctx.inputs = MagicMock()
     workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
     restart_type_mock = MagicMock()
-    restart_type_mock.get_member.return_value = RestartType.FROM_SCRATCH
+    restart_type_mock.get_member.return_value = RestartType.NONE
     workchain.ctx.inputs.restart_type = restart_type_mock
     workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
         "restart_type",

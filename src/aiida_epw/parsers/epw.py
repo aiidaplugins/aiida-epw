@@ -43,11 +43,42 @@ class EpwParser(BaseParser):
     class_error_map = {
         r"internal error,\s*cannot bracket Ef": "ERROR_CANNOT_BRACKET_EF",
     }
+    _scheduler_walltime_patterns = (
+        r"(?i)due to time limit",
+        r"(?i)time limit reached",
+        r"(?i)walltime\s+(?:limit\s+)?exceeded",
+        r"(?i)cputime\s+(?:limit\s+)?exceeded",
+        r"(?i)term_runlimit",
+        r"(?i)exceeded.*wallclock time limit",
+        r"(?i)job.*cancelled.*due to time limit",
+    )
 
     @staticmethod
     def get_parser_settings_key():
         """Return the settings key reserved for parser-specific options."""
         return "parser_options"
+
+    def check_scheduler_errors(self, logs):
+        """Check scheduler stderr/stdout or node exit status for scheduler-level aborts."""
+        scheduler_walltime_status = getattr(
+            EpwCalculation.exit_codes, "ERROR_SCHEDULER_OUT_OF_WALLTIME", None
+        )
+        if (
+            scheduler_walltime_status is not None
+            and self.node.exit_status == scheduler_walltime_status.status
+        ):
+            logs.error.append("ERROR_OUT_OF_WALLTIME")
+            return
+
+        scheduler_stderr = self.get_retrieved_content("_scheduler-stderr.txt") or ""
+        scheduler_stdout = self.get_retrieved_content("_scheduler-stdout.txt") or ""
+        scheduler_output = f"{scheduler_stderr}\n{scheduler_stdout}"
+
+        if scheduler_output.strip():
+            for pattern in self._scheduler_walltime_patterns:
+                if re.search(pattern, scheduler_output):
+                    logs.error.append("ERROR_OUT_OF_WALLTIME")
+                    return
 
     def get_retrieved_content(self, *filenames):
         """Return the content of the first retrieved file that exists."""
@@ -87,6 +118,8 @@ class EpwParser(BaseParser):
 
         parsed_epw, logs = self.parse_stdout(stdout, logs, code_version=code_version)
         parsed_data.update(parsed_epw)
+
+        self.check_scheduler_errors(logs)
 
         elbands_contents = self.get_retrieved_content(
             EpwCalculation._output_elbands_file
@@ -220,6 +253,9 @@ class EpwParser(BaseParser):
 
         if "ERROR_FACTORIZATION" in logs.error:
             return self.exit(self.exit_codes.get("ERROR_FACTORIZATION"), logs)
+
+        if "ERROR_OUT_OF_WALLTIME" in logs.error:
+            return self.exit(self.exit_codes.get("ERROR_OUT_OF_WALLTIME"), logs)
 
         for exit_code in list(self.get_error_map().values()):
             if exit_code in logs.error:
