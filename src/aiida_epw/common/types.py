@@ -35,7 +35,6 @@ RESTART_TYPE_DEFAULTS = {
         "ep_coupling": True,
         "elph": True,
         "ephwrite": True,
-        "restart": True,
     },
     RestartType.FROM_EPH: {
         "epwread": True,
