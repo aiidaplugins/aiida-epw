@@ -223,8 +223,8 @@ def test_epw_base_restart_types(fixture_code, generate_structure):
     )
 
     # We should be able to set and access restart_type on the builder
-    builder.restart_type = RestartType.EPHWRITE
-    assert builder.restart_type == RestartType.EPHWRITE
+    builder.restart_type = RestartType.FROM_EPMATWP
+    assert builder.restart_type == RestartType.FROM_EPMATWP
 
 
 def test_supercon_get_builder_from_protocol_default(
@@ -286,7 +286,7 @@ def test_supercon_get_builder_from_protocol_default(
     if "restart_type" in builder.epw_final_iso:
         from aiida_epw.common import RestartType
 
-        assert builder.epw_final_iso.restart_type == RestartType.EPHREAD
+        assert builder.epw_final_iso.restart_type == RestartType.FROM_EPH
     assert (
         builder.epw_final_iso.parameters.get_dict()["INPUTEPW"].get("tc_linear", False)
         is False
@@ -307,4 +307,4 @@ def test_supercon_get_builder_from_protocol_default(
     if "restart_type" in builder.epw_final_aniso:
         from aiida_epw.common import RestartType
 
-        assert builder.epw_final_aniso.restart_type == RestartType.EPHREAD
+        assert builder.epw_final_aniso.restart_type == RestartType.FROM_EPH

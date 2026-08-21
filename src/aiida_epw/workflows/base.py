@@ -518,9 +518,7 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
             restart_type_node.get_member() if restart_type_node is not None else None
         )
         next_restart_type = {
-            "NONE": "EPWREAD",
-            "EPHWRITE": "EPHREAD",
-            "EPHWRITE_RESTART": "EPHREAD",
+            "FROM_SCRATCH": "FROM_EPB",
         }.get(getattr(restart_type, "name", None))
         if next_restart_type is not None:
             self.ctx.inputs.restart_type = restart_type.__class__[next_restart_type]
@@ -645,12 +643,9 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
             )
 
-        try:
-            from aiida_epw.common.types import RestartType
+        from aiida_epw.common.types import RestartType
 
-            self.ctx.inputs.restart_type = RestartType.EPHREAD
-        except ImportError:
-            parameters.setdefault("INPUTEPW", {})["epwread"] = True
+        self.ctx.inputs.restart_type = RestartType.FROM_EPH
         self.ctx.inputs.parameters = orm.Dict(parameters)
         self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
 
