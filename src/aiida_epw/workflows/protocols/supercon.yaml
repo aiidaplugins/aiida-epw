@@ -48,8 +48,8 @@ default_inputs:
     parameters:
       INPUTEPW:
         eliashberg: True
-        elph: True
-        ep_coupling: True
+        elph: False
+        ep_coupling: False
         conv_thr_iaxis: 0.01
         elecselfen: False
         etf_mem: 1
@@ -73,8 +73,8 @@ default_inputs:
     parameters:
       INPUTEPW:
         eliashberg: True
-        elph: True
-        ep_coupling: True
+        elph: False
+        ep_coupling: False
         conv_thr_iaxis: 0.01
         elecselfen: False
         etf_mem: 1

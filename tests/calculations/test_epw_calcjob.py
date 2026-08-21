@@ -530,14 +530,26 @@ def test_epw_stages_from_eph(
     copied = [(entry[1], entry[2]) for entry in calc_info.remote_copy_list]
 
     assert (
+        Path(parent_folder.get_remote_path(), "crystal.fmt").as_posix(),
+        "crystal.fmt",
+    ) in copied
+    assert (
         Path(parent_folder.get_remote_path(), "out/aiida.ephmat").as_posix(),
         "out/aiida.ephmat",
+    ) in copied
+    assert (
+        Path(parent_folder.get_remote_path(), "out/aiida.dos").as_posix(),
+        "out/aiida.dos",
     ) in copied
     assert (
         Path(parent_folder.get_remote_path(), "aiida.a2f").as_posix(),
         "aiida.a2f",
     ) in copied
-    assert len(calc_info.remote_copy_list) == 2
+    assert (
+        Path(parent_folder.get_remote_path(), "selecq.fmt").as_posix(),
+        "selecq.fmt",
+    ) in copied
+    assert len(calc_info.remote_copy_list) == 5
 
 
 def test_epw_stages_ph_stash_folder_by_target_basepath(

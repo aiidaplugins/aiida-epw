@@ -1073,9 +1073,13 @@ class EpwCalculation(NamelistsCalculation):
 
         if restart_type is RestartType.FROM_EPH:
             ephmat_rel = Path(self._OUTPUT_SUBFOLDER, self._FOLDER_EPHMAT).as_posix()
+            dos_rel = Path(self._OUTPUT_SUBFOLDER, self._OUTPUT_DOS_FILE).as_posix()
             file_list = [
+                "crystal.fmt",
                 ephmat_rel,
+                dos_rel,
                 self._OUTPUT_A2F_FILE,
+                "selecq.fmt",
             ]
             for filename in file_list:
                 remote_list.append(
