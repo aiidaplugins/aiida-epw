@@ -5,7 +5,9 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiida import orm
+from aiida.common import AttributeDict
 
+from aiida_epw.calculations.epw import serialize_restart_type
 from aiida_epw.common.types import RestartType
 from aiida_epw.workflows.base import EpwBaseWorkChain
 
@@ -553,7 +555,10 @@ def test_handle_cannot_bracket_ef_switches_writer_restart_to_reader(
     report = workchain.handle_cannot_bracket_ef.__wrapped__(calculation)
 
     assert report.exit_code.status == 0
-    assert workchain.ctx.inputs.restart_type == RestartType[expected_restart_type]
+    assert (
+        workchain.ctx.inputs.restart_type.get_member()
+        == RestartType[expected_restart_type]
+    )
     assert workchain.ctx.inputs.parent_folder_epw is calculation.outputs.remote_folder
     assert expected_restart_type in workchain.report_messages[-1]
 
@@ -638,8 +643,61 @@ def test_handle_out_of_walltime(aiida_localhost):
 
     assert report.do_break is True
     assert report.exit_code.status == 0
-    assert workchain.ctx.inputs.restart_type == RestartType.EPHWRITE_RESTART
+    assert workchain.ctx.inputs.restart_type.get_member() == RestartType.EPHWRITE
     assert workchain.ctx.inputs.parent_folder_epw == calc.outputs.remote_folder
+
+
+def test_handle_out_of_walltime_consecutive_timeouts(aiida_localhost):
+    """Test that multiple walltime timeouts in the same workchain preserve EnumData input type."""
+
+    class MockWorkChain:
+        exit_codes = EpwBaseWorkChain.exit_codes
+
+        def __init__(self):
+            self.ctx = type("Context", (), {})()
+            self.ctx.inputs = AttributeDict()
+            self.report_messages = []
+
+        def report(self, msg):
+            self.report_messages.append(msg)
+
+        def report_error_handled(self, calculation, action):
+            self.report(f"Calculation failed: {action}")
+
+        handle_out_of_walltime = EpwBaseWorkChain.handle_out_of_walltime
+
+    workchain = MockWorkChain()
+    workchain.ctx.inputs.parameters = orm.Dict(dict={"INPUTEPW": {"eliashberg": True}})
+    workchain.ctx.inputs.restart_type = serialize_restart_type(RestartType.EPHWRITE)
+
+    calc1 = MagicMock()
+    calc1.outputs = MagicMock()
+    calc1.outputs.remote_folder = orm.RemoteData(
+        computer=aiida_localhost, remote_path="/tmp/1"
+    )
+    calc1.outputs.output_parameters = orm.Dict(dict={})
+
+    # First timeout
+    report1 = workchain.handle_out_of_walltime.__wrapped__(calc1)
+    assert report1.do_break is True
+    assert report1.exit_code.status == 0
+    assert isinstance(workchain.ctx.inputs.restart_type, orm.EnumData)
+    assert workchain.ctx.inputs.restart_type.get_member() == RestartType.EPHWRITE
+
+    # Second consecutive timeout (simulates iteration #3 in crash report)
+    calc2 = MagicMock()
+    calc2.outputs = MagicMock()
+    calc2.outputs.remote_folder = orm.RemoteData(
+        computer=aiida_localhost, remote_path="/tmp/2"
+    )
+    calc2.outputs.output_parameters = orm.Dict(dict={})
+
+    report2 = workchain.handle_out_of_walltime.__wrapped__(calc2)
+    assert report2.do_break is True
+    assert report2.exit_code.status == 0
+    assert isinstance(workchain.ctx.inputs.restart_type, orm.EnumData)
+    assert workchain.ctx.inputs.restart_type.get_member() == RestartType.EPHWRITE
+    assert workchain.ctx.inputs.parent_folder_epw == calc2.outputs.remote_folder
 
 
 def test_handle_out_of_walltime_unsupported(aiida_localhost):
@@ -736,7 +794,7 @@ def test_handle_out_of_walltime_from_eph_success(aiida_localhost):
     workchain.ctx.inputs = MagicMock()
     workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
     restart_type_mock = MagicMock()
-    restart_type_mock.get_member.return_value = RestartType.EPHREAD
+    restart_type_mock.get_member.return_value = RestartType.FROM_EPH
     workchain.ctx.inputs.restart_type = restart_type_mock
     workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
         "restart_type",
@@ -748,6 +806,7 @@ def test_handle_out_of_walltime_from_eph_success(aiida_localhost):
     assert report.do_break is True
     assert report.exit_code.status == 0
     assert workchain.ctx.inputs.parent_folder_epw == calc.outputs.remote_folder
+    assert workchain.ctx.inputs.restart_type.get_member() == RestartType.FROM_EPH
 
     updated_params = workchain.ctx.inputs.parameters.get_dict()
     assert updated_params["INPUTEPW"]["temps"] == [1.0]
@@ -802,7 +861,7 @@ def test_handle_out_of_walltime_from_eph_failure(aiida_localhost):
     workchain.ctx.inputs = MagicMock()
     workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
     restart_type_mock = MagicMock()
-    restart_type_mock.get_member.return_value = RestartType.EPHREAD
+    restart_type_mock.get_member.return_value = RestartType.FROM_EPH
     workchain.ctx.inputs.restart_type = restart_type_mock
     workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
         "restart_type",
@@ -848,7 +907,7 @@ def test_handle_out_of_walltime_fresh_eliashberg(aiida_localhost):
     workchain.ctx.inputs = MagicMock()
     workchain.ctx.inputs.parameters = orm.Dict(dict=initial_params)
     restart_type_mock = MagicMock()
-    restart_type_mock.get_member.return_value = RestartType.NONE
+    restart_type_mock.get_member.return_value = RestartType.FROM_SCRATCH
     workchain.ctx.inputs.restart_type = restart_type_mock
     workchain.ctx.inputs.__contains__.side_effect = lambda key: key in (
         "restart_type",

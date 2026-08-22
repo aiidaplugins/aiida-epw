@@ -192,7 +192,7 @@ def prepare_walltime_recovery(
     """Return ``(parameters, restart_type, action)`` for a recoverable timeout."""
     from aiida_epw.common.types import RestartType
 
-    if not is_eliashberg:
+    if not is_eliashberg or restart_type is None:
         return (
             None,
             None,
@@ -202,34 +202,17 @@ def prepare_walltime_recovery(
             ),
         )
 
-    if restart_type in (
-        "EPHWRITE",
-        "ephwrite",
-        "EPHWRITE_RESTART",
-        "ephwrite_restart",
-    ):
-        next_type = (
-            "EPHWRITE_RESTART"
-            if hasattr(RestartType, "EPHWRITE_RESTART")
-            else "EPHWRITE"
-        )
+    if restart_type is RestartType.EPHWRITE:
         return (
             parameters,
-            next_type,
+            RestartType.EPHWRITE,
             (
                 "Walltime reached during Eliashberg ephwrite calculation. "
                 "Restarting from the last checkpoint."
             ),
         )
 
-    if restart_type in (
-        "FROM_EPH",
-        "from_eph",
-        "EPHREAD",
-        "ephread",
-        "EPHREAD_RESTART",
-        "ephread_restart",
-    ):
+    if restart_type is RestartType.FROM_EPH:
         outputs = output_parameters or {}
         eliashberg_data = (
             outputs.get("isotropic_eliashberg")
@@ -261,12 +244,11 @@ def prepare_walltime_recovery(
             input_epw_new["nstemp"] = len(remaining_temps)
             input_epw_new.pop("tempsmin", None)
             input_epw_new.pop("tempsmax", None)
-            next_type = "EPHREAD" if hasattr(RestartType, "EPHREAD") else "FROM_EPH"
             return (
                 parameters,
-                next_type,
+                RestartType.FROM_EPH,
                 (
-                    f"Walltime reached during Eliashberg {next_type.lower()} calculation. "
+                    "Walltime reached during Eliashberg from_eph calculation. "
                     f"Removed successfully calculated temperatures: {succeeded_temps}. "
                     "Restarting."
                 ),
@@ -275,12 +257,12 @@ def prepare_walltime_recovery(
             None,
             None,
             (
-                "Walltime reached during Eliashberg ephread calculation but no "
+                "Walltime reached during Eliashberg from_eph calculation but no "
                 "temperatures finished. Aborting."
             ),
         )
 
-    if restart_type in ("FROM_SCRATCH", "from_scratch", "NONE", "none", None):
+    if restart_type is RestartType.FROM_SCRATCH:
         return (
             None,
             None,

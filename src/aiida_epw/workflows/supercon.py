@@ -9,6 +9,7 @@ from aiida.engine import WorkChain, while_, if_, append_
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
 from aiida_epw.calculations.epw import serialize_restart_type
+from aiida_epw.common.types import RestartType
 from aiida_epw.workflows.base import EpwBaseWorkChain
 from aiida_epw.data import A2fData
 
@@ -407,7 +408,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.qfpoints_distance = self.ctx.interpolation_list.pop()
 
         if "restart_type" not in inputs:
-            inputs.restart_type = serialize_restart_type("ephwrite")
+            inputs.restart_type = serialize_restart_type(RestartType.EPHWRITE)
 
         if self.ctx.degaussq:
             parameters = inputs.parameters.get_dict()
@@ -475,7 +476,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
 
         if "restart_type" not in inputs:
-            inputs.restart_type = serialize_restart_type("from_eph")
+            inputs.restart_type = serialize_restart_type(RestartType.FROM_EPH)
 
         if self.ctx.degaussq:
             parameters = inputs.parameters.get_dict()
@@ -514,7 +515,7 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
 
         if "restart_type" not in inputs:
-            inputs.restart_type = serialize_restart_type("from_eph")
+            inputs.restart_type = serialize_restart_type(RestartType.FROM_EPH)
 
         inputs.metadata.call_link_label = "epw_final_aniso"
         workchain_node = self.submit(EpwBaseWorkChain, **inputs)
