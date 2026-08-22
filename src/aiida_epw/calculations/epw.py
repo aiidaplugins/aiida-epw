@@ -590,6 +590,23 @@ class EpwCalculation(NamelistsCalculation):
                     "Analytic continuation method 'acon' is not implemented when full_bandwidth is True."
                 )
 
+        has_ir_sampling = (
+            "filirobj" in inputs
+            or inputepw.get("filirobj") is not None
+            or inputepw.get("gridsamp") == 2
+        )
+        if has_ir_sampling:
+            if momentum_dependence is None or not momentum_dependence.value:
+                raise exceptions.InputValidationError(
+                    "IR sampling (filirobj / gridsamp=2) is only supported for anisotropic "
+                    "Eliashberg calculations (momentum_dependence=True)."
+                )
+            if full_bandwidth is None or not full_bandwidth.value:
+                raise exceptions.InputValidationError(
+                    "IR sampling (filirobj / gridsamp=2) is only supported for full-bandwidth "
+                    "Eliashberg calculations (full_bandwidth=True)."
+                )
+
     @classmethod
     def set_blocked_keywords(cls, parameters):
         """Validate plugin-managed keywords without mutating the parameter dictionary."""
