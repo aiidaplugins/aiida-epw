@@ -61,7 +61,7 @@ default_inputs:
         temps: 300
         vme: 'dipole'
         wannierize: False
-    restart_type: wannierize
+    restart_type: from_scratch
   epw_bands:
     options:
       resources:
@@ -70,7 +70,7 @@ default_inputs:
     parameters:
       INPUTEPW:
         band_plot: True
-    restart_type: epwread
+    restart_type: from_epmatwp
 default_protocol: moderate
 protocols:
   moderate:

@@ -1193,7 +1193,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
 
         from aiida_epw.common.types import RestartType
 
-        inputs.restart_type = RestartType.NONE
+        inputs.restart_type = RestartType.FROM_SCRATCH
 
         workchain_node = self.submit(EpwBaseWorkChain, **inputs)
         self.report(
@@ -1274,7 +1274,7 @@ class EpwPrepWorkChain(ProtocolMixin, WorkChain):
 
         from aiida_epw.common.types import RestartType
 
-        inputs.restart_type = RestartType.EPWREAD
+        inputs.restart_type = RestartType.FROM_EPMATWP
 
         workchain_node = self.submit(EpwBaseWorkChain, **inputs)
         self.report(

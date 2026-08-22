@@ -122,7 +122,7 @@ class EpwParser(BaseParser):
         self.check_scheduler_errors(logs)
 
         elbands_contents = self.get_retrieved_content(
-            EpwCalculation._output_elbands_file
+            EpwCalculation._OUTPUT_ELBANDS_FILE
         )
         if elbands_contents is not None:
             self.out(
@@ -133,7 +133,7 @@ class EpwParser(BaseParser):
             )
 
         phbands_contents = self.get_retrieved_content(
-            EpwCalculation._output_phbands_file
+            EpwCalculation._OUTPUT_PHBANDS_FILE
         )
         if phbands_contents is not None:
             self.out(

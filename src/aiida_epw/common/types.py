@@ -4,9 +4,43 @@ import enum
 class RestartType(enum.Enum):
     """Enumeration of EPW run/restart modes."""
 
-    NONE = "none"
+    FROM_SCRATCH = "from_scratch"
+    FROM_EPB = "from_epb"
+    FROM_EPMATWP = "from_epmatwp"
     EPHWRITE = "ephwrite"
-    EPHREAD = "ephread"
-    EPHWRITE_RESTART = "ephwrite_restart"
-    EPHREAD_RESTART = "ephread_restart"
-    EPWREAD = "epwread"
+    FROM_EPH = "from_eph"
+
+
+RESTART_TYPE_DEFAULTS = {
+    RestartType.FROM_SCRATCH: {
+        "epwread": False,
+        "epwwrite": True,
+        "epbwrite": True,
+        "epbread": False,
+    },
+    RestartType.FROM_EPB: {
+        "epbread": True,
+        "epbwrite": False,
+        "epwread": False,
+        "epwwrite": True,
+    },
+    RestartType.FROM_EPMATWP: {
+        "epwread": True,
+        "epwwrite": False,
+        "epbwrite": False,
+        "epbread": False,
+    },
+    RestartType.EPHWRITE: {
+        "epwread": True,
+        "ep_coupling": True,
+        "elph": True,
+        "ephwrite": True,
+    },
+    RestartType.FROM_EPH: {
+        "epwread": True,
+        "ep_coupling": False,
+        "elph": False,
+        "ephwrite": False,
+        "restart": False,
+    },
+}

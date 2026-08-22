@@ -77,7 +77,6 @@ class EpwCalculation(NamelistsCalculation):
         ("INPUTEPW", "nkf1"),
         ("INPUTEPW", "nkf2"),
         ("INPUTEPW", "nkf3"),
-        ("INPUTEPW", "eliashberg"),
         ("INPUTEPW", "liso"),
         ("INPUTEPW", "laniso"),
         ("INPUTEPW", "fbw"),
@@ -99,8 +98,10 @@ class EpwCalculation(NamelistsCalculation):
     _OUTPUT_SUBFOLDER = "./out/"
     _FOLDER_SAVE = "save"
     _FOLDER_DYNAMICAL_MATRIX = "DYN_MAT"
-    _kfpoints_input_file = "kfpoints.kpt"
-    _qfpoints_input_file = "qfpoints.kpt"
+    _FILE_EPMATWP = _PREFIX + ".epmatwp"
+    _FOLDER_EPHMAT = _PREFIX + ".ephmat"
+    _KFPOINTS_INPUT_FILE = "kfpoints.kpt"
+    _QFPOINTS_INPUT_FILE = "qfpoints.kpt"
     _OUTPUT_XML_TENSOR_FILE_NAME = "tensors.xml"
     _OUTPUT_DOS_FILE = _PREFIX + ".dos"
     _OUTPUT_PHDOS_FILE = _PREFIX + ".phdos"
@@ -109,8 +110,8 @@ class EpwCalculation(NamelistsCalculation):
     _OUTPUT_A2F_PROJ_FILE = _PREFIX + ".a2f_proj"
     _OUTPUT_LAMBDA_FS_FILE = _PREFIX + ".lambda_FS"
     _OUTPUT_LAMBDA_K_PAIRS_FILE = _PREFIX + ".lambda_k_pairs"
-    _output_elbands_file = "band.eig"
-    _output_phbands_file = "phband.freq"
+    _OUTPUT_ELBANDS_FILE = "band.eig"
+    _OUTPUT_PHBANDS_FILE = "phband.freq"
 
     _MAX_NSTEMP = 1000
 
@@ -138,8 +139,8 @@ class EpwCalculation(NamelistsCalculation):
             required=False,
             serializer=serialize_restart_type,
             help=(
-                "EPW run/restart mode: none, ephwrite, ephread, "
-                "ephwrite_restart, ephread_restart, or epwread."
+                "EPW run/restart mode: from_scratch, from_epb, from_epmatwp, "
+                "ephwrite, or from_eph."
             ),
         )
         spec.input(
@@ -459,28 +460,32 @@ class EpwCalculation(NamelistsCalculation):
                 )
             return
 
+        if "restart_type" not in inputs:
+            return
+
+        restart_node = inputs["restart_type"]
         restart_type = (
-            inputs["restart_type"].get_member() if "restart_type" in inputs else None
+            restart_node.get_member()
+            if hasattr(restart_node, "get_member")
+            else restart_node
         )
         parent_restart_types = (
+            RestartType.FROM_EPB,
+            RestartType.FROM_EPMATWP,
             RestartType.EPHWRITE,
-            RestartType.EPHREAD,
-            RestartType.EPHWRITE_RESTART,
-            RestartType.EPHREAD_RESTART,
-            RestartType.EPWREAD,
+            RestartType.FROM_EPH,
         )
-        uses_parent = restart_type in parent_restart_types
-        has_parent = "parent_folder_epw" in inputs
 
-        if uses_parent != has_parent:
-            if uses_parent:
-                raise exceptions.InputValidationError(
-                    f"`parent_folder_epw` must be specified when "
-                    f"restart_type is '{restart_type.value}'."
-                )
+        if restart_type in parent_restart_types and "parent_folder_epw" not in inputs:
             raise exceptions.InputValidationError(
-                "`restart_type` must be set to a mode that reads an EPW parent "
-                "when `parent_folder_epw` is provided."
+                f"`parent_folder_epw` must be specified when "
+                f"restart_type is '{restart_type.value}'."
+            )
+
+        if restart_type is RestartType.FROM_SCRATCH and "parent_folder_epw" in inputs:
+            raise exceptions.InputValidationError(
+                "`parent_folder_epw` cannot be specified when "
+                "restart_type is 'from_scratch'."
             )
 
     @staticmethod
@@ -740,6 +745,20 @@ class EpwCalculation(NamelistsCalculation):
             )
             inputepw_parameters["nstemp"] = self._MAX_NSTEMP
 
+    def set_restart_parameters(self, inputepw_parameters):
+        """Set restart parameters in INPUTEPW based on the restart_type input."""
+        if "restart_type" in self.inputs:
+            from aiida_epw.common.types import RESTART_TYPE_DEFAULTS
+
+            restart_node = self.inputs.restart_type
+            restart_type = (
+                restart_node.get_member()
+                if hasattr(restart_node, "get_member")
+                else restart_node
+            )
+            for key, value in RESTART_TYPE_DEFAULTS[restart_type].items():
+                inputepw_parameters.setdefault(key, value)
+
     def prepare_input_parameters(self, folder, parameters):
         """Populate plugin-managed EPW parameters before writing the input file."""
         inputepw_parameters = parameters["INPUTEPW"]
@@ -765,7 +784,10 @@ class EpwCalculation(NamelistsCalculation):
                 inputepw_parameters["liso"] = not momentum_dependence
 
             if "full_bandwidth" in self.inputs:
-                inputepw_parameters["fbw"] = self.inputs.full_bandwidth.value
+                fbw = self.inputs.full_bandwidth.value
+                inputepw_parameters["fbw"] = fbw
+                if fbw:
+                    inputepw_parameters["tc_linear"] = False
 
             if "real_axis" in self.inputs:
                 real_axis = self.inputs.real_axis.value
@@ -788,57 +810,7 @@ class EpwCalculation(NamelistsCalculation):
                     inputepw_parameters["lpade"] = False
                     inputepw_parameters["lacon"] = False
 
-        if "restart_type" in self.inputs:
-            from aiida_epw.common.types import RestartType
-
-            restart_type = self.inputs.restart_type.get_member()
-            if restart_type is RestartType.NONE:
-                inputepw_parameters.update(
-                    {
-                        "epwread": False,
-                        "epwwrite": True,
-                        "restart": False,
-                        "ep_coupling": True,
-                        "elph": True,
-                        "epbwrite": True,
-                        "epbread": False,
-                    }
-                )
-            elif restart_type in (RestartType.EPHWRITE, RestartType.EPHWRITE_RESTART):
-                inputepw_parameters.update(
-                    {
-                        "epwread": True,
-                        "epwwrite": False,
-                        "restart": restart_type is RestartType.EPHWRITE_RESTART,
-                        "ep_coupling": True,
-                        "elph": True,
-                        "ephwrite": True,
-                    }
-                )
-            elif restart_type in (RestartType.EPHREAD, RestartType.EPHREAD_RESTART):
-                inputepw_parameters.update(
-                    {
-                        "epwread": True,
-                        "restart": restart_type is RestartType.EPHREAD_RESTART,
-                        "ep_coupling": False,
-                        "elph": False,
-                        "ephwrite": False,
-                    }
-                )
-                if inputepw_parameters.get("scattering", False):
-                    inputepw_parameters["epmatkqread"] = True
-            elif restart_type is RestartType.EPWREAD:
-                inputepw_parameters.update(
-                    {
-                        "epwread": True,
-                        "epwwrite": False,
-                        "epbwrite": False,
-                        "epbread": False,
-                        "ep_coupling": True,
-                        "elph": True,
-                    }
-                )
-                inputepw_parameters.setdefault("restart", False)
+        self.set_restart_parameters(inputepw_parameters)
 
         inputepw_parameters["outdir"] = self._OUTPUT_SUBFOLDER
         inputepw_parameters["dvscf_dir"] = self._FOLDER_SAVE
@@ -872,7 +844,7 @@ class EpwCalculation(NamelistsCalculation):
                 self.inputs.qfpoints,
                 ("nqf1", "nqf2", "nqf3"),
                 "filqf",
-                self._qfpoints_input_file,
+                self._QFPOINTS_INPUT_FILE,
                 "Cannot get the fine q-point grid",
             )
 
@@ -892,7 +864,7 @@ class EpwCalculation(NamelistsCalculation):
                 self.inputs.kfpoints,
                 ("nkf1", "nkf2", "nkf3"),
                 "filkf",
-                self._kfpoints_input_file,
+                self._KFPOINTS_INPUT_FILE,
                 "Cannot get the fine k-point grid",
             )
 
@@ -903,7 +875,7 @@ class EpwCalculation(NamelistsCalculation):
         retrieve_list = []
 
         if parameters["INPUTEPW"].get("band_plot"):
-            retrieve_list += [self._output_elbands_file, self._output_phbands_file]
+            retrieve_list += [self._OUTPUT_ELBANDS_FILE, self._OUTPUT_PHBANDS_FILE]
 
         if parameters["INPUTEPW"].get("eliashberg", False):
             retrieve_list.append(self._OUTPUT_A2F_FILE)
@@ -994,39 +966,44 @@ class EpwCalculation(NamelistsCalculation):
         else:
             nqpt = get_parent_ph_qpoint_ibz_count(parent_folder_ph)
 
-        prefix = self._PREFIX
-        outdir = PhCalculation._OUTPUT_SUBFOLDER
-        fildvscf = PhCalculation._DVSCF_PREFIX
-        fildyn = PhCalculation._OUTPUT_DYNAMICAL_MATRIX_PREFIX
         ph_path = self.get_parent_folder_path(parent_folder_ph)
 
         remote_list.append(
             (
                 parent_folder_ph.computer.uuid,
-                Path(ph_path, outdir, "_ph0", f"{prefix}.phsave").as_posix(),
+                Path(
+                    ph_path,
+                    PhCalculation._OUTPUT_SUBFOLDER,
+                    "_ph0",
+                    f"{self._PREFIX}.phsave",
+                ).as_posix(),
                 self._FOLDER_SAVE,
             )
         )
 
         for iqpt in range(1, nqpt + 1):
+            q_dir = "" if iqpt == 1 else f"{self._PREFIX}.q_{iqpt}"
             remote_list.append(
                 (
                     parent_folder_ph.computer.uuid,
                     Path(
                         ph_path,
-                        outdir,
+                        PhCalculation._OUTPUT_SUBFOLDER,
                         "_ph0",
-                        "" if iqpt == 1 else f"{prefix}.q_{iqpt}",
-                        f"{prefix}.{fildvscf}1",
+                        q_dir,
+                        f"{self._PREFIX}.{PhCalculation._DVSCF_PREFIX}1",
                     ).as_posix(),
-                    Path(self._FOLDER_SAVE, f"{prefix}.dvscf_q{iqpt}").as_posix(),
+                    Path(self._FOLDER_SAVE, f"{self._PREFIX}.dvscf_q{iqpt}").as_posix(),
                 )
             )
             remote_list.append(
                 (
                     parent_folder_ph.computer.uuid,
-                    Path(ph_path, f"{fildyn}{iqpt}").as_posix(),
-                    Path(self._FOLDER_SAVE, f"{prefix}.dyn_q{iqpt}").as_posix(),
+                    Path(
+                        ph_path,
+                        f"{PhCalculation._OUTPUT_DYNAMICAL_MATRIX_PREFIX}{iqpt}",
+                    ).as_posix(),
+                    Path(self._FOLDER_SAVE, f"{self._PREFIX}.dyn_q{iqpt}").as_posix(),
                 )
             )
 
@@ -1035,86 +1012,84 @@ class EpwCalculation(NamelistsCalculation):
         if "parent_folder_epw" not in self.inputs:
             return
 
+        from aiida_epw.common.types import RestartType
+
+        restart_node = self.inputs.get("restart_type", None)
+        restart_type = (
+            restart_node.get_member()
+            if hasattr(restart_node, "get_member")
+            else restart_node
+        )
+
+        if restart_type is None or restart_type is RestartType.FROM_SCRATCH:
+            return
+
         folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
 
         parent_folder_epw = self.inputs.parent_folder_epw
         epw_path = self.get_parent_folder_path(parent_folder_epw)
 
-        file_list = [
-            "selecq.fmt",
-            "crystal.fmt",
-            "epwdata.fmt",
-            "dmedata.fmt",
-            "vmedata.fmt",
-            "wigner.fmt",
-            "quadrupole.fmt",
-            "decay.H",
-            "decay.v",
-            "decay.P",
-            "decay.dynmat",
-            "decay.epmate",
-            "decay.epmatp",
-            f"{self._PREFIX}.kgmap",
-            f"{self._PREFIX}.kmap",
-            f"{self._PREFIX}.ukk",
-            f"{self._PREFIX}.mmn",
-            f"{self._PREFIX}.bvec",
-            self._FOLDER_SAVE,
-        ]
-        if parameters["INPUTEPW"].get("restart", False):
-            file_list.append("restart.fmt")
-
-        if parameters["INPUTEPW"].get("epwread", False) and parameters["INPUTEPW"].get(
-            "elph", False
-        ):
-            remote_symlink_list.append(
-                (
-                    parent_folder_epw.computer.uuid,
-                    Path(
-                        epw_path,
-                        f"{self._OUTPUT_SUBFOLDER}/{self._PREFIX}.epmatwp",
-                    ).as_posix(),
-                    Path(f"{self._OUTPUT_SUBFOLDER}/{self._PREFIX}.epmatwp").as_posix(),
-                )
-            )
-
-        if parameters["INPUTEPW"].get("eliashberg", False):
-            if parameters["INPUTEPW"].get("ephwrite", True):
-                if parameters["INPUTEPW"].get("restart", False):
-                    remote_symlink_list.append(
-                        (
-                            parent_folder_epw.computer.uuid,
-                            Path(
-                                epw_path,
-                                f"{self._OUTPUT_SUBFOLDER}/{self._PREFIX}.ephmat",
-                            ).as_posix(),
-                            Path(
-                                f"{self._OUTPUT_SUBFOLDER}/{self._PREFIX}.ephmat"
-                            ).as_posix(),
-                        )
-                    )
-            else:
-                remote_symlink_list.append(
+        if restart_type is RestartType.FROM_EPB:
+            file_list = [
+                (f"{self._PREFIX}.epb*", "."),
+                (self._FOLDER_SAVE, self._FOLDER_SAVE),
+                (f"{self._PREFIX}.ukk", f"{self._PREFIX}.ukk"),
+            ]
+            for src_name, dst_name in file_list:
+                remote_list.append(
                     (
                         parent_folder_epw.computer.uuid,
-                        Path(
-                            epw_path,
-                            f"{self._OUTPUT_SUBFOLDER}/{self._PREFIX}.ephmat",
-                        ).as_posix(),
-                        Path(
-                            f"{self._OUTPUT_SUBFOLDER}/{self._PREFIX}.ephmat"
-                        ).as_posix(),
+                        Path(epw_path, src_name).as_posix(),
+                        Path(dst_name).as_posix(),
                     )
                 )
+            return
 
-        for filename in file_list:
-            remote_list.append(
-                (
-                    parent_folder_epw.computer.uuid,
-                    Path(epw_path, filename).as_posix(),
-                    Path(filename).as_posix(),
+        if restart_type in (RestartType.FROM_EPMATWP, RestartType.EPHWRITE):
+            epmatwp_rel = Path(self._OUTPUT_SUBFOLDER, self._FILE_EPMATWP).as_posix()
+            file_list = [
+                f"{self._PREFIX}.bvec",
+                f"{self._PREFIX}.kgmap",
+                f"{self._PREFIX}.kmap",
+                f"{self._PREFIX}.mmn",
+                f"{self._PREFIX}.ukk",
+                "crystal.fmt",
+                "dmedata.fmt",
+                "epwdata.fmt",
+                epmatwp_rel,
+                self._FOLDER_SAVE,
+                "selecq.fmt",
+                "vmedata.fmt",
+            ]
+            for filename in file_list:
+                remote_list.append(
+                    (
+                        parent_folder_epw.computer.uuid,
+                        Path(epw_path, filename).as_posix(),
+                        Path(filename).as_posix(),
+                    )
                 )
-            )
+            return
+
+        if restart_type is RestartType.FROM_EPH:
+            ephmat_rel = Path(self._OUTPUT_SUBFOLDER, self._FOLDER_EPHMAT).as_posix()
+            dos_rel = Path(self._OUTPUT_SUBFOLDER, self._OUTPUT_DOS_FILE).as_posix()
+            file_list = [
+                "crystal.fmt",
+                ephmat_rel,
+                dos_rel,
+                self._OUTPUT_A2F_FILE,
+                "selecq.fmt",
+            ]
+            for filename in file_list:
+                remote_list.append(
+                    (
+                        parent_folder_epw.computer.uuid,
+                        Path(epw_path, filename).as_posix(),
+                        Path(filename).as_posix(),
+                    )
+                )
+            return
 
     def stage_quadrupole(self, local_copy_list, remote_list):
         """Stage quadrupole file/directory if provided as inputs."""
