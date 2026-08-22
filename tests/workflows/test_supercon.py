@@ -275,6 +275,7 @@ def test_supercon_get_builder_from_protocol_default(
     # epw_final_iso check
     if "momentum_dependence" in builder.epw_final_iso:
         assert not builder.epw_final_iso.momentum_dependence.value
+        assert builder.epw_final_iso.full_bandwidth.value
         assert not builder.epw_final_iso.real_axis.value
     if "calculation_type" in builder.epw_final_iso:
         from aiida_epw.common.types import CalculationTypes
@@ -295,8 +296,9 @@ def test_supercon_get_builder_from_protocol_default(
     # epw_final_aniso check
     if "momentum_dependence" in builder.epw_final_aniso:
         assert builder.epw_final_aniso.momentum_dependence.value
-        assert not builder.epw_final_aniso.full_bandwidth.value
+        assert builder.epw_final_aniso.full_bandwidth.value
         assert not builder.epw_final_aniso.real_axis.value
+        assert builder.epw_final_aniso.filirobj.value == "ir_nlambda6_ndigit8.dat"
     if "calculation_type" in builder.epw_final_aniso:
         from aiida_epw.common.types import CalculationTypes
 
@@ -308,3 +310,47 @@ def test_supercon_get_builder_from_protocol_default(
         from aiida_epw.common import RestartType
 
         assert builder.epw_final_aniso.restart_type == RestartType.EPHREAD
+
+
+def test_supercon_builder_fsr_does_not_inject_filirobj(
+    generate_structure,
+    generate_remote_data,
+    fixture_localhost,
+    fixture_code,
+    monkeypatch,
+):
+    """Test that FSR anisotropic mode (full_bandwidth=False) does not inject filirobj."""
+    from plumpy.ports import Port, PortNamespace
+
+    from aiida_epw.workflows.supercon import SuperConWorkChain
+
+    monkeypatch.setattr(Port, "validate", lambda *a, **k: None)
+    monkeypatch.setattr(PortNamespace, "validate", lambda *a, **k: None)
+
+    epw_code = fixture_code("epw.epw")
+    structure = generate_structure()
+    remote_stash = generate_remote_data(fixture_localhost, "/tmp/remote_stash")
+
+    parent_epw = MagicMock()
+    parent_epw.process_label = "EpwBaseWorkChain"
+    parent_epw.inputs = MagicMock()
+    parent_epw.inputs.structure = structure
+    parent_epw.inputs.code = epw_code
+    parent_epw.inputs.kpoints = orm.KpointsData()
+    parent_epw.inputs.qpoints = orm.KpointsData()
+    parent_epw.outputs = MagicMock()
+    parent_epw.outputs.remote_stash = remote_stash
+
+    overrides = {
+        "epw_final_aniso": {
+            "full_bandwidth": False,
+        }
+    }
+
+    builder = SuperConWorkChain.get_builder_from_protocol(
+        epw_code=epw_code,
+        parent_epw=parent_epw,
+        overrides=overrides,
+    )
+
+    assert "filirobj" not in builder.epw_final_aniso

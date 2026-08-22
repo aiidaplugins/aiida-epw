@@ -171,6 +171,12 @@ class EpwCalculation(NamelistsCalculation):
             help="Analytical continuation method: 'pade', 'acon', or 'none'.",
         )
         spec.input(
+            "filirobj",
+            valid_type=(orm.SinglefileData, orm.Str),
+            required=False,
+            help="Sparse-IR basis file (SinglefileData) or the filename of a pre-shipped basis (Str).",
+        )
+        spec.input(
             "kpoints",
             valid_type=orm.KpointsData,
             help=(
@@ -584,6 +590,23 @@ class EpwCalculation(NamelistsCalculation):
                     "Analytic continuation method 'acon' is not implemented when full_bandwidth is True."
                 )
 
+        has_ir_sampling = (
+            "filirobj" in inputs
+            or inputepw.get("filirobj") is not None
+            or inputepw.get("gridsamp") == 2
+        )
+        if has_ir_sampling:
+            if momentum_dependence is None or not momentum_dependence.value:
+                raise exceptions.InputValidationError(
+                    "IR sampling (filirobj / gridsamp=2) is only supported for anisotropic "
+                    "Eliashberg calculations (momentum_dependence=True)."
+                )
+            if full_bandwidth is None or not full_bandwidth.value:
+                raise exceptions.InputValidationError(
+                    "IR sampling (filirobj / gridsamp=2) is only supported for full-bandwidth "
+                    "Eliashberg calculations (full_bandwidth=True)."
+                )
+
     @classmethod
     def set_blocked_keywords(cls, parameters):
         """Validate plugin-managed keywords without mutating the parameter dictionary."""
@@ -765,7 +788,10 @@ class EpwCalculation(NamelistsCalculation):
                 inputepw_parameters["liso"] = not momentum_dependence
 
             if "full_bandwidth" in self.inputs:
-                inputepw_parameters["fbw"] = self.inputs.full_bandwidth.value
+                fbw = self.inputs.full_bandwidth.value
+                inputepw_parameters["fbw"] = fbw
+                if fbw:
+                    inputepw_parameters["tc_linear"] = False
 
             if "real_axis" in self.inputs:
                 real_axis = self.inputs.real_axis.value
@@ -1277,6 +1303,39 @@ class EpwCalculation(NamelistsCalculation):
 
         settings = self.get_settings()
         parameters = self.prepare_input_parameters(folder, self.get_parameters())
+
+        filirobj_input = None
+        if "filirobj" in self.inputs:
+            filirobj_input = self.inputs.filirobj
+
+        if filirobj_input is not None:
+            if isinstance(filirobj_input, orm.SinglefileData):
+                filename = filirobj_input.filename
+                with filirobj_input.open(mode="rb") as f:
+                    content = f.read()
+                with folder.open(filename, "wb") as handle:
+                    handle.write(content)
+            else:
+                from importlib.resources import files
+                from aiida_epw.common.resources import irobjs
+
+                filename = (
+                    filirobj_input.value
+                    if isinstance(filirobj_input, orm.Str)
+                    else filirobj_input
+                )
+                resource_path = files(irobjs) / filename
+                if not resource_path.exists():
+                    raise ValueError(
+                        f"Built-in basis file '{filename}' not found in resources."
+                    )
+                with folder.open(filename, "wb") as handle:
+                    handle.write(resource_path.read_bytes())
+
+            inputepw = parameters.setdefault("INPUTEPW", {})
+            inputepw["filirobj"] = filename
+            if "gridsamp" not in inputepw:
+                inputepw["gridsamp"] = 2
 
         self.stage_parent_folders(
             folder, parameters, settings, remote_copy_list, remote_symlink_list
