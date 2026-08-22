@@ -2,7 +2,7 @@
 
 
 def test_mobility_protocol_omits_plugin_managed_parameters():
-    """Mobility protocols leave EPW run/restart flags to ``RestartType``."""
+    """Mobility protocols omit plugin-managed EPW keywords."""
     from aiida_epw.calculations.epw import EpwCalculation
     from aiida_epw.workflows.mobility import MobilityWorkChain
 

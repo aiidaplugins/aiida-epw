@@ -5,7 +5,6 @@ from aiida.engine import WorkChain, while_, append_, calcfunction
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
-from aiida_epw.calculations.epw import serialize_restart_type
 from aiida_epw.tools.band_analysis import extract_band_edges_from_epw_prep
 from aiida_epw.workflows.base import EpwBaseWorkChain
 
@@ -448,7 +447,6 @@ class MobilityWorkChain(ProtocolMixin, WorkChain):
             "code": self.inputs.epw_mobility.code,
             "structure": self.inputs.structure,
             "parent_folder_epw": self.inputs.parent_folder_epw,
-            "restart_type": serialize_restart_type("ephread_restart"),
             "qfpoints_distance": self.ctx.interpolation_list.pop(0),
             "kfpoints_factor": self.inputs.kfpoints_factor,
             "parameters": orm.Dict(parameters),

@@ -1,5 +1,6 @@
 """Tests for the `EpwParser`."""
 
+import io
 import textwrap
 
 import pytest
@@ -387,3 +388,71 @@ def test_parse_aniso_imag_fbw_returns_typed_data():
     assert aniso_imag.get_array("temp_3_00_freq_0_znorm").tolist() == [1.0]
     assert aniso_imag.get_array("temp_3_00_freq_0_delta").tolist() == [0.5]
     assert aniso_imag.get_array("temp_3_00_freq_0_shift").tolist() == [0.2]
+
+
+def test_epw_parser_out_of_walltime_from_scheduler_stderr(aiida_localhost):
+    """Test that EpwParser returns ERROR_OUT_OF_WALLTIME when scheduler stderr indicates time limit."""
+    calc_entry_point = format_entry_point_string(
+        group="aiida.calculations", name="epw.epw"
+    )
+    node = orm.CalcJobNode(computer=aiida_localhost, process_type=calc_entry_point)
+    node.base.attributes.set("output_filename", "aiida.out")
+    node.store()
+
+    retrieved = orm.FolderData()
+    retrieved.base.repository.put_object_from_filelike(
+        io.StringIO("Program EPW v.5.8.0\nsome incomplete stdout..."),
+        "aiida.out",
+    )
+    scheduler_stderr = """Lmod is automatically replacing "craype-x86-rome" with "craype-x86-milan".
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** JOB 21415098 ON nid002500 CANCELLED AT 2026-08-20T18:25:38 DUE TO TIME LIMIT ***
+slurmstepd: error: *** STEP 21415098.0 ON nid002500 CANCELLED AT 2026-08-20T18:25:38 DUE TO TIME LIMIT ***
+"""
+    retrieved.base.repository.put_object_from_filelike(
+        io.StringIO(scheduler_stderr),
+        "_scheduler-stderr.txt",
+    )
+    retrieved.base.links.add_incoming(
+        node, link_type=LinkType.CREATE, link_label="retrieved"
+    )
+    retrieved.store()
+
+    results, calcfunction = EpwParser.parse_from_node(node, store_provenance=False)
+
+    assert calcfunction.is_failed
+    assert (
+        calcfunction.exit_status
+        == EpwCalculation.exit_codes.ERROR_OUT_OF_WALLTIME.status
+    )
+
+
+def test_epw_parser_out_of_walltime_from_node_exit_status(aiida_localhost):
+    """Test that EpwParser returns ERROR_OUT_OF_WALLTIME when node exit status was set by scheduler."""
+    calc_entry_point = format_entry_point_string(
+        group="aiida.calculations", name="epw.epw"
+    )
+    node = orm.CalcJobNode(computer=aiida_localhost, process_type=calc_entry_point)
+    node.base.attributes.set("output_filename", "aiida.out")
+    node.set_exit_status(
+        EpwCalculation.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME.status
+    )
+    node.store()
+
+    retrieved = orm.FolderData()
+    retrieved.base.repository.put_object_from_filelike(
+        io.StringIO("Program EPW v.5.8.0\nsome incomplete stdout..."),
+        "aiida.out",
+    )
+    retrieved.base.links.add_incoming(
+        node, link_type=LinkType.CREATE, link_label="retrieved"
+    )
+    retrieved.store()
+
+    results, calcfunction = EpwParser.parse_from_node(node, store_provenance=False)
+
+    assert calcfunction.is_failed
+    assert (
+        calcfunction.exit_status
+        == EpwCalculation.exit_codes.ERROR_OUT_OF_WALLTIME.status
+    )

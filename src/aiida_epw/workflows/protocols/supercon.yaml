@@ -18,7 +18,6 @@ default_inputs:
         num_machines: 1
       max_wallclock_seconds: 43200  # Twelve hours
       withmpi: True
-    restart_type: ephwrite
     momentum_dependence: False
     analytical_continuation: pade
     parameters:
@@ -46,12 +45,11 @@ default_inputs:
         num_machines: 1
       max_wallclock_seconds: 43200  # Twelve hours
       withmpi: True
-    restart_type: ephread
     parameters:
       INPUTEPW:
         eliashberg: True
-        elph: True
-        ep_coupling: True
+        elph: False
+        ep_coupling: False
         conv_thr_iaxis: 0.01
         elecselfen: False
         etf_mem: 1
@@ -60,9 +58,7 @@ default_inputs:
         muc: 0.13
         nqstep: 500
         nsiter: 500
-        nstemp: 40
         selecqread:  False
-        temps: 1 40
         vme: 'dipole'
         wscut: 0.5
         wannierize: False
@@ -72,12 +68,11 @@ default_inputs:
         num_machines: 1
       max_wallclock_seconds: 43200  # Twelve hours
       withmpi: True
-    restart_type: ephread
     parameters:
       INPUTEPW:
         eliashberg: True
-        elph: True
-        ep_coupling: True
+        elph: False
+        ep_coupling: False
         conv_thr_iaxis: 0.01
         elecselfen: False
         etf_mem: 1
@@ -86,9 +81,7 @@ default_inputs:
         muc: 0.13
         nqstep: 500
         nsiter: 500
-        nstemp: 20
         selecqread:  False
-        temps: 5 43
         vme: 'dipole'
         wscut: 0.5
         wannierize: False

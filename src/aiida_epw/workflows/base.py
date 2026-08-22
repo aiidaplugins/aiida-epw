@@ -23,7 +23,6 @@ from aiida_epw.tools.error_handling import epw as epw_error_handling
 from aiida_epw.tools.error_handling import supercon as supercon_error_handling
 from aiida_epw.tools.error_handling import transport as transport_error_handling
 
-
 EpwCalculation = CalculationFactory("epw.epw")
 
 
@@ -513,21 +512,22 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         # A recovered Fermi level must be read from the failed calculation on
         # the next attempt.  Preserve the available coarse-grid data by
         # changing writer restarts to their corresponding reader modes.
+        from aiida_epw.calculations.epw import serialize_restart_type
+        from aiida_epw.common.types import RestartType
+
         restart_type_node = getattr(self.ctx.inputs, "restart_type", None)
         restart_type = (
             restart_type_node.get_member() if restart_type_node is not None else None
         )
         next_restart_type = {
-            "NONE": "EPWREAD",
-            "EPHWRITE": "EPHREAD",
-            "EPHWRITE_RESTART": "EPHREAD",
-        }.get(getattr(restart_type, "name", None))
+            RestartType.FROM_SCRATCH: RestartType.FROM_EPB,
+        }.get(restart_type)
         if next_restart_type is not None:
-            self.ctx.inputs.restart_type = restart_type.__class__[next_restart_type]
+            self.ctx.inputs.restart_type = serialize_restart_type(next_restart_type)
             self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
             action_taken = (
                 f"{action_taken} Switched restart type from "
-                f"{restart_type.name} to {next_restart_type}."
+                f"{restart_type.name} to {next_restart_type.name}."
             )
 
         self.report_error_handled(calculation, action_taken)
@@ -645,12 +645,10 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
                 True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
             )
 
-        try:
-            from aiida_epw.common.types import RestartType
+        from aiida_epw.calculations.epw import serialize_restart_type
+        from aiida_epw.common.types import RestartType
 
-            self.ctx.inputs.restart_type = RestartType.EPHREAD
-        except ImportError:
-            parameters.setdefault("INPUTEPW", {})["epwread"] = True
+        self.ctx.inputs.restart_type = serialize_restart_type(RestartType.FROM_EPH)
         self.ctx.inputs.parameters = orm.Dict(parameters)
         self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
 
@@ -669,5 +667,50 @@ class EpwBaseWorkChain(ProtocolMixin, BaseRestartWorkChain):
         """
         action_taken = supercon_error_handling.get_temperature_out_of_range_action()
         self.ctx.is_finished = True
+        self.report_error_handled(calculation, action_taken)
+        return ProcessHandlerReport(True)
+
+    @process_handler(
+        priority=650,
+        exit_codes=[
+            EpwCalculation.exit_codes.ERROR_OUT_OF_WALLTIME,
+            EpwCalculation.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME,
+        ],
+    )
+    def handle_out_of_walltime(self, calculation):
+        """Handle exit code 120 (scheduler walltime timeout) and 400 (software walltime timeout)."""
+        from aiida_epw.calculations.epw import serialize_restart_type
+
+        parameters = self.ctx.inputs.parameters.get_dict()
+        input_epw = parameters.get("INPUTEPW", {})
+        is_eliashberg = input_epw.get("eliashberg", False) or any(
+            name in self.ctx.inputs
+            for name in (
+                "momentum_dependence",
+                "full_bandwidth",
+                "real_axis",
+                "analytical_continuation",
+            )
+        )
+        restart_type_node = getattr(self.ctx.inputs, "restart_type", None)
+        restart_type = (
+            restart_type_node.get_member() if restart_type_node is not None else None
+        )
+        parameters, next_restart, action_taken = (
+            supercon_error_handling.prepare_walltime_recovery(
+                parameters,
+                calculation.outputs.output_parameters.get_dict(),
+                restart_type,
+                is_eliashberg,
+            )
+        )
+        if parameters is None:
+            self.report_error_handled(calculation, action_taken)
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_KNOWN_UNRECOVERABLE_FAILURE
+            )
+        self.ctx.inputs.parameters = orm.Dict(parameters)
+        self.ctx.inputs.restart_type = serialize_restart_type(next_restart)
+        self.ctx.inputs.parent_folder_epw = calculation.outputs.remote_folder
         self.report_error_handled(calculation, action_taken)
         return ProcessHandlerReport(True)

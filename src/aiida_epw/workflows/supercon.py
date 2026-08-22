@@ -9,6 +9,7 @@ from aiida.engine import WorkChain, while_, if_, append_
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 
 from aiida_epw.calculations.epw import serialize_restart_type
+from aiida_epw.common.types import RestartType
 from aiida_epw.workflows.base import EpwBaseWorkChain
 from aiida_epw.data import A2fData
 
@@ -121,7 +122,6 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "parent_folder_chk",
                 "qfpoints",
                 "kfpoints",
-                "restart_type",
             ),
             namespace_options={
                 "help": (
@@ -140,7 +140,6 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "parent_folder_chk",
                 "qfpoints_distance",
                 "kfpoints_factor",
-                "restart_type",
             ),
             namespace_options={
                 "help": (
@@ -159,7 +158,6 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 "parent_folder_chk",
                 "qfpoints_distance",
                 "kfpoints_factor",
-                "restart_type",
             ),
             namespace_options={
                 "help": (
@@ -286,7 +284,11 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
             real_axis = epw_inputs.pop("real_axis", False)
             analytical_continuation = epw_inputs.pop("analytical_continuation", None)
             epw_inputs.pop("calculation_type", None)
-            epw_inputs.pop("restart_type", None)
+            restart_type = epw_inputs.pop("restart_type", None)
+            if restart_type is None:
+                restart_type = (
+                    "ephwrite" if epw_namespace == "epw_interp" else "from_eph"
+                )
 
             # Check which input ports are supported by EpwBaseWorkChain dynamically for cross-branch compatibility
             base_inputs = EpwBaseWorkChain.spec().inputs
@@ -307,6 +309,9 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
                 overrides=epw_inputs,
                 **kwargs,
             )
+
+            if "restart_type" in base_inputs:
+                epw_builder.restart_type = serialize_restart_type(restart_type)
 
             if epw_namespace == "epw_interp" and scon_epw_code is not None:
                 epw_builder.code = scon_epw_code
@@ -402,7 +407,8 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.kfpoints_factor = self.inputs.epw_interp.kfpoints_factor
         inputs.qfpoints_distance = self.ctx.interpolation_list.pop()
 
-        inputs.restart_type = serialize_restart_type("ephwrite")
+        if "restart_type" not in inputs:
+            inputs.restart_type = serialize_restart_type(RestartType.EPHWRITE)
 
         if self.ctx.degaussq:
             parameters = inputs.parameters.get_dict()
@@ -469,7 +475,8 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.kfpoints = parent_folder_epw.creator.inputs.kfpoints
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
 
-        inputs.restart_type = serialize_restart_type("ephread")
+        if "restart_type" not in inputs:
+            inputs.restart_type = serialize_restart_type(RestartType.FROM_EPH)
 
         if self.ctx.degaussq:
             parameters = inputs.parameters.get_dict()
@@ -507,7 +514,8 @@ class SuperConWorkChain(ProtocolMixin, WorkChain):
         inputs.kfpoints = parent_folder_epw.creator.inputs.kfpoints
         inputs.qfpoints = parent_folder_epw.creator.inputs.qfpoints
 
-        inputs.restart_type = serialize_restart_type("ephread")
+        if "restart_type" not in inputs:
+            inputs.restart_type = serialize_restart_type(RestartType.FROM_EPH)
 
         inputs.metadata.call_link_label = "epw_final_aniso"
         workchain_node = self.submit(EpwBaseWorkChain, **inputs)

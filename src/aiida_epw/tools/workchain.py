@@ -342,3 +342,105 @@ def get_default_target_basepath(computer):
     else:
         raise ValueError(f"Unsupported transport type: {computer.transport_type}")
     return target_basepath
+
+
+def pop_succeeded_temperatures(parameters, output_parameters):
+    """Analyze Eliashberg output parameters and pop successfully completed temperatures from input parameters.
+
+    :param parameters: Dict containing input namelist parameters
+    :param output_parameters: Dict containing output parameters of the calculation
+    :return: A tuple of (updated_parameters_dict, succeeded_temps, remaining_temps, eliashberg_data)
+    """
+    eliashberg_data = (
+        output_parameters.get("isotropic_eliashberg")
+        or output_parameters.get("anisotropic_eliashberg")
+        or {}
+    )
+
+    succeeded_temps = []
+    for temp_str, data in eliashberg_data.items():
+        temp = float(temp_str)
+        has_failed = False
+
+        iterations = data.get("iterations", {})
+        if iterations:
+            if not iterations.get("ethr") or any(
+                v is None for v in iterations.get("ethr", [])
+            ):
+                has_failed = True
+            elif any(v is None for v in iterations.get("znormi", [])) or any(
+                v is None for v in iterations.get("deltai", [])
+            ):
+                has_failed = True
+
+        pade = data.get("pade", {})
+        if pade:
+            if any(
+                pade.get(k) is None for k in ("delta", "znorm", "shift") if k in pade
+            ):
+                has_failed = True
+
+        if not iterations and not pade:
+            has_failed = True
+
+        if not has_failed:
+            succeeded_temps.append(temp)
+
+    input_epw = parameters.get("INPUTEPW", {})
+    all_temps = []
+    is_linear_range = False
+    if "temps" in input_epw:
+        temps_val = input_epw["temps"]
+        if isinstance(temps_val, str):
+            original_temps = [float(t) for t in temps_val.replace(",", " ").split()]
+        elif isinstance(temps_val, (int, float)):
+            original_temps = [float(temps_val)]
+        else:
+            original_temps = [float(t) for t in temps_val]
+
+        nstemp = input_epw.get("nstemp", len(original_temps))
+        if len(original_temps) == 2 and nstemp >= 2:
+            is_linear_range = True
+            t_min, t_max = original_temps[0], original_temps[1]
+            all_temps = [
+                t_min + i * (t_max - t_min) / (nstemp - 1) for i in range(nstemp)
+            ]
+        else:
+            all_temps = original_temps
+    elif "tempsmin" in input_epw and "tempsmax" in input_epw and "nstemp" in input_epw:
+        is_linear_range = True
+        t_min = float(input_epw["tempsmin"])
+        t_max = float(input_epw["tempsmax"])
+        n_temp = int(input_epw["nstemp"])
+        if n_temp > 1:
+            all_temps = [
+                t_min + i * (t_max - t_min) / (n_temp - 1) for i in range(n_temp)
+            ]
+        else:
+            all_temps = [t_min]
+    else:
+        all_temps = [float(k) for k in eliashberg_data.keys()]
+
+    remaining_temps = [
+        t for t in all_temps if not any(abs(t - st) < 1e-4 for st in succeeded_temps)
+    ]
+
+    new_temps_list = []
+    new_nstemp = len(remaining_temps)
+    if is_linear_range and new_nstemp >= 2:
+        new_temps_list = [remaining_temps[0], remaining_temps[-1]]
+    else:
+        new_temps_list = remaining_temps
+
+    updated_parameters = dict(parameters)
+    input_epw_new = updated_parameters.setdefault("INPUTEPW", {})
+
+    if isinstance(input_epw.get("temps"), str):
+        input_epw_new["temps"] = " ".join(str(t) for t in new_temps_list)
+    else:
+        input_epw_new["temps"] = new_temps_list
+    input_epw_new["nstemp"] = new_nstemp
+    input_epw_new.pop("tempsmin", None)
+    input_epw_new.pop("tempsmax", None)
+
+    return updated_parameters, succeeded_temps, remaining_temps, eliashberg_data
